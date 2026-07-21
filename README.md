@@ -23,8 +23,12 @@ src/
     Program.cs                # entry point
     MainGame.cs                # MonoGame's Game subclass — boot/wiring only
     Content/                  # MGCB content pipeline (Content.mgcb + raw assets)
+    Physics/                   # Box2D world wrapper, vector conversions
+    Rendering/                 # procedural placeholder textures
+    Ship.cs                    # hand-rolled Box2D-driven ship (placeholder until ECS)
+    ShipConfig.cs              # loads ship-config.json
+    ship-config.json           # tunable ship movement values, edit without recompiling
     ECS/                       # Components/ and Systems/ (Arch) — not yet created
-    Physics/                   # Box2D world wrapper, ECS<->Box2D sync — not yet created
     World/                     # chunk manager, procedural generation — later milestone
     Persistence/                # save/load — later milestone
 ```
@@ -35,7 +39,7 @@ src/
 
 - [x] Set up a MonoGame project skeleton (.NET, DesktopGL cross-platform desktop target)
 - [x] Get a basic game loop running: empty window, fixed timestep
-- [ ] Integrate Box2D (Box2DNet) for physics and get a single ship entity moving with thrust + rotation (momentum-based, no friction)
+- [x] Integrate Box2D (Box2DNet) for physics and get a single ship entity moving with thrust + rotation (momentum-based, no friction)
 - [ ] Set up Arch ECS with basic components (Transform, Velocity, Sprite) and get the ship rendering/moving through the ECS rather than as a one-off object
 - [ ] Camera that follows the ship
 
@@ -48,6 +52,7 @@ src/
 
 ## Status
 
-Milestone 1 is in progress: the project builds and runs, showing a blank
-window via MonoGame's fixed-timestep game loop. Next up is wiring in Box2D
-physics for ship movement.
+Milestone 1 is in progress: the ship moves under real Box2D physics (WASD
+thrust, mouse-facing, momentum with a speed cap, no drag), tunable via
+ship-config.json. It's still a hand-wired object rather than an ECS entity.
+Next up is setting up Arch ECS and moving the ship onto it.

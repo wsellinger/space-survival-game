@@ -25,10 +25,12 @@ src/
     Content/                  # MGCB content pipeline (Content.mgcb + raw assets)
     Physics/                   # Box2D world wrapper, vector conversions
     Rendering/                 # procedural placeholder textures
-    Ship.cs                    # hand-rolled Box2D-driven ship (placeholder until ECS)
     ShipConfig.cs              # loads ship-config.json
     ship-config.json           # tunable ship movement values, edit without recompiling
-    ECS/                       # Components/ and Systems/ (Arch) — not yet created
+    ECS/
+      Components/              # Transform, Velocity, Sprite, PhysicsBody, ShipMovement, PlayerControlled
+      Systems/                 # ShipInputSystem, PhysicsSyncSystem, SpeedCapSystem, RenderSystem
+      ShipEntity.cs            # creates the player ship entity; handles respawn
     World/                     # chunk manager, procedural generation — later milestone
     Persistence/                # save/load — later milestone
 ```
@@ -40,7 +42,7 @@ src/
 - [x] Set up a MonoGame project skeleton (.NET, DesktopGL cross-platform desktop target)
 - [x] Get a basic game loop running: empty window, fixed timestep
 - [x] Integrate Box2D (Box2DNet) for physics and get a single ship entity moving with thrust + rotation (momentum-based, no friction)
-- [ ] Set up Arch ECS with basic components (Transform, Velocity, Sprite) and get the ship rendering/moving through the ECS rather than as a one-off object
+- [x] Set up Arch ECS with basic components (Transform, Velocity, Sprite) and get the ship rendering/moving through the ECS rather than as a one-off object
 - [ ] Camera that follows the ship
 
 ### Later milestones (not yet planned in detail)
@@ -52,7 +54,9 @@ src/
 
 ## Status
 
-Milestone 1 is in progress: the ship moves under real Box2D physics (WASD
-thrust, mouse-facing, momentum with a speed cap, no drag), tunable via
-ship-config.json. It's still a hand-wired object rather than an ECS entity.
-Next up is setting up Arch ECS and moving the ship onto it.
+Milestone 1 is in progress: the ship is an Arch ECS entity (PhysicsBody,
+Transform, Velocity, Sprite, ShipMovement, PlayerControlled components) driven
+by systems each frame — ShipInputSystem (WASD thrust + mouse-facing),
+PhysicsSyncSystem (mirrors Box2D state into components), SpeedCapSystem, and
+RenderSystem. Movement is still tunable via ship-config.json. Next up is a
+camera that follows the ship.

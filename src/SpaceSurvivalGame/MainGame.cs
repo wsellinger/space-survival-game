@@ -1,8 +1,12 @@
 using System;
 using System.IO;
+using Arch.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using SpaceSurvivalGame.ECS;
+using SpaceSurvivalGame.ECS.Components;
+using SpaceSurvivalGame.ECS.Systems;
 using SpaceSurvivalGame.Physics;
 
 namespace SpaceSurvivalGame;
@@ -15,7 +19,7 @@ public class MainGame : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
     private PhysicsWorld _physicsWorld;
-    private Ship _ship;
+    private World _world;
     private System.Numerics.Vector2 _shipSpawnPositionMeters;
     private KeyboardState _previousKeyboardState;
 
@@ -33,6 +37,7 @@ public class MainGame : Game
     protected override void Initialize()
     {
         _physicsWorld = new PhysicsWorld();
+        _world = World.Create();
 
         base.Initialize();
     }
@@ -45,7 +50,7 @@ public class MainGame : Game
         var shipConfig = ShipConfig.Load(configPath);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
-        _ship = new Ship(_physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, shipConfig);
+        ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, shipConfig);
     }
 
     protected override void Update(GameTime gameTime)
@@ -55,15 +60,16 @@ public class MainGame : Game
             Exit();
 
         if (keyboard.IsKeyDown(Keys.R) && !_previousKeyboardState.IsKeyDown(Keys.R))
-            _ship.Respawn(_shipSpawnPositionMeters);
+            ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
 
         var mouse = Mouse.GetState();
         var mousePositionPixels = new System.Numerics.Vector2(mouse.X, mouse.Y);
 
         var deltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        _ship.HandleInput(keyboard, mousePositionPixels, deltaSeconds);
+        ShipInputSystem.Run(_world, keyboard, mousePositionPixels, deltaSeconds);
         _physicsWorld.Step(deltaSeconds);
-        _ship.ClampSpeed();
+        SpeedCapSystem.Run(_world);
+        PhysicsSyncSystem.Run(_world);
 
         _previousKeyboardState = keyboard;
         base.Update(gameTime);
@@ -74,15 +80,18 @@ public class MainGame : Game
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
         _spriteBatch.Begin();
-        _ship.Draw(_spriteBatch);
+        RenderSystem.Run(_world, _spriteBatch);
         _spriteBatch.End();
 
         base.Draw(gameTime);
     }
 
+    private static readonly QueryDescription SpriteQuery = new QueryDescription().WithAll<Sprite>();
+
     protected override void UnloadContent()
     {
-        _ship.Dispose();
+        _world.Query(in SpriteQuery, (ref Sprite sprite) => sprite.Texture.Dispose());
+        World.Destroy(_world);
         _physicsWorld.Dispose();
         base.UnloadContent();
     }

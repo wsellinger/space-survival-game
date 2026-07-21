@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+
+## Visual Studio / Rider / VS Code
+.vs/
+.idea/
+*.userosscache
+*.sln.docstates
+
+## MonoGame Content Builder intermediate/output (rebuilt from Content.mgcb)
+**/bin/Content/
+**/obj/Content/
+
+## OS cruft
+.DS_Store
+Thumbs.db
+
+## Claude Code local settings
+.claude/settings.local.json

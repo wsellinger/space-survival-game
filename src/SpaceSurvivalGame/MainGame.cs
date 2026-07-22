@@ -8,6 +8,7 @@ using SpaceSurvivalGame.ECS;
 using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.ECS.Systems;
 using SpaceSurvivalGame.Physics;
+using SpaceSurvivalGame.Rendering;
 
 namespace SpaceSurvivalGame;
 
@@ -20,6 +21,7 @@ public class MainGame : Game
     private SpriteBatch _spriteBatch;
     private PhysicsWorld _physicsWorld;
     private World _world;
+    private Camera _camera;
     private System.Numerics.Vector2 _shipSpawnPositionMeters;
     private KeyboardState _previousKeyboardState;
     private Point _previousMousePosition;
@@ -40,6 +42,7 @@ public class MainGame : Game
     {
         _physicsWorld = new PhysicsWorld();
         _world = World.Create();
+        _camera = new Camera { ViewportWidth = WindowWidth, ViewportHeight = WindowHeight };
 
         base.Initialize();
     }
@@ -53,6 +56,7 @@ public class MainGame : Game
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, shipConfig);
+        Starfield.Create(_world, GraphicsDevice, _shipSpawnPositionMeters, halfExtentMeters: 20f, starCount: 400);
     }
 
     protected override void Update(GameTime gameTime)
@@ -82,6 +86,7 @@ public class MainGame : Game
         _physicsWorld.Step(deltaSeconds);
         SpeedCapSystem.Run(_world);
         PhysicsSyncSystem.Run(_world);
+        CameraFollowSystem.Run(_world, _camera);
 
         _previousKeyboardState = keyboard;
         _previousMousePosition = mouse.Position;
@@ -118,10 +123,10 @@ public class MainGame : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        GraphicsDevice.Clear(Color.Black);
 
         _spriteBatch.Begin();
-        RenderSystem.Run(_world, _spriteBatch);
+        RenderSystem.Run(_world, _spriteBatch, _camera);
         _spriteBatch.End();
 
         base.Draw(gameTime);

@@ -68,4 +68,15 @@ public static class ProceduralTextures
         var closest = segmentStart + segment * t;
         return Vector2.Distance(point, closest);
     }
+
+    /// <summary>A solid size x size square, e.g. for a star dot.</summary>
+    public static Texture2D CreateSolidSquare(GraphicsDevice graphicsDevice, int size, Color color)
+    {
+        var data = new Color[size * size];
+        for (var i = 0; i < data.Length; i++) data[i] = color;
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
 }

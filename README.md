@@ -23,27 +23,32 @@ src/
     Program.cs                # entry point
     MainGame.cs                # MonoGame's Game subclass — boot/wiring only
     Content/                  # MGCB content pipeline (Content.mgcb + raw assets)
-    Physics/                   # Box2D world wrapper, vector conversions
-    Rendering/                 # procedural placeholder textures
+Physics/                   # Box2D world wrapper, vector conversions
+    Rendering/                 # Camera, procedural placeholder textures
     ShipConfig.cs              # loads ship-config.json
     ship-config.json           # tunable ship movement values, edit without recompiling
     ECS/
       Components/              # Transform, Velocity, Sprite, PhysicsBody, ShipMovement, PlayerControlled
-      Systems/                 # ShipInputSystem, PhysicsSyncSystem, SpeedCapSystem, RenderSystem
+      Systems/                 # ShipInputSystem, PhysicsSyncSystem, SpeedCapSystem, CameraFollowSystem, RenderSystem
       ShipEntity.cs            # creates the player ship entity; handles respawn
+      Starfield.cs             # scatters placeholder background star entities
     World/                     # chunk manager, procedural generation — later milestone
     Persistence/                # save/load — later milestone
 ```
 
 ## Roadmap
 
-### Milestone 1 — project skeleton and a moving ship (current)
+### Milestone 1 — project skeleton and a moving ship (done)
 
 - [x] Set up a MonoGame project skeleton (.NET, DesktopGL cross-platform desktop target)
 - [x] Get a basic game loop running: empty window, fixed timestep
 - [x] Integrate Box2D (Box2DNet) for physics and get a single ship entity moving with thrust + rotation (momentum-based, no friction)
 - [x] Set up Arch ECS with basic components (Transform, Velocity, Sprite) and get the ship rendering/moving through the ECS rather than as a one-off object
-- [ ] Camera that follows the ship
+- [x] Camera that follows the ship
+
+Also picked up along the way: Xbox controller support (mutually exclusive
+with keyboard/mouse — whichever was used most recently wins) and a scattered
+placeholder starfield so camera movement is visible against something.
 
 ### Later milestones (not yet planned in detail)
 
@@ -54,9 +59,11 @@ src/
 
 ## Status
 
-Milestone 1 is in progress: the ship is an Arch ECS entity (PhysicsBody,
+Milestone 1 is complete. The ship is an Arch ECS entity (PhysicsBody,
 Transform, Velocity, Sprite, ShipMovement, PlayerControlled components) driven
-by systems each frame — ShipInputSystem (WASD thrust + mouse-facing),
-PhysicsSyncSystem (mirrors Box2D state into components), SpeedCapSystem, and
-RenderSystem. Movement is still tunable via ship-config.json. Next up is a
-camera that follows the ship.
+by systems each frame — ShipInputSystem (WASD/left-stick thrust, right-stick
+or WASD-direction facing), PhysicsSyncSystem (mirrors Box2D state into
+components), SpeedCapSystem, CameraFollowSystem, and RenderSystem (now
+camera-relative). Movement is tunable via ship-config.json. Next up: deciding
+what milestone 2 covers — likely a first pass at the procedurally generated
+asteroid field.

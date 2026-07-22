@@ -95,7 +95,7 @@ public static class AsteroidField
                 new PhysicsBody { BodyId = bodyId },
                 new Transform { PositionMeters = positionMeters, RotationRadians = 0f },
                 new Velocity(),
-                new Sprite { Texture = shapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.Gray, Size = BaseShapeTextureSize, Scale = scale },
+                new Sprite { Texture = shapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.Gray, Size = BaseShapeTextureSize, Scale = scale, Parallax = 1f },
                 new Asteroid { RadiusMeters = radiusMeters });
         }
     }

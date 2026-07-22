@@ -1,0 +1,36 @@
+{
+  "Layers": [
+    {
+      "HalfExtentMeters": 80,
+      "StarCount": 200,
+      "Parallax": 0.2,
+      "Brightness": 1
+    },
+    {
+      "HalfExtentMeters": 80,
+      "StarCount": 250,
+      "Parallax": 0.18,
+      "Brightness": 0.85
+    },
+    {
+      "HalfExtentMeters": 80,
+      "StarCount": 300,
+      "Parallax": 0.16,
+      "Brightness": 0.7
+    },
+    {
+      "HalfExtentMeters": 80,
+      "StarCount": 350,
+      "Parallax": 0.14,
+      "Brightness": 0.55
+    },
+    {
+      "HalfExtentMeters": 80,
+      "StarCount": 400,
+      "Parallax": 0.12,
+      "Brightness": 0.35
+    }
+  ],
+  "MinTintStrength": 0.05,
+  "MaxTintStrength": 0.25
+}

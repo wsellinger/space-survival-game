@@ -63,11 +63,21 @@ public class MainGame : Game
         var worldConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "world-config.json");
         var worldConfig = WorldConfig.Load(worldConfigPath);
 
+        var starfieldConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "starfield-config.json");
+        var starfieldConfig = StarfieldConfig.Load(starfieldConfigPath);
+
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
         _camera.TargetPositionMeters = _shipSpawnPositionMeters;
         ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _shipConfig);
-        Starfield.Create(_world, GraphicsDevice, _shipSpawnPositionMeters, halfExtentMeters: 20f, starCount: 400);
+
+        foreach (var layer in starfieldConfig.Layers)
+        {
+            var color = Microsoft.Xna.Framework.Color.White * layer.Brightness;
+            Starfield.Create(_world, GraphicsDevice, _shipSpawnPositionMeters, layer.HalfExtentMeters, layer.StarCount, layer.Parallax, color,
+                starfieldConfig.MinTintStrength, starfieldConfig.MaxTintStrength);
+        }
+
         AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig);
     }
 

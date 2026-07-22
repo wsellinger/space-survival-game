@@ -13,7 +13,7 @@ public static class RenderSystem
     {
         world.Query(in Query, (ref Transform transform, ref Sprite sprite) =>
         {
-            var positionPixels = camera.WorldToScreen(transform.PositionMeters);
+            var positionPixels = camera.WorldToScreen(transform.PositionMeters, sprite.Parallax);
             var origin = new Microsoft.Xna.Framework.Vector2(sprite.Size / 2f, sprite.Size / 2f);
 
             spriteBatch.Draw(

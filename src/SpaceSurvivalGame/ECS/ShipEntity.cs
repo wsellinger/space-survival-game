@@ -44,7 +44,7 @@ public static class ShipEntity
             new PhysicsBody { BodyId = bodyId },
             new Transform { PositionMeters = startPositionMeters, RotationRadians = 0f },
             new Velocity(),
-            new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = config.SpriteSize, Scale = 1f },
+            new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = config.SpriteSize, Scale = 1f, Parallax = 1f },
             new ShipMovement
             {
                 ThrustAcceleration = config.ThrustAcceleration,

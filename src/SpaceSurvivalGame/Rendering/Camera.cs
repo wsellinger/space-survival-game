@@ -34,9 +34,14 @@ public class Camera
         PositionMeters = Vector2.Lerp(PositionMeters, TargetPositionMeters, t);
     }
 
-    public Microsoft.Xna.Framework.Vector2 WorldToScreen(Vector2 positionMeters)
+    /// <summary>
+    /// parallax scales how much camera movement affects the result: 1 (default) is normal;
+    /// less than 1 moves less than the camera, reading as farther away (distant background
+    /// layers); greater than 1 moves more, reading as closer than the camera's own plane.
+    /// </summary>
+    public Microsoft.Xna.Framework.Vector2 WorldToScreen(Vector2 positionMeters, float parallax = 1f)
     {
-        var offsetPixels = PhysicsWorld.MetersToPixels(positionMeters - PositionMeters).ToXna();
+        var offsetPixels = PhysicsWorld.MetersToPixels((positionMeters - PositionMeters) * parallax).ToXna();
         return new Microsoft.Xna.Framework.Vector2(ViewportWidth / 2f, ViewportHeight / 2f) + offsetPixels;
     }
 }

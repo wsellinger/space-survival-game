@@ -33,6 +33,8 @@ public static class AsteroidField
     private const int MaxVerticesPerShape = 8; // Box2D polygons cap out at 8 vertices
     private const float MinVertexRadiusFactor = 0.65f; // how "jagged" the rocks look; 1 = perfect circle
 
+    private static readonly Microsoft.Xna.Framework.Color RockColor = new(107, 91, 78);
+
     public static void Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 centerMeters, WorldConfig config)
     {
         var random = new Random(config.WorldSeed);
@@ -44,7 +46,7 @@ public static class AsteroidField
             shapeVariants[v] = GenerateRockShape(random);
             var xnaVertices = new Microsoft.Xna.Framework.Vector2[shapeVariants[v].Length];
             for (var p = 0; p < xnaVertices.Length; p++) xnaVertices[p] = shapeVariants[v][p].ToXna();
-            shapeTextures[v] = ProceduralTextures.CreatePolygon(graphicsDevice, BaseShapeTextureSize, Microsoft.Xna.Framework.Color.Gray, xnaVertices);
+            shapeTextures[v] = ProceduralTextures.CreatePolygon(graphicsDevice, BaseShapeTextureSize, RockColor, xnaVertices);
         }
 
         // Cell size = the largest possible sum-of-radii between any two asteroids,
@@ -95,7 +97,7 @@ public static class AsteroidField
                 new PhysicsBody { BodyId = bodyId },
                 new Transform { PositionMeters = positionMeters, RotationRadians = 0f },
                 new Velocity(),
-                new Sprite { Texture = shapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.Gray, Size = BaseShapeTextureSize, Scale = scale, Parallax = 1f },
+                new Sprite { Texture = shapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.White, Size = BaseShapeTextureSize, Scale = scale, Parallax = 1f },
                 new Asteroid { RadiusMeters = radiusMeters });
         }
     }

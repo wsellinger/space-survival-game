@@ -23,16 +23,20 @@ src/
     Program.cs                # entry point
     MainGame.cs                # MonoGame's Game subclass — boot/wiring only
     Content/                  # MGCB content pipeline (Content.mgcb + raw assets)
-Physics/                   # Box2D world wrapper, vector conversions
+    Physics/                   # Box2D world wrapper, vector conversions
     Rendering/                 # Camera, procedural placeholder textures
-    ShipConfig.cs              # loads ship-config.json
-    ship-config.json           # tunable ship movement values, edit without recompiling
+    ShipConfig.cs              # loads config/ship-config.json
+    WorldConfig.cs             # loads config/world-config.json
+    config/
+      ship-config.json          # tunable ship movement values, edit without recompiling
+      world-config.json         # tunable asteroid field values, edit without recompiling
     ECS/
-      Components/              # Transform, Velocity, Sprite, PhysicsBody, ShipMovement, PlayerControlled
+      Components/              # Transform, Velocity, Sprite, PhysicsBody, ShipMovement, PlayerControlled, Asteroid
       Systems/                 # ShipInputSystem, PhysicsSyncSystem, SpeedCapSystem, CameraFollowSystem, RenderSystem
       ShipEntity.cs            # creates the player ship entity; handles respawn
       Starfield.cs             # scatters placeholder background star entities
-    World/                     # chunk manager, procedural generation — later milestone
+      AsteroidField.cs         # scatters a fixed-size field of dynamic, collidable asteroids
+    World/                     # chunk manager — deferred, see note below
     Persistence/                # save/load — later milestone
 ```
 
@@ -50,20 +54,34 @@ Also picked up along the way: Xbox controller support (mutually exclusive
 with keyboard/mouse — whichever was used most recently wins) and a scattered
 placeholder starfield so camera movement is visible against something.
 
+### Milestone 2 — procedural asteroid field (fixed-size, no streaming yet)
+
+- [x] Procedurally generated asteroid field: dynamic, collidable circle
+  entities scattered across a large fixed-size area (no chunk streaming),
+  tunable via world-config.json, deterministic per WorldSeed
+
+**Chunk-based world streaming is deliberately deferred**, not dropped: the
+parts that matter for iterating on gameplay feel (density, size variety,
+collision behavior) don't need it, and it only pays off once the world needs
+to feel genuinely unbounded or once the save/load milestone (chunked
+persistence) arrives. Revisit then.
+
 ### Later milestones (not yet planned in detail)
 
-- Procedurally generated asteroid field with chunk-based world streaming
+- Chunk-based world streaming (if/when the field needs to feel unbounded)
 - Mining and resource gathering
 - Placeable space station modules and persistent building
 - Save/load via chunked region serialization
 
 ## Status
 
-Milestone 1 is complete. The ship is an Arch ECS entity (PhysicsBody,
-Transform, Velocity, Sprite, ShipMovement, PlayerControlled components) driven
-by systems each frame — ShipInputSystem (WASD/left-stick thrust, right-stick
-or WASD-direction facing), PhysicsSyncSystem (mirrors Box2D state into
-components), SpeedCapSystem, CameraFollowSystem, and RenderSystem (now
-camera-relative). Movement is tunable via ship-config.json. Next up: deciding
-what milestone 2 covers — likely a first pass at the procedurally generated
-asteroid field.
+Milestones 1 and 2 (deferred-chunking version) are complete. The ship and
+asteroids are all Arch ECS entities with real Box2D physics — the ship is
+player-driven (WASD/left-stick + right-stick or WASD-direction facing,
+tunable via ship-config.json); asteroids are dynamic bodies with a small
+random drift velocity and bounce off each other and the ship, density
+calibrated so the smallest asteroid masses about the same as the ship
+(tunable via world-config.json). Rendering is camera-relative and
+depth-sorted (stars behind everything). Next up: deciding what comes after —
+likely mining/resource gathering, or revisiting chunk streaming if the fixed
+field starts to feel limiting.

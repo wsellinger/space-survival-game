@@ -1,0 +1,6 @@
+{
+  "ThrustAcceleration": 3.8,
+  "MaxSpeedMetersPerSecond": 4,
+  "TurnSpeedRadiansPerSecond": 8,
+  "SpriteSize": 24
+}

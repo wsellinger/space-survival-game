@@ -51,12 +51,16 @@ public class MainGame : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-        var configPath = Path.Combine(AppContext.BaseDirectory, "ship-config.json");
-        var shipConfig = ShipConfig.Load(configPath);
+        var shipConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "ship-config.json");
+        var shipConfig = ShipConfig.Load(shipConfigPath);
+
+        var worldConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "world-config.json");
+        var worldConfig = WorldConfig.Load(worldConfigPath);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, shipConfig);
         Starfield.Create(_world, GraphicsDevice, _shipSpawnPositionMeters, halfExtentMeters: 20f, starCount: 400);
+        AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig);
     }
 
     protected override void Update(GameTime gameTime)
@@ -125,7 +129,10 @@ public class MainGame : Game
     {
         GraphicsDevice.Clear(Color.Black);
 
-        _spriteBatch.Begin();
+        // BackToFront so LayerDepth actually controls draw order (stars behind everything);
+        // PointClamp instead of the default linear filter so scaled sprites (asteroids) get
+        // crisp edges instead of blurring when magnified/minified.
+        _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
         _spriteBatch.End();
 

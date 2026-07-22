@@ -23,9 +23,9 @@ public static class RenderSystem
                 color: sprite.Color,
                 rotation: transform.RotationRadians,
                 origin: origin,
-                scale: 1f,
+                scale: sprite.Scale,
                 effects: SpriteEffects.None,
-                layerDepth: 0f);
+                layerDepth: sprite.LayerDepth);
         });
     }
 }

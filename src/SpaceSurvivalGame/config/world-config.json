@@ -1,0 +1,11 @@
+{
+  "FieldHalfExtentMeters": 50,
+  "AsteroidSpawnDensityPerSquareMeter": 0.2,
+  "AsteroidMinRadiusMeters": 0.1,
+  "AsteroidMaxRadiusMeters": 0.5,
+  "AsteroidMinSpeedMetersPerSecond": 0.1,
+  "AsteroidMaxSpeedMetersPerSecond": 0.5,
+  "AsteroidRestitution": 0.6,
+  "AsteroidMaterialDensity": 1.83,
+  "WorldSeed": 12345
+}

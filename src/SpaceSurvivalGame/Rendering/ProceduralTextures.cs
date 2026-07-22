@@ -79,4 +79,25 @@ public static class ProceduralTextures
         texture.SetData(data);
         return texture;
     }
+
+    /// <summary>A solid filled circle inscribed in a size x size square, transparent elsewhere. Meant to be shared across many entities of varying size via Sprite.Scale rather than regenerated per size.</summary>
+    public static Texture2D CreateCircle(GraphicsDevice graphicsDevice, int size, Color color)
+    {
+        var data = new Color[size * size];
+        var center = new Vector2(size / 2f, size / 2f);
+        var radius = size / 2f;
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                data[y * size + x] = Vector2.Distance(point, center) <= radius ? color : Color.Transparent;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
 }

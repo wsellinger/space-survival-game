@@ -28,7 +28,7 @@ public static class Starfield
 
             world.Create(
                 new Transform { PositionMeters = centerMeters + offset, RotationRadians = 0f },
-                new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = 2 });
+                new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = 2, Scale = 1f, LayerDepth = 1f });
         }
     }
 }

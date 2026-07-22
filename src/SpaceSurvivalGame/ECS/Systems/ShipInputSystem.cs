@@ -13,8 +13,10 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// based on whichever device was used most recently, picks one and the other
 /// is ignored). Facing: in controller mode the right stick aims independently
 /// whenever it's pushed past its deadzone, falling back to the left stick's
-/// direction otherwise; in keyboard/mouse mode facing just tracks WASD (no
-/// separate aim input there). Thrust acceleration is facing-agnostic — same
+/// direction otherwise; in keyboard/mouse mode, holding the left mouse button
+/// aims the same way (<paramref name="mouseFacingDirection"/>, precomputed by
+/// MainGame as the cursor's direction from the ship), falling back to WASD
+/// direction otherwise. Thrust acceleration is facing-agnostic — same
 /// magnitude regardless of which way the ship is pointed relative to its
 /// velocity; SpeedCapSystem enforces a flat top speed on top of this.
 /// </summary>
@@ -23,7 +25,7 @@ public static class ShipInputSystem
     private static readonly QueryDescription Query =
         new QueryDescription().WithAll<PhysicsBody, ShipMovement, PlayerControlled>();
 
-    public static void Run(World world, KeyboardState keyboard, GamePadState gamePad, bool useController, float deltaSeconds)
+    public static void Run(World world, KeyboardState keyboard, GamePadState gamePad, bool useController, Vector2? mouseFacingDirection, float deltaSeconds)
     {
         world.Query(in Query, (ref PhysicsBody physicsBody, ref ShipMovement movement) =>
         {
@@ -53,7 +55,10 @@ public static class ShipInputSystem
                 if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right)) direction += new Vector2(1, 0);
                 if (direction != Vector2.Zero) direction = Vector2.Normalize(direction);
 
-                if (direction != Vector2.Zero) facingDirection = direction;
+                if (mouseFacingDirection.HasValue)
+                    facingDirection = mouseFacingDirection.Value;
+                else if (direction != Vector2.Zero)
+                    facingDirection = direction;
             }
 
             if (direction != Vector2.Zero)

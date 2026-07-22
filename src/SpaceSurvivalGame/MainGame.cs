@@ -8,6 +8,7 @@ using SpaceSurvivalGame.ECS;
 using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.ECS.Systems;
 using SpaceSurvivalGame.Physics;
+using SpaceSurvivalGame.Platform;
 using SpaceSurvivalGame.Rendering;
 
 namespace SpaceSurvivalGame;
@@ -22,6 +23,8 @@ public class MainGame : Game
     private PhysicsWorld _physicsWorld;
     private World _world;
     private Camera _camera;
+    private ShipConfig _shipConfig;
+    private CameraConfig _cameraConfig;
     private System.Numerics.Vector2 _shipSpawnPositionMeters;
     private KeyboardState _previousKeyboardState;
     private Point _previousMousePosition;
@@ -52,13 +55,18 @@ public class MainGame : Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
         var shipConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "ship-config.json");
-        var shipConfig = ShipConfig.Load(shipConfigPath);
+        _shipConfig = ShipConfig.Load(shipConfigPath);
+
+        var cameraConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "camera-config.json");
+        _cameraConfig = CameraConfig.Load(cameraConfigPath);
 
         var worldConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "world-config.json");
         var worldConfig = WorldConfig.Load(worldConfigPath);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
-        ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, shipConfig);
+        _camera.PositionMeters = _shipSpawnPositionMeters;
+        _camera.TargetPositionMeters = _shipSpawnPositionMeters;
+        ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _shipConfig);
         Starfield.Create(_world, GraphicsDevice, _shipSpawnPositionMeters, halfExtentMeters: 20f, starCount: 400);
         AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig);
     }
@@ -74,33 +82,87 @@ public class MainGame : Game
             ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
 
         var mouse = Mouse.GetState();
+        var mousePosition = mouse.Position;
+
+        // True OS-level cursor confinement (Win32 ClipCursor) rather than a software clamp —
+        // clamping after the fact still lets a fast mouse movement's raw position genuinely
+        // leave the window for a frame, which can defocus the game or click into whatever's
+        // behind it. Only while focused; release the clip when not, so alt-tabbing away
+        // doesn't leave the OS cursor stuck to a window that no longer has focus.
+        if (IsActive)
+        {
+            IsMouseVisible = false;
+            WindowsCursorLock.Lock(Window.ClientBounds);
+        }
+        else
+        {
+            IsMouseVisible = true;
+            WindowsCursorLock.Release();
+        }
 
         // Keyboard/mouse and controller are mutually exclusive: whichever one
         // produced input this frame becomes (or stays) active, and the other is
         // ignored entirely until it's the one being used.
         if (IsControllerInputActive(gamePad))
             _useController = true;
-        else if (IsKeyboardMouseInputActive(keyboard, mouse, _previousMousePosition))
+        else if (IsKeyboardMouseInputActive(keyboard, mouse, mousePosition, _previousMousePosition))
             _useController = false;
 
-        IsMouseVisible = !_useController;
+        // The cursor's direction from the ship's on-screen position — used both as a mouse
+        // facing override (while LMB is held, mirroring the right stick) and for the camera
+        // look-ahead below. Uses last frame's synced Transform (one frame stale, imperceptible).
+        // Only while focused — unfocused input shouldn't affect facing/camera at all.
+        System.Numerics.Vector2? cursorDirectionFromShip = null;
+        if (IsActive && !_useController && CameraFollowSystem.TryGetShipPositionMeters(_world, out var shipPositionForAim))
+        {
+            var shipScreenPixels = _camera.WorldToScreen(shipPositionForAim).ToNumerics();
+            var cursorScreenPixels = new System.Numerics.Vector2(mousePosition.X, mousePosition.Y);
+            cursorDirectionFromShip = cursorScreenPixels - shipScreenPixels;
+        }
+
+        var mouseFacingDirection = mouse.LeftButton == ButtonState.Pressed ? cursorDirectionFromShip : null;
 
         var deltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        ShipInputSystem.Run(_world, keyboard, gamePad, _useController, deltaSeconds);
+        ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds);
         _physicsWorld.Step(deltaSeconds);
         SpeedCapSystem.Run(_world);
         PhysicsSyncSystem.Run(_world);
-        CameraFollowSystem.Run(_world, _camera);
+
+        // Camera casts out toward wherever the aim input points, not the ship's facing
+        // (which lags behind at a capped turn rate): the right stick's own direction in
+        // controller mode; in mouse mode, a point MouseFocusRatio of the way from the
+        // ship's on-screen position to the cursor's.
+        System.Numerics.Vector2 lookAheadOffsetMeters;
+        if (_useController)
+        {
+            var rightStick = new System.Numerics.Vector2(gamePad.ThumbSticks.Right.X, -gamePad.ThumbSticks.Right.Y);
+            if (rightStick.LengthSquared() > 1f) rightStick = System.Numerics.Vector2.Normalize(rightStick);
+            lookAheadOffsetMeters = rightStick * _cameraConfig.MaxDistanceMeters;
+        }
+        else if (cursorDirectionFromShip.HasValue)
+        {
+            lookAheadOffsetMeters = PhysicsWorld.PixelsToMeters(cursorDirectionFromShip.Value * _cameraConfig.MouseFocusRatio);
+        }
+        else
+        {
+            lookAheadOffsetMeters = System.Numerics.Vector2.Zero;
+        }
+
+        // Tweening only applies in controller mode; mouse aiming snaps straight to target
+        // since the mouse's own movement is already the direct input, and easing on top of
+        // that felt disconnected from the cursor.
+        var cameraSmoothingSpeed = _useController ? _cameraConfig.TweenSpeed : 0f;
+        CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, cameraSmoothingSpeed);
 
         _previousKeyboardState = keyboard;
-        _previousMousePosition = mouse.Position;
+        _previousMousePosition = mousePosition;
         base.Update(gameTime);
     }
 
-    private static bool IsKeyboardMouseInputActive(KeyboardState keyboard, MouseState mouse, Point previousMousePosition)
+    private static bool IsKeyboardMouseInputActive(KeyboardState keyboard, MouseState mouse, Point mousePosition, Point previousMousePosition)
     {
         return keyboard.GetPressedKeys().Length > 0
-               || mouse.Position != previousMousePosition
+               || mousePosition != previousMousePosition
                || mouse.LeftButton == ButtonState.Pressed
                || mouse.RightButton == ButtonState.Pressed
                || mouse.MiddleButton == ButtonState.Pressed;
@@ -143,6 +205,7 @@ public class MainGame : Game
 
     protected override void UnloadContent()
     {
+        WindowsCursorLock.Release();
         _world.Query(in SpriteQuery, (ref Sprite sprite) => sprite.Texture.Dispose());
         World.Destroy(_world);
         _physicsWorld.Dispose();

@@ -26,7 +26,7 @@ public static class ShipEntity
         var box = B2Api.b2MakeBox(halfExtent, halfExtent);
         B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in box);
 
-        var texture = ProceduralTextures.CreateRightFacingTriangle(graphicsDevice, config.SpriteSize, Microsoft.Xna.Framework.Color.White);
+        var texture = ProceduralTextures.CreateRightFacingTriangle(graphicsDevice, config.SpriteSize, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.Red);
 
         return world.Create(
             new PhysicsBody { BodyId = bodyId },

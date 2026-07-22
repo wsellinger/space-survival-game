@@ -20,6 +20,12 @@ public class MainGame : Game
 
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
+#if DEBUG
+    private SpriteFont _debugFont;
+    private float _fpsTimerSeconds;
+    private int _fpsFrameCount;
+    private int _fps;
+#endif
     private PhysicsWorld _physicsWorld;
     private World _world;
     private Camera _camera;
@@ -53,6 +59,9 @@ public class MainGame : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
+#if DEBUG
+        _debugFont = Content.Load<SpriteFont>("Fonts/DebugFont");
+#endif
 
         var shipConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "ship-config.json");
         _shipConfig = ShipConfig.Load(shipConfigPath);
@@ -133,6 +142,18 @@ public class MainGame : Game
         var mouseFacingDirection = mouse.LeftButton == ButtonState.Pressed ? cursorDirectionFromShip : null;
 
         var deltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+#if DEBUG
+        _fpsFrameCount++;
+        _fpsTimerSeconds += deltaSeconds;
+        if (_fpsTimerSeconds >= 1f)
+        {
+            _fps = _fpsFrameCount;
+            _fpsFrameCount = 0;
+            _fpsTimerSeconds -= 1f;
+        }
+#endif
+
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds);
         _physicsWorld.Step(deltaSeconds);
         SpeedCapSystem.Run(_world);
@@ -207,6 +228,13 @@ public class MainGame : Game
         _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
         _spriteBatch.End();
+
+#if DEBUG
+        // Separate screen-space pass (no camera transform) for UI/debug text.
+        _spriteBatch.Begin();
+        _spriteBatch.DrawString(_debugFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
+        _spriteBatch.End();
+#endif
 
         base.Draw(gameTime);
     }

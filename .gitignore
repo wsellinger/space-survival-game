@@ -4,6 +4,9 @@ obj/
 *.user
 *.suo
 
+## Published standalone builds
+Build/
+
 ## Visual Studio / Rider / VS Code
 .vs/
 .idea/

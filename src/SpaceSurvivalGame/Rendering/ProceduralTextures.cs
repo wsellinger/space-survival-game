@@ -100,4 +100,49 @@ public static class ProceduralTextures
         texture.SetData(data);
         return texture;
     }
+
+    /// <summary>
+    /// Fills a size x size square with the polygon described by unitVertices — points
+    /// given in a -1..1 local space around the texture's center, e.g. for an irregular
+    /// rock shape. Vertices must be in angular order around the center (a "star-shaped"
+    /// polygon relative to it) so the shape is simple even if concave; this method doesn't
+    /// itself require convexity.
+    /// </summary>
+    public static Texture2D CreatePolygon(GraphicsDevice graphicsDevice, int size, Color color, Vector2[] unitVertices)
+    {
+        var data = new Color[size * size];
+        var center = new Vector2(size / 2f, size / 2f);
+        var scale = size / 2f;
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var localPoint = (point - center) / scale;
+                data[y * size + x] = IsInsidePolygon(localPoint, unitVertices) ? color : Color.Transparent;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
+    private static bool IsInsidePolygon(Vector2 point, Vector2[] vertices)
+    {
+        var inside = false;
+        for (int i = 0, j = vertices.Length - 1; i < vertices.Length; j = i++)
+        {
+            var a = vertices[i];
+            var b = vertices[j];
+            if ((a.Y > point.Y) != (b.Y > point.Y) &&
+                point.X < (b.X - a.X) * (point.Y - a.Y) / (b.Y - a.Y) + a.X)
+            {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
 }

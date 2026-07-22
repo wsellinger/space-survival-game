@@ -22,9 +22,21 @@ public static class ShipEntity
 
         var shapeDef = B2Api.b2DefaultShapeDef();
         shapeDef.density = 1f;
-        var halfExtent = PhysicsWorld.PixelsToMeters(config.SpriteSize / 2f);
-        var box = B2Api.b2MakeBox(halfExtent, halfExtent);
-        B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in box);
+
+        // Matches ProceduralTextures.CreateRightFacingTriangle's vertex layout (tip at
+        // (size-1, size/2), tail corners at (0,0)/(0,size-1)) relative to the sprite's
+        // center — same center RenderSystem uses as the rotation origin — so the collider
+        // actually matches the visible triangle instead of a bounding box around it.
+        var halfSize = config.SpriteSize / 2f;
+        var trianglePointsMeters = new[]
+        {
+            PhysicsWorld.PixelsToMeters(new Vector2(halfSize - 1f, 0f)),
+            PhysicsWorld.PixelsToMeters(new Vector2(-halfSize, -halfSize)),
+            PhysicsWorld.PixelsToMeters(new Vector2(-halfSize, halfSize - 1f))
+        };
+        var hull = B2Api.b2ComputeHull(trianglePointsMeters, trianglePointsMeters.Length);
+        var triangle = B2Api.b2MakePolygon(hull, 0f);
+        B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in triangle);
 
         var texture = ProceduralTextures.CreateRightFacingTriangle(graphicsDevice, config.SpriteSize, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.Red);
 

@@ -18,16 +18,34 @@ namespace SpaceSurvivalGame.ECS;
 /// Every asteroid starts with a small random drift velocity and bounces off
 /// others on contact. Density is a fixed value from config (not tied to the
 /// ship at runtime), same for every asteroid, so mass just scales with area.
+///
+/// Asteroids pick from a small shared set of irregular rock shapes (not a
+/// unique shape per asteroid — keeps texture count and per-asteroid generation
+/// cost down) at whatever radius that instance rolled; the Box2D shape is the
+/// convex hull of the same points, so physics roughly matches what's drawn.
 /// </summary>
 public static class AsteroidField
 {
-    private const int BaseCircleTextureSize = 64;
+    private const int BaseShapeTextureSize = 64;
     private const int MaxPlacementAttempts = 30;
+    private const int ShapeVariantCount = 6;
+    private const int MinVerticesPerShape = 6;
+    private const int MaxVerticesPerShape = 8; // Box2D polygons cap out at 8 vertices
+    private const float MinVertexRadiusFactor = 0.65f; // how "jagged" the rocks look; 1 = perfect circle
 
     public static void Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 centerMeters, WorldConfig config)
     {
         var random = new Random(config.WorldSeed);
-        var texture = ProceduralTextures.CreateCircle(graphicsDevice, BaseCircleTextureSize, Microsoft.Xna.Framework.Color.Gray);
+
+        var shapeVariants = new Vector2[ShapeVariantCount][];
+        var shapeTextures = new Texture2D[ShapeVariantCount];
+        for (var v = 0; v < ShapeVariantCount; v++)
+        {
+            shapeVariants[v] = GenerateRockShape(random);
+            var xnaVertices = new Microsoft.Xna.Framework.Vector2[shapeVariants[v].Length];
+            for (var p = 0; p < xnaVertices.Length; p++) xnaVertices[p] = shapeVariants[v][p].ToXna();
+            shapeTextures[v] = ProceduralTextures.CreatePolygon(graphicsDevice, BaseShapeTextureSize, Microsoft.Xna.Framework.Color.Gray, xnaVertices);
+        }
 
         // Cell size = the largest possible sum-of-radii between any two asteroids,
         // which is the standard correctness condition for checking only the 3x3
@@ -56,24 +74,53 @@ public static class AsteroidField
 
             var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
 
+            var variantIndex = random.Next(ShapeVariantCount);
+            var unitVertices = shapeVariants[variantIndex];
+            var points = new Vector2[unitVertices.Length];
+            for (var p = 0; p < unitVertices.Length; p++) points[p] = unitVertices[p] * radiusMeters;
+
             var shapeDef = B2Api.b2DefaultShapeDef();
             shapeDef.density = config.AsteroidMaterialDensity;
             shapeDef.material.restitution = config.AsteroidRestitution;
-            var circle = new b2Circle(Vector2.Zero, radiusMeters);
-            B2Api.b2CreateCircleShape(bodyId, in shapeDef, in circle);
+            var hull = B2Api.b2ComputeHull(points, points.Length);
+            var polygon = B2Api.b2MakePolygon(hull, 0f);
+            B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);
 
-            // BaseCircleTextureSize pixels at scale 1 would be BaseCircleTextureSize px across;
+            // BaseShapeTextureSize pixels at scale 1 would be BaseShapeTextureSize px across;
             // we want it to actually measure 2*radiusMeters in world space.
             var desiredDiameterPixels = PhysicsWorld.MetersToPixels(radiusMeters * 2f);
-            var scale = desiredDiameterPixels / BaseCircleTextureSize;
+            var scale = desiredDiameterPixels / BaseShapeTextureSize;
 
             world.Create(
                 new PhysicsBody { BodyId = bodyId },
                 new Transform { PositionMeters = positionMeters, RotationRadians = 0f },
                 new Velocity(),
-                new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.Gray, Size = BaseCircleTextureSize, Scale = scale },
+                new Sprite { Texture = shapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.Gray, Size = BaseShapeTextureSize, Scale = scale },
                 new Asteroid { RadiusMeters = radiusMeters });
         }
+    }
+
+    /// <summary>
+    /// An irregular, star-shaped-around-center polygon in unit (-1..1) space: vertices at
+    /// evenly-spaced angles with per-vertex radius and angle jitter. Jitter is kept below
+    /// half the angle step so vertices stay in angular order — guarantees a simple polygon
+    /// (possibly concave) rather than one with self-intersecting edges.
+    /// </summary>
+    private static Vector2[] GenerateRockShape(Random random)
+    {
+        var vertexCount = random.Next(MinVerticesPerShape, MaxVerticesPerShape + 1);
+        var vertices = new Vector2[vertexCount];
+        var angleStep = MathF.PI * 2f / vertexCount;
+
+        for (var i = 0; i < vertexCount; i++)
+        {
+            var angleJitter = ((float)random.NextDouble() * 2f - 1f) * (angleStep * 0.4f);
+            var angle = i * angleStep + angleJitter;
+            var radius = MinVertexRadiusFactor + (float)random.NextDouble() * (1f - MinVertexRadiusFactor);
+            vertices[i] = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
+        }
+
+        return vertices;
     }
 
     private static bool TryFindPosition(Random random, SpatialGrid grid, Vector2 centerMeters, WorldConfig config, out Vector2 positionMeters, out float radiusMeters)

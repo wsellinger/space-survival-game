@@ -44,6 +44,8 @@ public class MainGame : Game
     private KeyboardState _previousKeyboardState;
     private Point _previousMousePosition;
     private bool _useController;
+    private bool _isFirstUpdate = true;
+    private bool _hasReceivedInput;
 
     public MainGame()
     {
@@ -130,12 +132,31 @@ public class MainGame : Game
         var mouse = Mouse.GetState();
         var mousePosition = mouse.Position;
 
+        // The OS can place the cursor anywhere at launch, and _previousMousePosition starts
+        // at (0,0) — without this, frame one would almost always read as "the mouse moved",
+        // spuriously flipping into mouse mode before the player has touched anything.
+        if (_isFirstUpdate)
+        {
+            _previousMousePosition = mousePosition;
+            _isFirstUpdate = false;
+        }
+
+        // Don't lock the cursor or react to the mouse at all until the window has actually
+        // been focused and used at least once — otherwise we'd start locking/steering the
+        // camera from wherever the OS happens to place the cursor before the player's done
+        // anything, which reads as a spurious jump/lock right at startup.
+        if (!_hasReceivedInput && IsActive &&
+            (IsControllerInputActive(gamePad) || IsKeyboardMouseInputActive(keyboard, mouse, mousePosition, _previousMousePosition)))
+        {
+            _hasReceivedInput = true;
+        }
+
         // True OS-level cursor confinement (Win32 ClipCursor) rather than a software clamp —
         // clamping after the fact still lets a fast mouse movement's raw position genuinely
         // leave the window for a frame, which can defocus the game or click into whatever's
         // behind it. Only while focused; release the clip when not, so alt-tabbing away
         // doesn't leave the OS cursor stuck to a window that no longer has focus.
-        if (IsActive)
+        if (_hasReceivedInput && IsActive)
         {
             IsMouseVisible = false;
             WindowsCursorLock.Lock(Window.ClientBounds);
@@ -159,7 +180,7 @@ public class MainGame : Game
         // look-ahead below. Uses last frame's synced Transform (one frame stale, imperceptible).
         // Only while focused — unfocused input shouldn't affect facing/camera at all.
         System.Numerics.Vector2? cursorDirectionFromShip = null;
-        if (IsActive && !_useController && CameraFollowSystem.TryGetShipPositionMeters(_world, out var shipPositionForAim))
+        if (_hasReceivedInput && IsActive && !_useController && CameraFollowSystem.TryGetShipPositionMeters(_world, out var shipPositionForAim))
         {
             var shipScreenPixels = _camera.WorldToScreen(shipPositionForAim).ToNumerics();
             var cursorScreenPixels = new System.Numerics.Vector2(mousePosition.X, mousePosition.Y);

@@ -33,8 +33,13 @@ public class MainGame : Game
     private CameraConfig _cameraConfig;
     private PlayerConfig _playerConfig;
     private HudConfig _hudConfig;
+    private ParticleConfig _particleConfig;
+    private HitFlashConfig _hitFlashConfig;
+    private ScreenShakeConfig _screenShakeConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
+    private Texture2D _sparkTexture;
+    private readonly Random _random = new();
     private System.Numerics.Vector2 _shipSpawnPositionMeters;
     private KeyboardState _previousKeyboardState;
     private Point _previousMousePosition;
@@ -87,6 +92,15 @@ public class MainGame : Game
         var barCornerRadius = _hudConfig.BarThicknessPixels / 2f;
         _hudBarFillTexture = ProceduralTextures.CreateRoundedRect(GraphicsDevice, _hudConfig.BarLengthPixels, _hudConfig.BarThicknessPixels, barCornerRadius, Microsoft.Xna.Framework.Color.White);
         _hudBarOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, _hudConfig.BarLengthPixels, _hudConfig.BarThicknessPixels, barCornerRadius, _hudConfig.BarOutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
+        var particleConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "particle-config.json");
+        _particleConfig = ParticleConfig.Load(particleConfigPath);
+        _sparkTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _particleConfig.SparkTextureSizePixels, Microsoft.Xna.Framework.Color.White);
+
+        var hitFlashConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hit-flash-config.json");
+        _hitFlashConfig = HitFlashConfig.Load(hitFlashConfigPath);
+
+        var screenShakeConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-shake-config.json");
+        _screenShakeConfig = ScreenShakeConfig.Load(screenShakeConfigPath);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
@@ -169,8 +183,10 @@ public class MainGame : Game
 
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds);
         _physicsWorld.Step(deltaSeconds);
-        CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig); // must read hit events before the next Step overwrites them
+        CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig); // must read hit events before the next Step overwrites them
         VitalsSystem.Run(_world, deltaSeconds, _playerConfig);
+        ParticleSystem.Run(_world, deltaSeconds);
+        HitFlashSystem.Run(_world, deltaSeconds, _hitFlashConfig);
         SpeedCapSystem.Run(_world);
         PhysicsSyncSystem.Run(_world);
 
@@ -199,6 +215,7 @@ public class MainGame : Game
         // that felt disconnected from the cursor.
         var cameraSmoothingSpeed = _useController ? _cameraConfig.TweenSpeed : 0f;
         CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, cameraSmoothingSpeed);
+        _camera.UpdateShake(deltaSeconds, _screenShakeConfig.ShakeDecaySpeed);
 
         _previousKeyboardState = keyboard;
         _previousMousePosition = mousePosition;
@@ -263,6 +280,7 @@ public class MainGame : Game
         _world.Query(in SpriteQuery, (ref Sprite sprite) => sprite.Texture.Dispose());
         _hudBarFillTexture.Dispose();
         _hudBarOutlineTexture.Dispose();
+        _sparkTexture.Dispose();
         World.Destroy(_world);
         _physicsWorld.Dispose();
         base.UnloadContent();

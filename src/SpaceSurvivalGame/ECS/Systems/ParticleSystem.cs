@@ -31,4 +31,12 @@ public static class ParticleSystem
 
         foreach (var entity in expired) world.Destroy(entity);
     }
+
+    /// <summary>Destroys every live particle entity immediately, regardless of remaining lifetime — used on Restart so leftover explosion sparks/ship fragments from the previous life don't carry over (their shared textures are owned elsewhere and aren't affected).</summary>
+    public static void Clear(World world)
+    {
+        var toDestroy = new List<Entity>();
+        world.Query(in Query, (Entity entity, ref Particle particle) => toDestroy.Add(entity));
+        foreach (var entity in toDestroy) world.Destroy(entity);
+    }
 }

@@ -11,10 +11,19 @@ namespace SpaceSurvivalGame.Configuration;
 /// </summary>
 public class DeathSequenceConfig
 {
-    // How many times ParticleEffects.SpawnSparkBurst fires at the ship's position (each burst
-    // is ParticleConfig.SparkCountMin-Max particles) — repurposes the collision-spark effect
-    // into a bigger one-off explosion.
+    // How many times ParticleEffects.SpawnExplosionBurst fires at the ship's position (each
+    // burst is ExplosionSparkCountMin-Max particles).
     public int ExplosionBurstCount { get; set; } = 5;
+
+    // Independent from ParticleConfig's collision-tap sparks, so the death explosion can be
+    // made bigger/longer-lived without changing how ordinary hits look.
+    public int ExplosionSparkCountMin { get; set; } = 8;
+    public int ExplosionSparkCountMax { get; set; } = 14;
+    public float ExplosionSparkSpeedMinMetersPerSecond { get; set; } = 1.5f;
+    public float ExplosionSparkSpeedMaxMetersPerSecond { get; set; } = 4f;
+    public float ExplosionSparkLifetimeMinSeconds { get; set; } = 0.2f;
+    public float ExplosionSparkLifetimeMaxSeconds { get; set; } = 0.45f;
+    public int ExplosionSparkSizePixels { get; set; } = 6;
 
     // Delay from the moment of death until the screen starts fading to black (during which
     // the explosion/fragments play out).

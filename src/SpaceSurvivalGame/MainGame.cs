@@ -226,6 +226,7 @@ public class MainGame : Game
                 if (_gameState == GameState.GameOver)
                 {
                     ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
+                    ParticleSystem.Clear(_world); // no leftover explosion sparks/ship fragments carrying over from the previous life
                     _camera.PositionMeters = _shipSpawnPositionMeters;
                     _camera.TargetPositionMeters = _shipSpawnPositionMeters;
                 }
@@ -265,7 +266,10 @@ public class MainGame : Game
         }
 
         if (keyboard.IsKeyDown(Keys.R) && !_previousKeyboardState.IsKeyDown(Keys.R))
+        {
             ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
+            ParticleSystem.Clear(_world);
+        }
 
         var mousePosition = mouse.Position;
 
@@ -348,7 +352,7 @@ public class MainGame : Game
         if (shipHealth <= 0f && CameraFollowSystem.TryGetShipPositionMeters(_world, out var deathPositionMeters))
         {
             for (var i = 0; i < _deathSequenceConfig.ExplosionBurstCount; i++)
-                ParticleEffects.SpawnSparkBurst(_world, _sparkTexture, deathPositionMeters, _random, _particleConfig);
+                ParticleEffects.SpawnExplosionBurst(_world, _sparkTexture, deathPositionMeters, _random, _deathSequenceConfig);
 
             // Read the Box2D body directly rather than the ECS Velocity component — PhysicsSyncSystem
             // (which mirrors Box2D into Velocity) hasn't run yet this frame, so Velocity would still

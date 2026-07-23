@@ -1,5 +1,12 @@
 {
   "ExplosionBurstCount": 10,
+  "ExplosionSparkCountMin": 8,
+  "ExplosionSparkCountMax": 14,
+  "ExplosionSparkSpeedMinMetersPerSecond": 1.5,
+  "ExplosionSparkSpeedMaxMetersPerSecond": 4,
+  "ExplosionSparkLifetimeMinSeconds": 1.0,
+  "ExplosionSparkLifetimeMaxSeconds": 2.0,
+  "ExplosionSparkSizePixels": 6,
   "FadeDelaySeconds": 0.5,
   "FadeDurationSeconds": 1.5,
   "ShipFragmentCount": 5,

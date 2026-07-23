@@ -61,16 +61,17 @@ public static class ShipEntity
             new HealthBarFeedback(),
             new Suffocation { ElapsedSeconds = 0f },
             new Damaging(),
+            new EngineThrottle { Current = 0f },
             new PlayerControlled());
     }
 
     private static readonly QueryDescription RespawnQuery =
-        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, HitFlash, HealthBarFeedback, Suffocation, Sprite>();
+        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, HitFlash, HealthBarFeedback, Suffocation, Sprite, EngineThrottle>();
 
     public static void Respawn(World world, Vector2 positionMeters)
     {
         world.Query(in RespawnQuery, (ref PhysicsBody physicsBody, ref Health health, ref Oxygen oxygen, ref HitFlash hitFlash,
-            ref HealthBarFeedback healthBarFeedback, ref Suffocation suffocation, ref Sprite sprite) =>
+            ref HealthBarFeedback healthBarFeedback, ref Suffocation suffocation, ref Sprite sprite, ref EngineThrottle throttle) =>
         {
             var bodyId = physicsBody.BodyId;
             B2Api.b2Body_SetTransform(bodyId, positionMeters, b2Rot.FromAngle(0f));
@@ -82,14 +83,19 @@ public static class ShipEntity
             healthBarFeedback = new HealthBarFeedback();
             suffocation.ElapsedSeconds = 0f;
             sprite.Color = Microsoft.Xna.Framework.Color.White; // undo the hide-on-death from the collision death sequence
+            throttle.Current = 0f;
         });
     }
 
-    private static readonly QueryDescription HideQuery = new QueryDescription().WithAll<PlayerControlled, Sprite>();
+    private static readonly QueryDescription HideQuery = new QueryDescription().WithAll<PlayerControlled, Sprite, EngineThrottle>();
 
-    /// <summary>Hides the ship's own sprite in favor of ShipFragments' debris, for the collision death sequence.</summary>
+    /// <summary>Hides the ship's own sprite (in favor of ShipFragments' debris) and kills its engine throttle so EngineJetRenderer stops drawing a flame with no ship attached to it, for the collision death sequence.</summary>
     public static void Hide(World world)
     {
-        world.Query(in HideQuery, (ref Sprite sprite) => sprite.Color = Microsoft.Xna.Framework.Color.Transparent);
+        world.Query(in HideQuery, (ref Sprite sprite, ref EngineThrottle throttle) =>
+        {
+            sprite.Color = Microsoft.Xna.Framework.Color.Transparent;
+            throttle.Current = 0f;
+        });
     }
 }

@@ -1,0 +1,20 @@
+{
+  "KeyboardThrottleEaseSpeed": 4,
+  "FlameTextureSizePixels": 16,
+  "MinFlameLengthPixels": 6,
+  "MaxFlameLengthPixels": 16,
+  "MinFlameWidthPixels": 2,
+  "MaxFlameWidthPixels": 8,
+  "ColorR": 255,
+  "ColorG": 108,
+  "ColorB": 79,
+  "MinInnerFlameLengthPixels": 3,
+  "MaxInnerFlameLengthPixels": 7,
+  "MinInnerFlameWidthPixels": 1,
+  "MaxInnerFlameWidthPixels": 6,
+  "InnerColorR": 255,
+  "InnerColorG": 164,
+  "InnerColorB": 145,
+  "FlickerSpeedHz": 14,
+  "FlickerIntensity": 0.3
+}

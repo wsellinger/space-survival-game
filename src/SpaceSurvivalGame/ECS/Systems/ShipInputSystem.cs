@@ -3,6 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Box2dNet.Interop;
 using Microsoft.Xna.Framework.Input;
+using SpaceSurvivalGame.Configuration;
 using SpaceSurvivalGame.ECS.Components;
 
 namespace SpaceSurvivalGame.ECS.Systems;
@@ -19,15 +20,18 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// direction otherwise. Thrust acceleration is facing-agnostic — same
 /// magnitude regardless of which way the ship is pointed relative to its
 /// velocity; SpeedCapSystem enforces a flat top speed on top of this.
+/// Also maintains EngineThrottle (0-1, drives the exhaust flame drawn by
+/// EngineJetRenderer): the raw left-stick magnitude for controller input, or an
+/// eased ramp toward 0/1 for keyboard's inherently on-off input.
 /// </summary>
 public static class ShipInputSystem
 {
     private static readonly QueryDescription Query =
-        new QueryDescription().WithAll<PhysicsBody, ShipMovement, PlayerControlled>();
+        new QueryDescription().WithAll<PhysicsBody, ShipMovement, EngineThrottle, PlayerControlled>();
 
-    public static void Run(World world, KeyboardState keyboard, GamePadState gamePad, bool useController, Vector2? mouseFacingDirection, float deltaSeconds)
+    public static void Run(World world, KeyboardState keyboard, GamePadState gamePad, bool useController, Vector2? mouseFacingDirection, float deltaSeconds, EngineConfig engineConfig)
     {
-        world.Query(in Query, (ref PhysicsBody physicsBody, ref ShipMovement movement) =>
+        world.Query(in Query, (ref PhysicsBody physicsBody, ref ShipMovement movement, ref EngineThrottle throttle) =>
         {
             var bodyId = physicsBody.BodyId;
 
@@ -40,6 +44,7 @@ public static class ShipInputSystem
                 var leftStick = gamePad.ThumbSticks.Left;
                 direction = new Vector2(leftStick.X, -leftStick.Y);
                 if (direction.LengthSquared() > 1f) direction = Vector2.Normalize(direction);
+                throttle.Current = direction.Length();
 
                 var rightStick = gamePad.ThumbSticks.Right;
                 if (rightStick.LengthSquared() > 0f)
@@ -54,6 +59,10 @@ public static class ShipInputSystem
                 if (keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.Left)) direction += new Vector2(-1, 0);
                 if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right)) direction += new Vector2(1, 0);
                 if (direction != Vector2.Zero) direction = Vector2.Normalize(direction);
+
+                var targetThrottle = direction != Vector2.Zero ? 1f : 0f;
+                var maxStep = engineConfig.KeyboardThrottleEaseSpeed * deltaSeconds;
+                throttle.Current += Math.Clamp(targetThrottle - throttle.Current, -maxStep, maxStep);
 
                 if (mouseFacingDirection.HasValue)
                     facingDirection = mouseFacingDirection.Value;

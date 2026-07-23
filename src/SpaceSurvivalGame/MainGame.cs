@@ -59,6 +59,8 @@ public class MainGame : Game
     private Texture2D _screenWarningOutlineTexture;
     private Texture2D _screenWarningVignetteTexture;
     private Texture2D[] _shipFragmentTextures;
+    private EngineConfig _engineConfig;
+    private Texture2D _flameTexture;
     private Texture2D _sparkTexture;
     private RenderTarget2D _sceneRenderTarget;
     private Effect _suffocationEffect;
@@ -150,6 +152,12 @@ public class MainGame : Game
         _screenWarningOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, WindowWidth, WindowHeight, 0f, _screenWarningConfig.OutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
         _screenWarningVignetteTexture = ProceduralTextures.CreateEdgeVignette(GraphicsDevice, WindowWidth, WindowHeight, _screenWarningConfig.VignetteDepthPixels, Microsoft.Xna.Framework.Color.White);
         _shipFragmentTextures = ShipFragments.CreateFragmentTextures(GraphicsDevice, _random);
+
+        var engineConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "engine-config.json");
+        _engineConfig = EngineConfig.Load(engineConfigPath);
+        // Baked white and tinted per-layer at draw time (see EngineJetRenderer) — shared by
+        // both the outer and inner flame layers, which have independent colors.
+        _flameTexture = ProceduralTextures.CreateRightFacingTriangle(GraphicsDevice, _engineConfig.FlameTextureSizePixels, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.White);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
@@ -324,7 +332,7 @@ public class MainGame : Game
         }
 #endif
 
-        ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds);
+        ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds, _engineConfig);
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
 
@@ -449,6 +457,7 @@ public class MainGame : Game
         // crisp edges instead of blurring when magnified/minified.
         _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
+        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds);
         _spriteBatch.End();
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
@@ -529,6 +538,7 @@ public class MainGame : Game
         _screenWarningOutlineTexture.Dispose();
         _screenWarningVignetteTexture.Dispose();
         foreach (var texture in _shipFragmentTextures) texture.Dispose();
+        _flameTexture.Dispose();
         _sparkTexture.Dispose();
         _buttonFillTexture.Dispose();
         _buttonOutlineTexture.Dispose();

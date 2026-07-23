@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame;
+namespace SpaceSurvivalGame.Config;
 
 /// <summary>
 /// Tunable collision spark burst values, loaded from a JSON file next to the executable

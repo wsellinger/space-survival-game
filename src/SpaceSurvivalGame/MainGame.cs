@@ -11,6 +11,8 @@ using SpaceSurvivalGame.Physics;
 using SpaceSurvivalGame.Platform;
 using SpaceSurvivalGame.Rendering;
 
+using SpaceSurvivalGame.Config;
+
 namespace SpaceSurvivalGame;
 
 public class MainGame : Game

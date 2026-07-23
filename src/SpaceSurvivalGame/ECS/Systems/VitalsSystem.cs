@@ -1,6 +1,8 @@
 using Arch.Core;
 using SpaceSurvivalGame.ECS.Components;
 
+using SpaceSurvivalGame.Config;
+
 namespace SpaceSurvivalGame.ECS.Systems;
 
 /// <summary>

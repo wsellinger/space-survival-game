@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame;
+namespace SpaceSurvivalGame.Config;
 
 /// <summary>
 /// Tunable suffocation post-process values, loaded from a JSON file next to the executable

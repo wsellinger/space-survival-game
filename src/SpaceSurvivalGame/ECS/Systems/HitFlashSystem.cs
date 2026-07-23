@@ -2,6 +2,8 @@ using Arch.Core;
 using Microsoft.Xna.Framework;
 using SpaceSurvivalGame.ECS.Components;
 
+using SpaceSurvivalGame.Config;
+
 namespace SpaceSurvivalGame.ECS.Systems;
 
 /// <summary>Fades the ship's Sprite.Color from red back to white as HitFlash.RemainingSeconds counts down, reset to full by CollisionDamageSystem on each hit.</summary>

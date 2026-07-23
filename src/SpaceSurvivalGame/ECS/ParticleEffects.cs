@@ -4,6 +4,8 @@ using Arch.Core;
 using Microsoft.Xna.Framework.Graphics;
 using SpaceSurvivalGame.ECS.Components;
 
+using SpaceSurvivalGame.Config;
+
 namespace SpaceSurvivalGame.ECS;
 
 /// <summary>Spawns short-lived, physics-free spark particles at a world position, e.g. for collision impact or pickup-collection feedback.</summary>

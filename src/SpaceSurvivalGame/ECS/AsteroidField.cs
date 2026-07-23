@@ -8,6 +8,8 @@ using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.Physics;
 using SpaceSurvivalGame.Rendering;
 
+using SpaceSurvivalGame.Config;
+
 namespace SpaceSurvivalGame.ECS;
 
 /// <summary>

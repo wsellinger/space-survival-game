@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame;
+namespace SpaceSurvivalGame.Config;
 
 /// <summary>
 /// Tunable asteroid field values, loaded from a JSON file next to the executable

@@ -6,6 +6,8 @@ using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.Physics;
 using SpaceSurvivalGame.Rendering;
 
+using SpaceSurvivalGame.Config;
+
 namespace SpaceSurvivalGame.ECS;
 
 /// <summary>Creates the player ship entity and handles the one-off respawn action.</summary>

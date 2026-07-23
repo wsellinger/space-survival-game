@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame;
+namespace SpaceSurvivalGame.Config;
 
 /// <summary>
 /// Tunable screen shake values, loaded from a JSON file next to the executable so they

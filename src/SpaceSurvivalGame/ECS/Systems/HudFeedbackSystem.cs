@@ -3,6 +3,8 @@ using Arch.Core;
 using Microsoft.Xna.Framework;
 using SpaceSurvivalGame.ECS.Components;
 
+using SpaceSurvivalGame.Config;
+
 namespace SpaceSurvivalGame.ECS.Systems;
 
 /// <summary>Decays the health bar's shake magnitude and rolls a fresh jitter offset each frame; the flash fade itself is just RemainingSeconds counting down, read directly by HudRenderer.</summary>

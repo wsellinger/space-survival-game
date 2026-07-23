@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame;
+namespace SpaceSurvivalGame.Config;
 
 /// <summary>
 /// Tunable HUD bar layout values, loaded from a JSON file next to the executable

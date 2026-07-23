@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SpaceSurvivalGame.ECS.Components;
 
+using SpaceSurvivalGame.Config;
+
 namespace SpaceSurvivalGame.Rendering;
 
 /// <summary>

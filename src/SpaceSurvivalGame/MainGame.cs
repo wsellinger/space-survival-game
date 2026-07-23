@@ -255,7 +255,7 @@ public class MainGame : Game
             ShipEntity.Hide(_world); // re-assert each frame — HitFlashSystem still runs once more in the Playing frame where death triggers (after the initial Hide() call) and clobbers it back to visible
 
             _deathElapsedSeconds += dyingDeltaSeconds;
-            if (_deathElapsedSeconds >= _deathSequenceConfig.ExplosionDurationSeconds + _deathSequenceConfig.FadeDurationSeconds)
+            if (_deathElapsedSeconds >= _deathSequenceConfig.FadeDelaySeconds + _deathSequenceConfig.FadeDurationSeconds)
                 _gameState = GameState.GameOver;
 
             _previousMenuMouseState = mouse;
@@ -504,13 +504,13 @@ public class MainGame : Game
         _spriteBatch.Draw(_sceneRenderTarget, Vector2.Zero, Color.White);
         _spriteBatch.End();
 
-        // Fades to fully opaque black across Dying's ExplosionDurationSeconds..+FadeDurationSeconds
+        // Fades to fully opaque black across Dying's FadeDelaySeconds..+FadeDurationSeconds
         // window, then stays there through GameOver (elapsed is never advanced again once
         // GameOver is reached, so this keeps evaluating to 1).
         var deathFadeAlpha = 0f;
         if (_gameState == GameState.Dying || _gameState == GameState.GameOver)
         {
-            var fadeElapsed = _deathElapsedSeconds - _deathSequenceConfig.ExplosionDurationSeconds;
+            var fadeElapsed = _deathElapsedSeconds - _deathSequenceConfig.FadeDelaySeconds;
             deathFadeAlpha = _gameState == GameState.GameOver ? 1f : MathHelper.Clamp(fadeElapsed / _deathSequenceConfig.FadeDurationSeconds, 0f, 1f);
         }
 

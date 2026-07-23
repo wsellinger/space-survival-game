@@ -16,15 +16,16 @@ public class DeathSequenceConfig
     // into a bigger one-off explosion.
     public int ExplosionBurstCount { get; set; } = 5;
 
-    // How long the explosion plays before the screen starts fading to black.
-    public float ExplosionDurationSeconds { get; set; } = 1.5f;
+    // Delay from the moment of death until the screen starts fading to black (during which
+    // the explosion/fragments play out).
+    public float FadeDelaySeconds { get; set; } = 1.5f;
 
     // How long the fade to black takes once it starts.
     public float FadeDurationSeconds { get; set; } = 1.5f;
 
     // How many hull fragments the ship visibly splits into on death (its own sprite is
     // hidden for the rest of the sequence, in favor of these). Fragments live for the whole
-    // ExplosionDurationSeconds+FadeDurationSeconds, fading out right as the screen goes black.
+    // FadeDelaySeconds+FadeDurationSeconds, fading out right as the screen goes black.
     public int ShipFragmentCount { get; set; } = 3;
     public int FragmentSizePixels { get; set; } = 22;
 

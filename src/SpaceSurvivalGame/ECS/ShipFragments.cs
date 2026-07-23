@@ -33,7 +33,7 @@ public static class ShipFragments
 
     public static void SpawnDebris(World world, Texture2D[] fragmentTextures, Vector2 positionMeters, Vector2 shipVelocityMetersPerSecond, Random random, DeathSequenceConfig config)
     {
-        var lifetime = config.ExplosionDurationSeconds + config.FadeDurationSeconds;
+        var lifetime = config.FadeDelaySeconds + config.FadeDurationSeconds;
         var scale = config.FragmentSizePixels / (float)FragmentTextureSize;
 
         var shipSpeed = shipVelocityMetersPerSecond.Length();

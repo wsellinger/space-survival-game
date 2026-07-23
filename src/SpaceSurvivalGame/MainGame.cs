@@ -11,7 +11,7 @@ using SpaceSurvivalGame.Physics;
 using SpaceSurvivalGame.Platform;
 using SpaceSurvivalGame.Rendering;
 
-using SpaceSurvivalGame.Config;
+using SpaceSurvivalGame.Configuration;
 
 namespace SpaceSurvivalGame;
 
@@ -46,6 +46,7 @@ public class MainGame : Game
     private HitFlashConfig _hitFlashConfig;
     private ScreenShakeConfig _screenShakeConfig;
     private HudFeedbackConfig _hudFeedbackConfig;
+    private HealthWarningConfig _healthWarningConfig;
     private OxygenWarningConfig _oxygenWarningConfig;
     private SuffocationEffectConfig _suffocationConfig;
     private DeathSequenceConfig _deathSequenceConfig;
@@ -121,6 +122,9 @@ public class MainGame : Game
 
         var hudFeedbackConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hud-feedback-config.json");
         _hudFeedbackConfig = HudFeedbackConfig.Load(hudFeedbackConfigPath);
+
+        var healthWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "health-warning-config.json");
+        _healthWarningConfig = HealthWarningConfig.Load(healthWarningConfigPath);
 
         var oxygenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "oxygen-warning-config.json");
         _oxygenWarningConfig = OxygenWarningConfig.Load(oxygenWarningConfigPath);
@@ -422,7 +426,7 @@ public class MainGame : Game
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
         _spriteBatch.Begin();
-        HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudFeedbackConfig, _oxygenWarningConfig,
+        HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudFeedbackConfig, _healthWarningConfig, _oxygenWarningConfig,
             (float)gameTime.TotalGameTime.TotalSeconds, _hudBarFillTexture, _hudBarOutlineTexture);
 #if DEBUG
         _spriteBatch.DrawString(_uiFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);

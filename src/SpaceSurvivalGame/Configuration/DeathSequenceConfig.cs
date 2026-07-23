@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame.Config;
+namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
 /// Tunable death-sequence values (explosion, then fade to black, then the game-over screen),

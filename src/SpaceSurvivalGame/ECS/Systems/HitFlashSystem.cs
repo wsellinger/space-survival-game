@@ -2,7 +2,7 @@ using Arch.Core;
 using Microsoft.Xna.Framework;
 using SpaceSurvivalGame.ECS.Components;
 
-using SpaceSurvivalGame.Config;
+using SpaceSurvivalGame.Configuration;
 
 namespace SpaceSurvivalGame.ECS.Systems;
 

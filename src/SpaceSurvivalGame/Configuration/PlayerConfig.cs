@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame.Config;
+namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
 /// Tunable player vitals values, loaded from a JSON file next to the executable

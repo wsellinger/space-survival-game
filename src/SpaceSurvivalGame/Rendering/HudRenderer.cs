@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SpaceSurvivalGame.ECS.Components;
 
-using SpaceSurvivalGame.Config;
+using SpaceSurvivalGame.Configuration;
 
 namespace SpaceSurvivalGame.Rendering;
 
@@ -22,7 +22,7 @@ public static class HudRenderer
     private static readonly QueryDescription Query = new QueryDescription().WithAll<Health, Oxygen, HealthBarFeedback, PlayerControlled>();
 
     public static void Run(World world, SpriteBatch spriteBatch, int viewportHeight, HudConfig config, HudFeedbackConfig feedbackConfig,
-        OxygenWarningConfig oxygenWarningConfig, float totalGameSeconds, Texture2D fillTexture, Texture2D outlineTexture)
+        HealthWarningConfig healthWarningConfig, OxygenWarningConfig oxygenWarningConfig, float totalGameSeconds, Texture2D fillTexture, Texture2D outlineTexture)
     {
         world.Query(in Query, (ref Health health, ref Oxygen oxygen, ref HealthBarFeedback feedback) =>
         {
@@ -32,7 +32,15 @@ public static class HudRenderer
 
             var flashFraction = MathHelper.Clamp(feedback.RemainingSeconds / feedbackConfig.FlashDurationSeconds, 0f, 1f);
             var healthColor = Color.Lerp(Color.Red, Color.White, flashFraction);
-            DrawBar(spriteBatch, config, fillTexture, outlineTexture, healthPosition, health.Current / health.Max, healthColor, Color.White, 1f);
+
+            var healthFraction = health.Current / health.Max;
+            if (health.Current > 0f && healthFraction <= healthWarningConfig.LowHealthThresholdFraction &&
+                IsInFlashBeat(totalGameSeconds, config.WarningFlashBeatSeconds))
+            {
+                healthColor = Color.White; // the low-health blink overrides the hit-flash color during its "on" beats
+            }
+
+            DrawBar(spriteBatch, config, fillTexture, outlineTexture, healthPosition, healthFraction, healthColor, Color.White, 1f);
 
             var oxygenFraction = oxygen.Current / oxygen.Max;
             Color oxygenColor;
@@ -52,10 +60,7 @@ public static class HudRenderer
             }
             else if (oxygenFraction <= oxygenWarningConfig.LowOxygenThresholdFraction)
             {
-                // flash-off-flash-off-off-off-off: 7 equal beats, a quick double-blink (lit on
-                // beats 0 and 2) followed by a longer pause (beats 3-6).
-                var beatIndex = (int)(totalGameSeconds / oxygenWarningConfig.LowOxygenFlashBeatSeconds) % 7;
-                oxygenColor = beatIndex == 0 || beatIndex == 2 ? Color.White : Color.CornflowerBlue;
+                oxygenColor = IsInFlashBeat(totalGameSeconds, config.WarningFlashBeatSeconds) ? Color.White : Color.CornflowerBlue;
                 oxygenOutlineColor = Color.White;
             }
             else
@@ -66,6 +71,13 @@ public static class HudRenderer
 
             DrawBar(spriteBatch, config, fillTexture, outlineTexture, oxygenPosition, oxygenFraction, oxygenColor, oxygenOutlineColor, oxygenScale);
         });
+    }
+
+    /// <summary>flash-off-flash-off-off-off-off: 7 equal beats, a quick double-blink (lit on beats 0 and 2) followed by a longer pause (beats 3-6).</summary>
+    private static bool IsInFlashBeat(float totalGameSeconds, float beatSeconds)
+    {
+        var beatIndex = (int)(totalGameSeconds / beatSeconds) % 7;
+        return beatIndex == 0 || beatIndex == 2;
     }
 
     private static void DrawBar(SpriteBatch spriteBatch, HudConfig config, Texture2D fillTexture, Texture2D outlineTexture, Vector2 position,

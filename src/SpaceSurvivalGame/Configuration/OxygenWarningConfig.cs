@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame.Config;
+namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
 /// Tunable O2-bar low-oxygen warning values, loaded from a JSON file next to the executable
@@ -10,12 +10,10 @@ namespace SpaceSurvivalGame.Config;
 /// </summary>
 public class OxygenWarningConfig
 {
-    // Below this fraction of MaxOxygen (and above 0), the bar flashes in a repeating
-    // flash-flash-wait-wait-wait pattern (5 equal beats, first 2 lit).
+    // Below this fraction of MaxOxygen (and above 0), the bar blinks in a repeating
+    // flash-off-flash-off-off-off-off pattern (7 equal beats, lit on beats 0 and 2). Cadence
+    // is HudConfig.WarningFlashBeatSeconds, shared with the health bar so both blink in sync.
     public float LowOxygenThresholdFraction { get; set; } = 0.1f;
-
-    // Duration of one beat in the flash-flash-wait-wait-wait cycle.
-    public float LowOxygenFlashBeatSeconds { get; set; } = 0.15f;
 
     // Once Oxygen hits exactly 0, the bar instead pulses smoothly toward red and grows/
     // shrinks, this many full cycles per second.

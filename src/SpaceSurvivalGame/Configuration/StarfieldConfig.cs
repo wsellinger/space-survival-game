@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
-namespace SpaceSurvivalGame.Config;
+namespace SpaceSurvivalGame.Configuration;
 
 public class StarfieldLayerConfig
 {

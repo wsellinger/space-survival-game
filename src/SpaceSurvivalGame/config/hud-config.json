@@ -3,5 +3,6 @@
   "BarThicknessPixels": 10,
   "BarOutlineThicknessPixels": 1,
   "MarginPixels": 16,
-  "BarSpacingPixels": 6
+  "BarSpacingPixels": 6,
+  "WarningFlashBeatSeconds": 0.115
 }

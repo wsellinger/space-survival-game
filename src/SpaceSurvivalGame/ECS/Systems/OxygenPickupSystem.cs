@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework.Graphics;
 using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.Physics;
 
-using SpaceSurvivalGame.Config;
+using SpaceSurvivalGame.Configuration;
 
 namespace SpaceSurvivalGame.ECS.Systems;
 

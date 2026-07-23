@@ -12,6 +12,10 @@ public class WorldConfig
 {
     public float FieldHalfExtentMeters { get; set; } = 250f;
 
+    // Asteroids never spawn within this many pixels of the ship's spawn point, so the ship
+    // doesn't start out already touching (or embedded in) one.
+    public float ShipSpawnClearRadiusPixels { get; set; } = 50f;
+
     // How many asteroids per square meter to generate, not a raw count — so shrinking
     // FieldHalfExtentMeters (e.g. to cut down on total asteroid/physics load) keeps the
     // same spawn density instead of requiring AsteroidCount to be manually recalculated.
@@ -21,6 +25,11 @@ public class WorldConfig
     public float AsteroidMaxRadiusMeters { get; set; } = 2f;
     public float AsteroidMinSpeedMetersPerSecond { get; set; } = 0.1f;
     public float AsteroidMaxSpeedMetersPerSecond { get; set; } = 0.5f;
+
+    // Initial spin, magnitude only — sign (direction) is randomized separately at spawn time.
+    public float AsteroidMinAngularVelocityRadiansPerSecond { get; set; } = 0.1f;
+    public float AsteroidMaxAngularVelocityRadiansPerSecond { get; set; } = 1f;
+
     public float AsteroidRestitution { get; set; } = 0.6f;
 
     // Same material density for every asteroid, so mass just scales with area (bigger =

@@ -129,6 +129,49 @@ public static class ProceduralTextures
         return texture;
     }
 
+    /// <summary>
+    /// Same fill as CreatePolygon, plus a soft radial glow filling the area between the
+    /// polygon's edge and glowRadius (in the same -1..1 unit space), fading out via an
+    /// eased falloff so it reads as a gentle halo rather than a hard-edged ring.
+    /// </summary>
+    public static Texture2D CreateGlowingPolygon(GraphicsDevice graphicsDevice, int size, Color polygonColor, Color glowColor, Vector2[] unitVertices, float glowRadius)
+    {
+        var data = new Color[size * size];
+        var center = new Vector2(size / 2f, size / 2f);
+        var scale = size / 2f;
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var localPoint = (point - center) / scale;
+
+                if (IsInsidePolygon(localPoint, unitVertices))
+                {
+                    data[y * size + x] = polygonColor;
+                    continue;
+                }
+
+                var distance = localPoint.Length();
+                if (distance <= glowRadius)
+                {
+                    var falloff = 1f - distance / glowRadius;
+                    falloff *= falloff; // eases the fade so it's softer near the outer edge of the glow
+                    data[y * size + x] = glowColor * falloff;
+                }
+                else
+                {
+                    data[y * size + x] = Color.Transparent;
+                }
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
     private static bool IsInsidePolygon(Vector2 point, Vector2[] vertices)
     {
         var inside = false;

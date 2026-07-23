@@ -1,0 +1,12 @@
+{
+  "PickupCount": 100,
+  "OxygenAmount": 20,
+  "SpriteSizePixels": 16,
+  "GlowRadius": 2.5,
+  "MaterialDensity": 0.3,
+  "Restitution": 0.6,
+  "MinSpeedMetersPerSecond": 0.1,
+  "MaxSpeedMetersPerSecond": 0.5,
+  "MinAngularVelocityRadiansPerSecond": 0.1,
+  "MaxAngularVelocityRadiansPerSecond": 1
+}

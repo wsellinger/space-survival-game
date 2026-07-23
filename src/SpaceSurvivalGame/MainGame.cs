@@ -48,6 +48,7 @@ public class MainGame : Game
     private SuffocationEffectConfig _suffocationConfig;
     private DeathSequenceConfig _deathSequenceConfig;
     private float _deathElapsedSeconds;
+    private PickupConfig _pickupConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
     private Texture2D _sparkTexture;
@@ -130,6 +131,9 @@ public class MainGame : Game
         var deathSequenceConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "death-sequence-config.json");
         _deathSequenceConfig = DeathSequenceConfig.Load(deathSequenceConfigPath);
 
+        var pickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "pickup-config.json");
+        _pickupConfig = PickupConfig.Load(pickupConfigPath);
+
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
         _camera.TargetPositionMeters = _shipSpawnPositionMeters;
@@ -143,6 +147,7 @@ public class MainGame : Game
         }
 
         AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig);
+        OxygenPickupField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig, _pickupConfig);
 
         const int buttonWidth = 220;
         const int buttonHeight = 60;
@@ -311,6 +316,7 @@ public class MainGame : Game
         }
 
         VitalsSystem.Run(_world, deltaSeconds, _playerConfig, _suffocationConfig);
+        OxygenPickupSystem.Run(_world, _shipConfig, _pickupConfig, _particleConfig, _sparkTexture, _random);
 
         // Suffocation kills once its post-process effect has fully played out. No explosion
         // and no extra fade here — the screen's already fully black from the vignette by

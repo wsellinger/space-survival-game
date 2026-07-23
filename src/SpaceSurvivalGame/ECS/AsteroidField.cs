@@ -74,6 +74,10 @@ public static class AsteroidField
             var angle = (float)(random.NextDouble() * Math.PI * 2);
             bodyDef.linearVelocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
 
+            var angularSpeed = config.AsteroidMinAngularVelocityRadiansPerSecond +
+                                (float)random.NextDouble() * (config.AsteroidMaxAngularVelocityRadiansPerSecond - config.AsteroidMinAngularVelocityRadiansPerSecond);
+            bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
+
             var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
 
             var variantIndex = random.Next(ShapeVariantCount);
@@ -98,7 +102,8 @@ public static class AsteroidField
                 new Transform { PositionMeters = positionMeters, RotationRadians = 0f },
                 new Velocity(),
                 new Sprite { Texture = shapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.White, Size = BaseShapeTextureSize, Scale = scale, Parallax = 1f },
-                new Asteroid { RadiusMeters = radiusMeters });
+                new Asteroid { RadiusMeters = radiusMeters },
+                new Damaging());
         }
     }
 
@@ -127,6 +132,8 @@ public static class AsteroidField
 
     private static bool TryFindPosition(Random random, SpatialGrid grid, Vector2 centerMeters, WorldConfig config, out Vector2 positionMeters, out float radiusMeters)
     {
+        var clearRadiusMeters = PhysicsWorld.PixelsToMeters(config.ShipSpawnClearRadiusPixels);
+
         for (var attempt = 0; attempt < MaxPlacementAttempts; attempt++)
         {
             var candidatePosition = centerMeters + new Vector2(
@@ -134,6 +141,10 @@ public static class AsteroidField
                 (float)(random.NextDouble() * 2 - 1) * config.FieldHalfExtentMeters);
             var candidateRadius = config.AsteroidMinRadiusMeters +
                                    (float)random.NextDouble() * (config.AsteroidMaxRadiusMeters - config.AsteroidMinRadiusMeters);
+
+            var minDistanceFromCenter = clearRadiusMeters + candidateRadius;
+            if (Vector2.DistanceSquared(candidatePosition, centerMeters) < minDistanceFromCenter * minDistanceFromCenter)
+                continue; // too close to where the ship spawns
 
             if (!grid.Overlaps(candidatePosition, candidateRadius))
             {

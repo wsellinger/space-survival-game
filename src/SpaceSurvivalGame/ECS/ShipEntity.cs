@@ -23,6 +23,7 @@ public static class ShipEntity
         var shapeDef = B2Api.b2DefaultShapeDef();
         shapeDef.density = 1f;
         shapeDef.enableHitEvents = true; // only one shape in a collision needs this set for CollisionDamageSystem to see it
+        shapeDef.filter.categoryBits = CollisionCategories.Ship; // lets OxygenPickupField exclude just the ship from its collision mask
 
         // Matches ProceduralTextures.CreateRightFacingTriangle's vertex layout (tip at
         // (size-1, size/2), tail corners at (0,0)/(0,size-1)) relative to the sprite's
@@ -57,6 +58,7 @@ public static class ShipEntity
             new HitFlash { RemainingSeconds = 0f },
             new HealthBarFeedback(),
             new Suffocation { ElapsedSeconds = 0f },
+            new Damaging(),
             new PlayerControlled());
     }
 

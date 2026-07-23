@@ -37,6 +37,7 @@ public class MainGame : Game
     private HitFlashConfig _hitFlashConfig;
     private ScreenShakeConfig _screenShakeConfig;
     private HudFeedbackConfig _hudFeedbackConfig;
+    private OxygenWarningConfig _oxygenWarningConfig;
     private SuffocationEffectConfig _suffocationConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -110,6 +111,9 @@ public class MainGame : Game
 
         var hudFeedbackConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hud-feedback-config.json");
         _hudFeedbackConfig = HudFeedbackConfig.Load(hudFeedbackConfigPath);
+
+        var oxygenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "oxygen-warning-config.json");
+        _oxygenWarningConfig = OxygenWarningConfig.Load(oxygenWarningConfigPath);
 
         var suffocationConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "suffocation-effect-config.json");
         _suffocationConfig = SuffocationEffectConfig.Load(suffocationConfigPath);
@@ -303,7 +307,8 @@ public class MainGame : Game
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
         _spriteBatch.Begin();
-        HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudFeedbackConfig, _hudBarFillTexture, _hudBarOutlineTexture);
+        HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudFeedbackConfig, _oxygenWarningConfig,
+            (float)gameTime.TotalGameTime.TotalSeconds, _hudBarFillTexture, _hudBarOutlineTexture);
 #if DEBUG
         _spriteBatch.DrawString(_debugFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
 #endif

@@ -61,6 +61,8 @@ public class MainGame : Game
     private Texture2D[] _shipFragmentTextures;
     private EngineConfig _engineConfig;
     private Texture2D _flameTexture;
+    private CrosshairConfig _crosshairConfig;
+    private Texture2D _crosshairTexture;
     private Texture2D _sparkTexture;
     private RenderTarget2D _sceneRenderTarget;
     private Effect _suffocationEffect;
@@ -158,6 +160,11 @@ public class MainGame : Game
         // Baked white and tinted per-layer at draw time (see EngineJetRenderer) — shared by
         // both the outer and inner flame layers, which have independent colors.
         _flameTexture = ProceduralTextures.CreateRightFacingTriangle(GraphicsDevice, _engineConfig.FlameTextureSizePixels, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.White);
+
+        var crosshairConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "crosshair-config.json");
+        _crosshairConfig = CrosshairConfig.Load(crosshairConfigPath);
+        var crosshairColor = new Microsoft.Xna.Framework.Color(_crosshairConfig.ColorR, _crosshairConfig.ColorG, _crosshairConfig.ColorB);
+        _crosshairTexture = ProceduralTextures.CreateCrosshair(GraphicsDevice, _crosshairConfig.SizePixels, _crosshairConfig.GapRadiusPixels, _crosshairConfig.TickLengthPixels, _crosshairConfig.ThicknessPixels, crosshairColor);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
@@ -382,7 +389,9 @@ public class MainGame : Game
         // Camera casts out toward wherever the aim input points, not the ship's facing
         // (which lags behind at a capped turn rate): the right stick's own direction in
         // controller mode; in mouse mode, a point MouseFocusRatio of the way from the
-        // ship's on-screen position to the cursor's.
+        // ship's on-screen position to the cursor's — only while LMB is held (same gate as
+        // mouseFacingDirection), so idly moving the mouse without aiming doesn't drag the
+        // camera around.
         System.Numerics.Vector2 lookAheadOffsetMeters;
         if (_useController)
         {
@@ -390,20 +399,20 @@ public class MainGame : Game
             if (rightStick.LengthSquared() > 1f) rightStick = System.Numerics.Vector2.Normalize(rightStick);
             lookAheadOffsetMeters = rightStick * _cameraConfig.MaxDistanceMeters;
         }
-        else if (cursorDirectionFromShip.HasValue)
+        else if (mouseFacingDirection.HasValue)
         {
-            lookAheadOffsetMeters = PhysicsWorld.PixelsToMeters(cursorDirectionFromShip.Value * _cameraConfig.MouseFocusRatio);
+            lookAheadOffsetMeters = PhysicsWorld.PixelsToMeters(mouseFacingDirection.Value * _cameraConfig.MouseFocusRatio);
         }
         else
         {
             lookAheadOffsetMeters = System.Numerics.Vector2.Zero;
         }
 
-        // Tweening only applies in controller mode; mouse aiming snaps straight to target
-        // since the mouse's own movement is already the direct input, and easing on top of
-        // that felt disconnected from the cursor.
-        var cameraSmoothingSpeed = _useController ? _cameraConfig.TweenSpeed : 0f;
-        CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, cameraSmoothingSpeed);
+        // Tweens in both modes now — since the look-ahead offset itself only engages while
+        // LMB is held (or the right stick is pushed), an instant snap read as an abrupt jump
+        // right at the moment of pressing/releasing; easing that transition in and out feels
+        // smoother without lagging behind the cursor's own live position while held.
+        CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, _cameraConfig.TweenSpeed);
 
         _previousKeyboardState = keyboard;
         _previousMousePosition = mousePosition;
@@ -512,6 +521,16 @@ public class MainGame : Game
             _spriteBatch.End();
         }
 
+        // Only while the real OS cursor is actually hidden/locked (mouse mode, Playing, past
+        // the first real input) — otherwise the player already has the visible system cursor.
+        if (_gameState == GameState.Playing && _hasReceivedInput && !_useController)
+        {
+            var crosshairOrigin = new Vector2(_crosshairConfig.SizePixels / 2f, _crosshairConfig.SizePixels / 2f);
+            _spriteBatch.Begin();
+            _spriteBatch.Draw(_crosshairTexture, Mouse.GetState().Position.ToVector2(), null, Color.White, 0f, crosshairOrigin, 1f, SpriteEffects.None, 0f);
+            _spriteBatch.End();
+        }
+
         if (_gameState == GameState.StartScreen || _gameState == GameState.GameOver)
         {
             var button = _gameState == GameState.StartScreen ? _startButton : _restartButton;
@@ -539,6 +558,7 @@ public class MainGame : Game
         _screenWarningVignetteTexture.Dispose();
         foreach (var texture in _shipFragmentTextures) texture.Dispose();
         _flameTexture.Dispose();
+        _crosshairTexture.Dispose();
         _sparkTexture.Dispose();
         _buttonFillTexture.Dispose();
         _buttonOutlineTexture.Dispose();

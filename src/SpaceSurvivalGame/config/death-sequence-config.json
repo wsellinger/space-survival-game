@@ -1,12 +1,12 @@
 {
-  "ExplosionBurstCount": 5,
-  "ExplosionDurationSeconds": 1.5,
+  "ExplosionBurstCount": 10,
+  "ExplosionDurationSeconds": 6,
   "FadeDurationSeconds": 0.5,
-  "ShipFragmentCount": 3,
+  "ShipFragmentCount": 5,
   "FragmentSizePixels": 22,
   "FragmentMinSpeedMetersPerSecond": 0.1,
-  "FragmentMaxSpeedMetersPerSecond": 0.4,
-  "FragmentSpreadAngleRadians": 1.6,
+  "FragmentMaxSpeedMetersPerSecond": 0.8,
+  "FragmentSpreadAngleRadians": 2,
   "FragmentMinAngularVelocityRadiansPerSecond": 2,
-  "FragmentMaxAngularVelocityRadiansPerSecond": 6
+  "FragmentMaxAngularVelocityRadiansPerSecond": 12
 }

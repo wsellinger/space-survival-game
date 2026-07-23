@@ -270,4 +270,30 @@ public static class ProceduralTextures
         var insideDistance = MathHelper.Min(MathHelper.Max(q.X, q.Y), 0f);
         return outsideDistance + insideDistance - cornerRadius;
     }
+
+    /// <summary>
+    /// A minimal 4-tick crosshair centered in a size x size canvas: a short tick mark above,
+    /// below, left, and right of center, with a gap in the middle so the exact aim point isn't
+    /// obscured. Transparent elsewhere.
+    /// </summary>
+    public static Texture2D CreateCrosshair(GraphicsDevice graphicsDevice, int size, float gapRadius, float tickLength, float thickness, Color color)
+    {
+        var data = new Color[size * size];
+        var center = new Vector2(size / 2f, size / 2f);
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var offset = new Vector2(x + 0.5f, y + 0.5f) - center;
+                var onVerticalTick = System.Math.Abs(offset.X) <= thickness / 2f && System.Math.Abs(offset.Y) >= gapRadius && System.Math.Abs(offset.Y) <= gapRadius + tickLength;
+                var onHorizontalTick = System.Math.Abs(offset.Y) <= thickness / 2f && System.Math.Abs(offset.X) >= gapRadius && System.Math.Abs(offset.X) <= gapRadius + tickLength;
+                data[y * size + x] = onVerticalTick || onHorizontalTick ? color : Color.Transparent;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
 }

@@ -1,5 +1,5 @@
 {
-  "MaxDistanceMeters": 3,
+  "MaxDistanceMeters": 2,
   "TweenSpeed": 5,
   "MouseFocusRatio": 0.2
 }

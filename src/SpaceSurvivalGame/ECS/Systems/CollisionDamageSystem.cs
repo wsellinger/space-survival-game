@@ -23,10 +23,10 @@ namespace SpaceSurvivalGame.ECS.Systems;
 public static class CollisionDamageSystem
 {
     private static readonly QueryDescription ShipQuery =
-        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, HitFlash>();
+        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, HitFlash, HealthBarFeedback>();
 
     public static void Run(World world, PhysicsWorld physicsWorld, PlayerConfig config, Texture2D sparkTexture, Random random,
-        ParticleConfig particleConfig, Camera camera, ScreenShakeConfig screenShakeConfig, HitFlashConfig hitFlashConfig)
+        ParticleConfig particleConfig, Camera camera, ScreenShakeConfig screenShakeConfig, HitFlashConfig hitFlashConfig, HudFeedbackConfig hudFeedbackConfig)
     {
         var shipBodyId = default(b2BodyId);
         var foundShip = false;
@@ -61,10 +61,15 @@ public static class CollisionDamageSystem
                               damageFraction * (screenShakeConfig.MaxShakeMagnitudePixels - screenShakeConfig.MinShakeMagnitudePixels);
         camera.AddShake(shakeMagnitude);
 
-        world.Query(in ShipQuery, (ref Health health, ref HitFlash hitFlash) =>
+        var hudShakeMagnitude = hudFeedbackConfig.MinShakeMagnitudePixels +
+                                 damageFraction * (hudFeedbackConfig.MaxShakeMagnitudePixels - hudFeedbackConfig.MinShakeMagnitudePixels);
+
+        world.Query(in ShipQuery, (ref Health health, ref HitFlash hitFlash, ref HealthBarFeedback healthBarFeedback) =>
         {
             health.Current = System.Math.Clamp(health.Current - totalDamage, 0f, health.Max);
             hitFlash.RemainingSeconds = hitFlashConfig.FlashDurationSeconds;
+            healthBarFeedback.RemainingSeconds = hudFeedbackConfig.FlashDurationSeconds;
+            healthBarFeedback.ShakeMagnitudePixels = MathF.Max(healthBarFeedback.ShakeMagnitudePixels, hudShakeMagnitude);
         });
     }
 

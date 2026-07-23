@@ -15,16 +15,20 @@ namespace SpaceSurvivalGame.Rendering;
 /// </summary>
 public static class HudRenderer
 {
-    private static readonly QueryDescription Query = new QueryDescription().WithAll<Health, Oxygen, PlayerControlled>();
+    private static readonly QueryDescription Query = new QueryDescription().WithAll<Health, Oxygen, HealthBarFeedback, PlayerControlled>();
 
-    public static void Run(World world, SpriteBatch spriteBatch, int viewportHeight, HudConfig config, Texture2D fillTexture, Texture2D outlineTexture)
+    public static void Run(World world, SpriteBatch spriteBatch, int viewportHeight, HudConfig config, HudFeedbackConfig feedbackConfig, Texture2D fillTexture, Texture2D outlineTexture)
     {
-        world.Query(in Query, (ref Health health, ref Oxygen oxygen) =>
+        world.Query(in Query, (ref Health health, ref Oxygen oxygen, ref HealthBarFeedback feedback) =>
         {
-            var healthPosition = new Vector2(config.MarginPixels, viewportHeight - config.MarginPixels - config.BarThicknessPixels);
-            var oxygenPosition = healthPosition - new Vector2(0, config.BarThicknessPixels + config.BarSpacingPixels);
+            var basePosition = new Vector2(config.MarginPixels, viewportHeight - config.MarginPixels - config.BarThicknessPixels);
+            var oxygenPosition = basePosition - new Vector2(0, config.BarThicknessPixels + config.BarSpacingPixels);
+            var healthPosition = basePosition + feedback.ShakeOffsetPixels;
 
-            DrawBar(spriteBatch, config, fillTexture, outlineTexture, healthPosition, health.Current / health.Max, Color.Red);
+            var flashFraction = MathHelper.Clamp(feedback.RemainingSeconds / feedbackConfig.FlashDurationSeconds, 0f, 1f);
+            var healthColor = Color.Lerp(Color.Red, Color.White, flashFraction);
+
+            DrawBar(spriteBatch, config, fillTexture, outlineTexture, healthPosition, health.Current / health.Max, healthColor);
             DrawBar(spriteBatch, config, fillTexture, outlineTexture, oxygenPosition, oxygen.Current / oxygen.Max, Color.CornflowerBlue);
         });
     }

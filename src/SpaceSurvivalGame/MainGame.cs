@@ -36,6 +36,7 @@ public class MainGame : Game
     private ParticleConfig _particleConfig;
     private HitFlashConfig _hitFlashConfig;
     private ScreenShakeConfig _screenShakeConfig;
+    private HudFeedbackConfig _hudFeedbackConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
     private Texture2D _sparkTexture;
@@ -103,6 +104,9 @@ public class MainGame : Game
 
         var screenShakeConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-shake-config.json");
         _screenShakeConfig = ScreenShakeConfig.Load(screenShakeConfigPath);
+
+        var hudFeedbackConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hud-feedback-config.json");
+        _hudFeedbackConfig = HudFeedbackConfig.Load(hudFeedbackConfigPath);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
@@ -204,10 +208,11 @@ public class MainGame : Game
 
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds);
         _physicsWorld.Step(deltaSeconds);
-        CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig); // must read hit events before the next Step overwrites them
+        CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
         VitalsSystem.Run(_world, deltaSeconds, _playerConfig);
         ParticleSystem.Run(_world, deltaSeconds);
         HitFlashSystem.Run(_world, deltaSeconds, _hitFlashConfig);
+        HudFeedbackSystem.Run(_world, deltaSeconds, _hudFeedbackConfig, _random);
         SpeedCapSystem.Run(_world);
         PhysicsSyncSystem.Run(_world);
 
@@ -284,7 +289,7 @@ public class MainGame : Game
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
         _spriteBatch.Begin();
-        HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudBarFillTexture, _hudBarOutlineTexture);
+        HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudFeedbackConfig, _hudBarFillTexture, _hudBarOutlineTexture);
 #if DEBUG
         _spriteBatch.DrawString(_debugFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
 #endif

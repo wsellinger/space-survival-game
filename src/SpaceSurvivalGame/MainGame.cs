@@ -20,12 +20,19 @@ public class MainGame : Game
 
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
+    private SpriteFont _uiFont;
 #if DEBUG
-    private SpriteFont _debugFont;
     private float _fpsTimerSeconds;
     private int _fpsFrameCount;
     private int _fps;
 #endif
+    private GameState _gameState = GameState.StartScreen;
+    private Texture2D _buttonFillTexture;
+    private Texture2D _buttonOutlineTexture;
+    private Texture2D _solidPixelTexture;
+    private UiButton _startButton;
+    private UiButton _restartButton;
+    private MouseState _previousMenuMouseState;
     private PhysicsWorld _physicsWorld;
     private World _world;
     private Camera _camera;
@@ -39,6 +46,8 @@ public class MainGame : Game
     private HudFeedbackConfig _hudFeedbackConfig;
     private OxygenWarningConfig _oxygenWarningConfig;
     private SuffocationEffectConfig _suffocationConfig;
+    private DeathSequenceConfig _deathSequenceConfig;
+    private float _deathElapsedSeconds;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
     private Texture2D _sparkTexture;
@@ -75,9 +84,7 @@ public class MainGame : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-#if DEBUG
-        _debugFont = Content.Load<SpriteFont>("Fonts/DebugFont");
-#endif
+        _uiFont = Content.Load<SpriteFont>("Fonts/DebugFont");
 
         var shipConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "ship-config.json");
         _shipConfig = ShipConfig.Load(shipConfigPath);
@@ -120,6 +127,9 @@ public class MainGame : Game
         _suffocationEffect = Content.Load<Effect>("Shaders/SuffocationEffect");
         _sceneRenderTarget = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
 
+        var deathSequenceConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "death-sequence-config.json");
+        _deathSequenceConfig = DeathSequenceConfig.Load(deathSequenceConfigPath);
+
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
         _camera.TargetPositionMeters = _shipSpawnPositionMeters;
@@ -133,19 +143,86 @@ public class MainGame : Game
         }
 
         AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig);
+
+        const int buttonWidth = 220;
+        const int buttonHeight = 60;
+        const float buttonCornerRadius = 14f;
+        _buttonFillTexture = ProceduralTextures.CreateRoundedRect(GraphicsDevice, buttonWidth, buttonHeight, buttonCornerRadius, Microsoft.Xna.Framework.Color.White);
+        _buttonOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, buttonWidth, buttonHeight, buttonCornerRadius, 2f, Microsoft.Xna.Framework.Color.White);
+        _solidPixelTexture = ProceduralTextures.CreateSolidSquare(GraphicsDevice, 1, Microsoft.Xna.Framework.Color.White);
+
+        var buttonBounds = new Rectangle((WindowWidth - buttonWidth) / 2, (WindowHeight - buttonHeight) / 2, buttonWidth, buttonHeight);
+        _startButton = new UiButton(buttonBounds, "START");
+        _restartButton = new UiButton(buttonBounds, "RESTART");
     }
 
     protected override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
         var gamePad = GamePad.GetState(PlayerIndex.One, GamePadDeadZone.Circular);
+        var mouse = Mouse.GetState();
         if (gamePad.Buttons.Back == ButtonState.Pressed || keyboard.IsKeyDown(Keys.Escape))
             Exit();
+
+        if (_gameState == GameState.StartScreen || _gameState == GameState.GameOver)
+        {
+            // Menus always show a free, visible cursor — cursor lock/hide is a Playing-only concern.
+            IsMouseVisible = true;
+            WindowsCursorLock.Release();
+
+            var button = _gameState == GameState.StartScreen ? _startButton : _restartButton;
+            var clickedButton = mouse.LeftButton == ButtonState.Pressed && _previousMenuMouseState.LeftButton == ButtonState.Released
+                                 && button.IsHovered(mouse.Position);
+            var confirmedViaKeyboardOrPad = (keyboard.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
+                                            || (keyboard.IsKeyDown(Keys.Space) && !_previousKeyboardState.IsKeyDown(Keys.Space))
+                                            || gamePad.Buttons.Start == ButtonState.Pressed
+                                            || gamePad.Buttons.A == ButtonState.Pressed;
+
+            if (clickedButton || confirmedViaKeyboardOrPad)
+            {
+                if (_gameState == GameState.GameOver)
+                {
+                    ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
+                    _camera.PositionMeters = _shipSpawnPositionMeters;
+                    _camera.TargetPositionMeters = _shipSpawnPositionMeters;
+                }
+
+                _hasReceivedInput = true; // clicking/confirming counts as the real input that unlocks the cursor for Playing
+                _gameState = GameState.Playing;
+            }
+
+            _previousMenuMouseState = mouse;
+            _previousKeyboardState = keyboard;
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_gameState == GameState.Dying)
+        {
+            // A brief cutscene: no player input, but physics/particles/asteroids keep animating
+            // (including the ship's own residual momentum from Box2D) so the explosion and the
+            // dead ship drifting still read as part of the world, not a frozen snapshot.
+            IsMouseVisible = true;
+            WindowsCursorLock.Release();
+
+            var dyingDeltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _physicsWorld.Step(dyingDeltaSeconds);
+            ParticleSystem.Run(_world, dyingDeltaSeconds);
+            PhysicsSyncSystem.Run(_world);
+
+            _deathElapsedSeconds += dyingDeltaSeconds;
+            if (_deathElapsedSeconds >= _deathSequenceConfig.ExplosionDurationSeconds + _deathSequenceConfig.FadeDurationSeconds)
+                _gameState = GameState.GameOver;
+
+            _previousMenuMouseState = mouse;
+            _previousKeyboardState = keyboard;
+            base.Update(gameTime);
+            return;
+        }
 
         if (keyboard.IsKeyDown(Keys.R) && !_previousKeyboardState.IsKeyDown(Keys.R))
             ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
 
-        var mouse = Mouse.GetState();
         var mousePosition = mouse.Position;
 
         // The OS can place the cursor anywhere at launch, and _previousMousePosition starts
@@ -221,7 +298,34 @@ public class MainGame : Game
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds);
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
+
+        var shipHealth = float.MaxValue;
+        _world.Query(in HealthQuery, (ref Health health) => shipHealth = health.Current);
+        if (shipHealth <= 0f && CameraFollowSystem.TryGetShipPositionMeters(_world, out var deathPositionMeters))
+        {
+            for (var i = 0; i < _deathSequenceConfig.ExplosionBurstCount; i++)
+                ParticleEffects.SpawnSparkBurst(_world, _sparkTexture, deathPositionMeters, _random, _particleConfig);
+
+            _gameState = GameState.Dying;
+            _deathElapsedSeconds = 0f;
+        }
+
         VitalsSystem.Run(_world, deltaSeconds, _playerConfig, _suffocationConfig);
+
+        // Suffocation kills once its post-process effect has fully played out. No explosion
+        // and no extra fade here — the screen's already fully black from the vignette by
+        // this point, so jump straight to GameOver instead of the collision-death sequence.
+        if (_gameState == GameState.Playing)
+        {
+            var suffocationElapsedSeconds = 0f;
+            _world.Query(in SuffocationQuery, (ref Suffocation suffocation) => suffocationElapsedSeconds = suffocation.ElapsedSeconds);
+            if (suffocationElapsedSeconds >= _suffocationConfig.EffectDurationSeconds)
+            {
+                _world.Query(in HealthQuery, (ref Health health) => health.Current = 0f);
+                _gameState = GameState.GameOver;
+            }
+        }
+
         ParticleSystem.Run(_world, deltaSeconds);
         HitFlashSystem.Run(_world, deltaSeconds, _hitFlashConfig);
         HudFeedbackSystem.Run(_world, deltaSeconds, _hudFeedbackConfig, _random);
@@ -257,8 +361,11 @@ public class MainGame : Game
 
         _previousKeyboardState = keyboard;
         _previousMousePosition = mousePosition;
+        _previousMenuMouseState = mouse;
         base.Update(gameTime);
     }
+
+    private static readonly QueryDescription HealthQuery = new QueryDescription().WithAll<Health, PlayerControlled>();
 
     private static bool IsKeyboardMouseInputActive(KeyboardState keyboard, MouseState mouse, Point mousePosition, Point previousMousePosition)
     {
@@ -310,7 +417,7 @@ public class MainGame : Game
         HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudFeedbackConfig, _oxygenWarningConfig,
             (float)gameTime.TotalGameTime.TotalSeconds, _hudBarFillTexture, _hudBarOutlineTexture);
 #if DEBUG
-        _spriteBatch.DrawString(_debugFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
+        _spriteBatch.DrawString(_uiFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
 #endif
         _spriteBatch.End();
 
@@ -338,6 +445,35 @@ public class MainGame : Game
         _spriteBatch.Draw(_sceneRenderTarget, Vector2.Zero, Color.White);
         _spriteBatch.End();
 
+        // Fades to fully opaque black across Dying's ExplosionDurationSeconds..+FadeDurationSeconds
+        // window, then stays there through GameOver (elapsed is never advanced again once
+        // GameOver is reached, so this keeps evaluating to 1).
+        var deathFadeAlpha = 0f;
+        if (_gameState == GameState.Dying || _gameState == GameState.GameOver)
+        {
+            var fadeElapsed = _deathElapsedSeconds - _deathSequenceConfig.ExplosionDurationSeconds;
+            deathFadeAlpha = _gameState == GameState.GameOver ? 1f : MathHelper.Clamp(fadeElapsed / _deathSequenceConfig.FadeDurationSeconds, 0f, 1f);
+        }
+
+        if (deathFadeAlpha > 0f)
+        {
+            _spriteBatch.Begin();
+            _spriteBatch.Draw(_solidPixelTexture, new Rectangle(0, 0, WindowWidth, WindowHeight), Color.Black * deathFadeAlpha);
+            _spriteBatch.End();
+        }
+
+        if (_gameState == GameState.StartScreen || _gameState == GameState.GameOver)
+        {
+            var button = _gameState == GameState.StartScreen ? _startButton : _restartButton;
+            var title = _gameState == GameState.StartScreen ? "STATION" : "YOU DIED";
+            var isHovered = button.IsHovered(Mouse.GetState().Position);
+
+            _spriteBatch.Begin();
+            MenuRenderer.Draw(_spriteBatch, _uiFont, _solidPixelTexture, _buttonFillTexture, _buttonOutlineTexture,
+                WindowWidth, WindowHeight, title, button, isHovered);
+            _spriteBatch.End();
+        }
+
         base.Draw(gameTime);
     }
 
@@ -350,6 +486,9 @@ public class MainGame : Game
         _hudBarFillTexture.Dispose();
         _hudBarOutlineTexture.Dispose();
         _sparkTexture.Dispose();
+        _buttonFillTexture.Dispose();
+        _buttonOutlineTexture.Dispose();
+        _solidPixelTexture.Dispose();
         _sceneRenderTarget.Dispose();
         World.Destroy(_world);
         _physicsWorld.Dispose();

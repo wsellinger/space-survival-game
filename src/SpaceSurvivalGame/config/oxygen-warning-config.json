@@ -1,5 +1,5 @@
 {
-  "LowOxygenThresholdFraction": 0.9,
+  "LowOxygenThresholdFraction": 0.3,
   "LowOxygenFlashBeatSeconds": 0.115,
   "EmptyOxygenPulseFrequencyHz": 1.5,
   "EmptyOxygenPulseScaleAmount": 0.02

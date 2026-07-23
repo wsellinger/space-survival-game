@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Arch.Core;
+using Box2dNet.Interop;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -57,6 +58,7 @@ public class MainGame : Game
     private Texture2D _hudBarOutlineTexture;
     private Texture2D _screenWarningOutlineTexture;
     private Texture2D _screenWarningVignetteTexture;
+    private Texture2D[] _shipFragmentTextures;
     private Texture2D _sparkTexture;
     private RenderTarget2D _sceneRenderTarget;
     private Effect _suffocationEffect;
@@ -147,6 +149,7 @@ public class MainGame : Game
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
         _screenWarningOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, WindowWidth, WindowHeight, 0f, _screenWarningConfig.OutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
         _screenWarningVignetteTexture = ProceduralTextures.CreateEdgeVignette(GraphicsDevice, WindowWidth, WindowHeight, _screenWarningConfig.VignetteDepthPixels, Microsoft.Xna.Framework.Color.White);
+        _shipFragmentTextures = ShipFragments.CreateFragmentTextures(GraphicsDevice, _random);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
@@ -228,6 +231,7 @@ public class MainGame : Game
             _physicsWorld.Step(dyingDeltaSeconds);
             ParticleSystem.Run(_world, dyingDeltaSeconds);
             PhysicsSyncSystem.Run(_world);
+            ShipEntity.Hide(_world); // re-assert each frame — HitFlashSystem still runs once more in the Playing frame where death triggers (after the initial Hide() call) and clobbers it back to visible
 
             _deathElapsedSeconds += dyingDeltaSeconds;
             if (_deathElapsedSeconds >= _deathSequenceConfig.ExplosionDurationSeconds + _deathSequenceConfig.FadeDurationSeconds)
@@ -325,6 +329,15 @@ public class MainGame : Game
             for (var i = 0; i < _deathSequenceConfig.ExplosionBurstCount; i++)
                 ParticleEffects.SpawnSparkBurst(_world, _sparkTexture, deathPositionMeters, _random, _particleConfig);
 
+            // Read the Box2D body directly rather than the ECS Velocity component — PhysicsSyncSystem
+            // (which mirrors Box2D into Velocity) hasn't run yet this frame, so Velocity would still
+            // be last frame's value; the body itself already reflects the collision this Step() just
+            // resolved, so fragments fly off the way the ship itself actually bounced.
+            var shipVelocity = System.Numerics.Vector2.Zero;
+            _world.Query(in PlayerPhysicsBodyQuery, (ref PhysicsBody physicsBody) => shipVelocity = B2Api.b2Body_GetLinearVelocity(physicsBody.BodyId));
+            ShipFragments.SpawnDebris(_world, _shipFragmentTextures, deathPositionMeters, shipVelocity, _random, _deathSequenceConfig);
+            ShipEntity.Hide(_world);
+
             _gameState = GameState.Dying;
             _deathElapsedSeconds = 0f;
         }
@@ -386,6 +399,7 @@ public class MainGame : Game
     }
 
     private static readonly QueryDescription HealthQuery = new QueryDescription().WithAll<Health, PlayerControlled>();
+    private static readonly QueryDescription PlayerPhysicsBodyQuery = new QueryDescription().WithAll<PhysicsBody, PlayerControlled>();
 
     private static bool IsKeyboardMouseInputActive(KeyboardState keyboard, MouseState mouse, Point mousePosition, Point previousMousePosition)
     {
@@ -509,6 +523,7 @@ public class MainGame : Game
         _hudBarOutlineTexture.Dispose();
         _screenWarningOutlineTexture.Dispose();
         _screenWarningVignetteTexture.Dispose();
+        foreach (var texture in _shipFragmentTextures) texture.Dispose();
         _sparkTexture.Dispose();
         _buttonFillTexture.Dispose();
         _buttonOutlineTexture.Dispose();

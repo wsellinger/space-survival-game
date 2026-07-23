@@ -1,5 +1,12 @@
 {
   "ExplosionBurstCount": 5,
   "ExplosionDurationSeconds": 1.5,
-  "FadeDurationSeconds": 0.5
+  "FadeDurationSeconds": 0.5,
+  "ShipFragmentCount": 3,
+  "FragmentSizePixels": 22,
+  "FragmentMinSpeedMetersPerSecond": 0.1,
+  "FragmentMaxSpeedMetersPerSecond": 0.4,
+  "FragmentSpreadAngleRadians": 1.6,
+  "FragmentMinAngularVelocityRadiansPerSecond": 2,
+  "FragmentMaxAngularVelocityRadiansPerSecond": 6
 }

@@ -22,6 +22,23 @@ public class DeathSequenceConfig
     // How long the fade to black takes once it starts.
     public float FadeDurationSeconds { get; set; } = 1.5f;
 
+    // How many hull fragments the ship visibly splits into on death (its own sprite is
+    // hidden for the rest of the sequence, in favor of these). Fragments live for the whole
+    // ExplosionDurationSeconds+FadeDurationSeconds, fading out right as the screen goes black.
+    public int ShipFragmentCount { get; set; } = 3;
+    public int FragmentSizePixels { get; set; } = 22;
+
+    // Fragments inherit the ship's own velocity, plus a small kick in a direction within
+    // +/-FragmentSpreadAngleRadians of the ship's own travel direction (or a random direction
+    // if the ship was essentially stationary) — they drift apart gently while still generally
+    // continuing the way the ship was already going, rather than exploding outward.
+    public float FragmentMinSpeedMetersPerSecond { get; set; } = 0.1f;
+    public float FragmentMaxSpeedMetersPerSecond { get; set; } = 0.4f;
+    public float FragmentSpreadAngleRadians { get; set; } = 0.6f;
+
+    public float FragmentMinAngularVelocityRadiansPerSecond { get; set; } = 2f;
+    public float FragmentMaxAngularVelocityRadiansPerSecond { get; set; } = 6f;
+
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 
     public static DeathSequenceConfig Load(string path)

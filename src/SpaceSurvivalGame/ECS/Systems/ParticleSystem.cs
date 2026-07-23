@@ -4,7 +4,7 @@ using SpaceSurvivalGame.ECS.Components;
 
 namespace SpaceSurvivalGame.ECS.Systems;
 
-/// <summary>Ages and moves particle entities (Particle+Transform+Velocity+Sprite, no PhysicsBody), fading them out and destroying them once their lifetime expires. Position is integrated manually here since these aren't Box2D bodies.</summary>
+/// <summary>Ages and moves particle entities (Particle+Transform+Velocity+Sprite, no PhysicsBody), fading them out and destroying them once their lifetime expires. Position/rotation are integrated manually here since these aren't Box2D bodies.</summary>
 public static class ParticleSystem
 {
     private static readonly QueryDescription Query = new QueryDescription().WithAll<Particle, Transform, Velocity, Sprite>();
@@ -23,6 +23,7 @@ public static class ParticleSystem
             }
 
             transform.PositionMeters += velocity.LinearMetersPerSecond * deltaSeconds;
+            transform.RotationRadians += velocity.AngularRadiansPerSecond * deltaSeconds;
 
             var fraction = particle.RemainingSeconds / particle.TotalSeconds;
             sprite.Color = particle.BaseColor * fraction;

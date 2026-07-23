@@ -56,15 +56,16 @@ public static class ShipEntity
             new Oxygen { Current = playerConfig.MaxOxygen, Max = playerConfig.MaxOxygen },
             new HitFlash { RemainingSeconds = 0f },
             new HealthBarFeedback(),
+            new Suffocation { ElapsedSeconds = 0f },
             new PlayerControlled());
     }
 
     private static readonly QueryDescription RespawnQuery =
-        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, HitFlash, HealthBarFeedback>();
+        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, HitFlash, HealthBarFeedback, Suffocation>();
 
     public static void Respawn(World world, Vector2 positionMeters)
     {
-        world.Query(in RespawnQuery, (ref PhysicsBody physicsBody, ref Health health, ref Oxygen oxygen, ref HitFlash hitFlash, ref HealthBarFeedback healthBarFeedback) =>
+        world.Query(in RespawnQuery, (ref PhysicsBody physicsBody, ref Health health, ref Oxygen oxygen, ref HitFlash hitFlash, ref HealthBarFeedback healthBarFeedback, ref Suffocation suffocation) =>
         {
             var bodyId = physicsBody.BodyId;
             B2Api.b2Body_SetTransform(bodyId, positionMeters, b2Rot.FromAngle(0f));
@@ -74,6 +75,7 @@ public static class ShipEntity
             oxygen.Current = oxygen.Max;
             hitFlash.RemainingSeconds = 0f;
             healthBarFeedback = new HealthBarFeedback();
+            suffocation.ElapsedSeconds = 0f;
         });
     }
 }

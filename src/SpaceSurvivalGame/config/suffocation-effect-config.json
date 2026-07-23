@@ -1,0 +1,12 @@
+{
+  "EffectDurationSeconds": 20,
+  "PixelationEnabled": true,
+  "MaxPixelationBlockSizePixels": 5,
+  "NoiseGrainSizePixels": 5,
+  "NoiseMaxIntensity": 0.6,
+  "NoiseAdditiveBlend": false,
+  "GrayscaleEaseExponent": 0.5,
+  "VignetteStartRadius": 1.2,
+  "VignetteFeatherRadius": 0.2,
+  "VignetteEaseExponent": 2.5
+}

@@ -37,9 +37,12 @@ public class MainGame : Game
     private HitFlashConfig _hitFlashConfig;
     private ScreenShakeConfig _screenShakeConfig;
     private HudFeedbackConfig _hudFeedbackConfig;
+    private SuffocationEffectConfig _suffocationConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
     private Texture2D _sparkTexture;
+    private RenderTarget2D _sceneRenderTarget;
+    private Effect _suffocationEffect;
     private readonly Random _random = new();
     private System.Numerics.Vector2 _shipSpawnPositionMeters;
     private KeyboardState _previousKeyboardState;
@@ -107,6 +110,11 @@ public class MainGame : Game
 
         var hudFeedbackConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hud-feedback-config.json");
         _hudFeedbackConfig = HudFeedbackConfig.Load(hudFeedbackConfigPath);
+
+        var suffocationConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "suffocation-effect-config.json");
+        _suffocationConfig = SuffocationEffectConfig.Load(suffocationConfigPath);
+        _suffocationEffect = Content.Load<Effect>("Shaders/SuffocationEffect");
+        _sceneRenderTarget = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
@@ -209,7 +217,7 @@ public class MainGame : Game
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds);
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
-        VitalsSystem.Run(_world, deltaSeconds, _playerConfig);
+        VitalsSystem.Run(_world, deltaSeconds, _playerConfig, _suffocationConfig);
         ParticleSystem.Run(_world, deltaSeconds);
         HitFlashSystem.Run(_world, deltaSeconds, _hitFlashConfig);
         HudFeedbackSystem.Run(_world, deltaSeconds, _hudFeedbackConfig, _random);
@@ -276,8 +284,14 @@ public class MainGame : Game
                || gamePad.DPad.Right == ButtonState.Pressed;
     }
 
+    private static readonly QueryDescription SuffocationQuery = new QueryDescription().WithAll<Suffocation>();
+
     protected override void Draw(GameTime gameTime)
     {
+        // Everything (world + HUD) draws into an offscreen target first so the suffocation
+        // effect below — grayscale/pixelation/vignette — can post-process the whole frame
+        // as one composited image, rather than each piece separately.
+        GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
         GraphicsDevice.Clear(Color.Black);
 
         // BackToFront so LayerDepth actually controls draw order (stars behind everything);
@@ -295,6 +309,30 @@ public class MainGame : Game
 #endif
         _spriteBatch.End();
 
+        GraphicsDevice.SetRenderTarget(null);
+        GraphicsDevice.Clear(Color.Black);
+
+        var suffocationSeconds = 0f;
+        _world.Query(in SuffocationQuery, (ref Suffocation suffocation) => suffocationSeconds = suffocation.ElapsedSeconds);
+        var suffocationProgress = MathHelper.Clamp(suffocationSeconds / _suffocationConfig.EffectDurationSeconds, 0f, 1f);
+
+        var pixelBlockSizePixels = _suffocationConfig.PixelationEnabled ? _suffocationConfig.MaxPixelationBlockSizePixels * suffocationProgress : 0f;
+        _suffocationEffect.Parameters["PixelBlockSizeUV"].SetValue(new Vector2(pixelBlockSizePixels / WindowWidth, pixelBlockSizePixels / WindowHeight));
+        var grayscaleIntensity = MathF.Pow(suffocationProgress, _suffocationConfig.GrayscaleEaseExponent);
+        _suffocationEffect.Parameters["GrayscaleIntensity"].SetValue(grayscaleIntensity);
+        var vignetteProgress = MathF.Pow(suffocationProgress, _suffocationConfig.VignetteEaseExponent);
+        _suffocationEffect.Parameters["VignetteRadius"].SetValue(MathHelper.Lerp(_suffocationConfig.VignetteStartRadius, 0f, vignetteProgress));
+        _suffocationEffect.Parameters["VignetteFeatherRadius"].SetValue(_suffocationConfig.VignetteFeatherRadius);
+        _suffocationEffect.Parameters["AspectRatio"].SetValue(new Vector2(WindowWidth / (float)WindowHeight, 1f));
+        _suffocationEffect.Parameters["NoiseCellCount"].SetValue(new Vector2(WindowWidth / _suffocationConfig.NoiseGrainSizePixels, WindowHeight / _suffocationConfig.NoiseGrainSizePixels));
+        _suffocationEffect.Parameters["NoiseIntensity"].SetValue(_suffocationConfig.NoiseMaxIntensity * suffocationProgress);
+        _suffocationEffect.Parameters["NoiseAdditiveBlend"].SetValue(_suffocationConfig.NoiseAdditiveBlend ? 1f : 0f);
+        _suffocationEffect.Parameters["NoiseTimeSeed"].SetValue((float)gameTime.TotalGameTime.TotalSeconds);
+
+        _spriteBatch.Begin(effect: _suffocationEffect, samplerState: SamplerState.PointClamp);
+        _spriteBatch.Draw(_sceneRenderTarget, Vector2.Zero, Color.White);
+        _spriteBatch.End();
+
         base.Draw(gameTime);
     }
 
@@ -307,6 +345,7 @@ public class MainGame : Game
         _hudBarFillTexture.Dispose();
         _hudBarOutlineTexture.Dispose();
         _sparkTexture.Dispose();
+        _sceneRenderTarget.Dispose();
         World.Destroy(_world);
         _physicsWorld.Dispose();
         base.UnloadContent();

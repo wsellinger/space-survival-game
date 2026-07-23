@@ -20,6 +20,11 @@ public sealed class PhysicsWorld : IDisposable
         var worldDef = B2Api.b2DefaultWorldDef();
         worldDef.gravity = Vector2.Zero; // open space: nothing pulls the ship around
         WorldId = B2Api.b2CreateWorld(worldDef);
+
+        // Box2D's default hit-event threshold filters out slow impacts entirely; we want
+        // even a trivial tap to generate a hit event so CollisionDamageSystem's own
+        // min-speed/min-damage config is what decides "this barely counts", not Box2D.
+        B2Api.b2World_SetHitEventThreshold(WorldId, 0f);
     }
 
     public void Step(float deltaSeconds)

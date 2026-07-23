@@ -1,0 +1,9 @@
+{
+  "MaxHealth": 100,
+  "MaxOxygen": 100,
+  "OxygenDrainPerSecond": 1,
+  "MinCollisionDamage": 0.1,
+  "MaxCollisionDamage": 100,
+  "MinCollisionSpeedMetersPerSecond": 0.1,
+  "MaxCollisionSpeedMetersPerSecond": 4.5
+}

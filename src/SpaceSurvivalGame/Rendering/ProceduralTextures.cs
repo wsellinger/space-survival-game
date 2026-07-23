@@ -145,4 +145,60 @@ public static class ProceduralTextures
 
         return inside;
     }
+
+    /// <summary>A solid width x height rounded rectangle (a full pill/capsule when radius = height/2), transparent elsewhere. Meant to be shared/tinted at draw time (e.g. HUD bars of different colors).</summary>
+    public static Texture2D CreateRoundedRect(GraphicsDevice graphicsDevice, int width, int height, float cornerRadius, Color color)
+    {
+        var data = new Color[width * height];
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                data[y * width + x] = RoundedRectSignedDistance(point, width, height, cornerRadius) <= 0f ? color : Color.Transparent;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, width, height);
+        texture.SetData(data);
+        return texture;
+    }
+
+    /// <summary>The stroke-only outline of a rounded rectangle (see CreateRoundedRect), outlineThickness pixels wide, hugging the inside of the boundary.</summary>
+    public static Texture2D CreateRoundedRectOutline(GraphicsDevice graphicsDevice, int width, int height, float cornerRadius, float outlineThickness, Color color)
+    {
+        var data = new Color[width * height];
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var distance = RoundedRectSignedDistance(point, width, height, cornerRadius);
+                data[y * width + x] = distance <= 0f && distance > -outlineThickness ? color : Color.Transparent;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, width, height);
+        texture.SetData(data);
+        return texture;
+    }
+
+    /// <summary>
+    /// Signed distance from point to the boundary of a width x height rounded rect centered
+    /// in that box (negative = inside, positive = outside) — the standard rounded-box SDF:
+    /// shrink the box by cornerRadius, measure distance to that inner rect (clamped to 0 when
+    /// inside it), then subtract cornerRadius back out.
+    /// </summary>
+    private static float RoundedRectSignedDistance(Vector2 point, int width, int height, float cornerRadius)
+    {
+        var center = new Vector2(width / 2f, height / 2f);
+        var halfSize = new Vector2(width / 2f - cornerRadius, height / 2f - cornerRadius);
+        var offset = point - center;
+        var q = new Vector2(System.Math.Abs(offset.X) - halfSize.X, System.Math.Abs(offset.Y) - halfSize.Y);
+        var outsideDistance = new Vector2(MathHelper.Max(q.X, 0f), MathHelper.Max(q.Y, 0f)).Length();
+        var insideDistance = MathHelper.Min(MathHelper.Max(q.X, q.Y), 0f);
+        return outsideDistance + insideDistance - cornerRadius;
+    }
 }

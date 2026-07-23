@@ -11,7 +11,7 @@ namespace SpaceSurvivalGame.ECS;
 /// <summary>Creates the player ship entity and handles the one-off respawn action.</summary>
 public static class ShipEntity
 {
-    public static Entity Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 startPositionMeters, ShipConfig config)
+    public static Entity Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 startPositionMeters, ShipConfig config, PlayerConfig playerConfig)
     {
         var bodyDef = B2Api.b2DefaultBodyDef();
         bodyDef.type = b2BodyType.b2_dynamicBody;
@@ -22,6 +22,7 @@ public static class ShipEntity
 
         var shapeDef = B2Api.b2DefaultShapeDef();
         shapeDef.density = 1f;
+        shapeDef.enableHitEvents = true; // only one shape in a collision needs this set for CollisionDamageSystem to see it
 
         // Matches ProceduralTextures.CreateRightFacingTriangle's vertex layout (tip at
         // (size-1, size/2), tail corners at (0,0)/(0,size-1)) relative to the sprite's
@@ -51,20 +52,24 @@ public static class ShipEntity
                 MaxSpeedMetersPerSecond = config.MaxSpeedMetersPerSecond,
                 TurnSpeedRadiansPerSecond = config.TurnSpeedRadiansPerSecond
             },
+            new Health { Current = playerConfig.MaxHealth, Max = playerConfig.MaxHealth },
+            new Oxygen { Current = playerConfig.MaxOxygen, Max = playerConfig.MaxOxygen },
             new PlayerControlled());
     }
 
     private static readonly QueryDescription RespawnQuery =
-        new QueryDescription().WithAll<PhysicsBody, PlayerControlled>();
+        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen>();
 
     public static void Respawn(World world, Vector2 positionMeters)
     {
-        world.Query(in RespawnQuery, (ref PhysicsBody physicsBody) =>
+        world.Query(in RespawnQuery, (ref PhysicsBody physicsBody, ref Health health, ref Oxygen oxygen) =>
         {
             var bodyId = physicsBody.BodyId;
             B2Api.b2Body_SetTransform(bodyId, positionMeters, b2Rot.FromAngle(0f));
             B2Api.b2Body_SetLinearVelocity(bodyId, Vector2.Zero);
             B2Api.b2Body_SetAngularVelocity(bodyId, 0f);
+            health.Current = health.Max;
+            oxygen.Current = oxygen.Max;
         });
     }
 }

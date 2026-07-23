@@ -31,6 +31,10 @@ public class MainGame : Game
     private Camera _camera;
     private ShipConfig _shipConfig;
     private CameraConfig _cameraConfig;
+    private PlayerConfig _playerConfig;
+    private HudConfig _hudConfig;
+    private Texture2D _hudBarFillTexture;
+    private Texture2D _hudBarOutlineTexture;
     private System.Numerics.Vector2 _shipSpawnPositionMeters;
     private KeyboardState _previousKeyboardState;
     private Point _previousMousePosition;
@@ -75,10 +79,19 @@ public class MainGame : Game
         var starfieldConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "starfield-config.json");
         var starfieldConfig = StarfieldConfig.Load(starfieldConfigPath);
 
+        var playerConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "player-config.json");
+        _playerConfig = PlayerConfig.Load(playerConfigPath);
+
+        var hudConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hud-config.json");
+        _hudConfig = HudConfig.Load(hudConfigPath);
+        var barCornerRadius = _hudConfig.BarThicknessPixels / 2f;
+        _hudBarFillTexture = ProceduralTextures.CreateRoundedRect(GraphicsDevice, _hudConfig.BarLengthPixels, _hudConfig.BarThicknessPixels, barCornerRadius, Microsoft.Xna.Framework.Color.White);
+        _hudBarOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, _hudConfig.BarLengthPixels, _hudConfig.BarThicknessPixels, barCornerRadius, _hudConfig.BarOutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
+
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
         _camera.TargetPositionMeters = _shipSpawnPositionMeters;
-        ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _shipConfig);
+        ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _shipConfig, _playerConfig);
 
         foreach (var layer in starfieldConfig.Layers)
         {
@@ -156,6 +169,8 @@ public class MainGame : Game
 
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds);
         _physicsWorld.Step(deltaSeconds);
+        CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig); // must read hit events before the next Step overwrites them
+        VitalsSystem.Run(_world, deltaSeconds, _playerConfig);
         SpeedCapSystem.Run(_world);
         PhysicsSyncSystem.Run(_world);
 
@@ -229,12 +244,13 @@ public class MainGame : Game
         RenderSystem.Run(_world, _spriteBatch, _camera);
         _spriteBatch.End();
 
-#if DEBUG
-        // Separate screen-space pass (no camera transform) for UI/debug text.
+        // Separate screen-space pass (no camera transform) for HUD/debug text.
         _spriteBatch.Begin();
+        HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudBarFillTexture, _hudBarOutlineTexture);
+#if DEBUG
         _spriteBatch.DrawString(_debugFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
-        _spriteBatch.End();
 #endif
+        _spriteBatch.End();
 
         base.Draw(gameTime);
     }
@@ -245,6 +261,8 @@ public class MainGame : Game
     {
         WindowsCursorLock.Release();
         _world.Query(in SpriteQuery, (ref Sprite sprite) => sprite.Texture.Dispose());
+        _hudBarFillTexture.Dispose();
+        _hudBarOutlineTexture.Dispose();
         World.Destroy(_world);
         _physicsWorld.Dispose();
         base.UnloadContent();

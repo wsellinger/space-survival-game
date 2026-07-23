@@ -186,6 +186,12 @@ public class MainGame : Game
         if (gamePad.Buttons.Back == ButtonState.Pressed || keyboard.IsKeyDown(Keys.Escape))
             Exit();
 
+        // Decay screen shake every frame regardless of game state — otherwise it freezes
+        // during Dying/GameOver (since those branches return before reaching the old call
+        // site further down) and then visibly resumes/jolts once Playing starts back up
+        // after a Restart, even though the hit that caused it was long past.
+        _camera.UpdateShake((float)gameTime.ElapsedGameTime.TotalSeconds, _screenShakeConfig.ShakeDecaySpeed);
+
         if (_gameState == GameState.StartScreen || _gameState == GameState.GameOver)
         {
             // Menus always show a free, visible cursor — cursor lock/hide is a Playing-only concern.
@@ -390,7 +396,6 @@ public class MainGame : Game
         // that felt disconnected from the cursor.
         var cameraSmoothingSpeed = _useController ? _cameraConfig.TweenSpeed : 0f;
         CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, cameraSmoothingSpeed);
-        _camera.UpdateShake(deltaSeconds, _screenShakeConfig.ShakeDecaySpeed);
 
         _previousKeyboardState = keyboard;
         _previousMousePosition = mousePosition;

@@ -52,8 +52,11 @@ public class MainGame : Game
     private DeathSequenceConfig _deathSequenceConfig;
     private float _deathElapsedSeconds;
     private PickupConfig _pickupConfig;
+    private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
+    private Texture2D _screenWarningOutlineTexture;
+    private Texture2D _screenWarningVignetteTexture;
     private Texture2D _sparkTexture;
     private RenderTarget2D _sceneRenderTarget;
     private Effect _suffocationEffect;
@@ -139,6 +142,11 @@ public class MainGame : Game
 
         var pickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "pickup-config.json");
         _pickupConfig = PickupConfig.Load(pickupConfigPath);
+
+        var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
+        _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
+        _screenWarningOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, WindowWidth, WindowHeight, 0f, _screenWarningConfig.OutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
+        _screenWarningVignetteTexture = ProceduralTextures.CreateEdgeVignette(GraphicsDevice, WindowWidth, WindowHeight, _screenWarningConfig.VignetteDepthPixels, Microsoft.Xna.Framework.Color.White);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
@@ -428,6 +436,8 @@ public class MainGame : Game
         _spriteBatch.Begin();
         HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudFeedbackConfig, _healthWarningConfig, _oxygenWarningConfig,
             (float)gameTime.TotalGameTime.TotalSeconds, _hudBarFillTexture, _hudBarOutlineTexture);
+        ScreenWarningRenderer.Run(_world, _spriteBatch, _screenWarningConfig, _healthWarningConfig, _oxygenWarningConfig, _hudFeedbackConfig,
+            (float)gameTime.TotalGameTime.TotalSeconds, _screenWarningOutlineTexture, _screenWarningVignetteTexture);
 #if DEBUG
         _spriteBatch.DrawString(_uiFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
 #endif
@@ -497,6 +507,8 @@ public class MainGame : Game
         _world.Query(in SpriteQuery, (ref Sprite sprite) => sprite.Texture.Dispose());
         _hudBarFillTexture.Dispose();
         _hudBarOutlineTexture.Dispose();
+        _screenWarningOutlineTexture.Dispose();
+        _screenWarningVignetteTexture.Dispose();
         _sparkTexture.Dispose();
         _buttonFillTexture.Dispose();
         _buttonOutlineTexture.Dispose();

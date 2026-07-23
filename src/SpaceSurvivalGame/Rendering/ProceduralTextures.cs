@@ -229,6 +229,32 @@ public static class ProceduralTextures
     }
 
     /// <summary>
+    /// A soft edge vignette: full color right at the width x height rectangle's boundary,
+    /// easing out to transparent depthPixels inward. Meant to be shared/tinted at draw time
+    /// (e.g. a red or blue full-screen warning).
+    /// </summary>
+    public static Texture2D CreateEdgeVignette(GraphicsDevice graphicsDevice, int width, int height, float depthPixels, Color color)
+    {
+        var data = new Color[width * height];
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var distanceFromEdge = -RoundedRectSignedDistance(point, width, height, 0f); // positive inside; 0 right at the boundary
+                var falloff = MathHelper.Clamp(1f - distanceFromEdge / depthPixels, 0f, 1f);
+                falloff *= falloff; // eases the fade so it's softer approaching the inner edge
+                data[y * width + x] = color * falloff;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, width, height);
+        texture.SetData(data);
+        return texture;
+    }
+
+    /// <summary>
     /// Signed distance from point to the boundary of a width x height rounded rect centered
     /// in that box (negative = inside, positive = outside) — the standard rounded-box SDF:
     /// shrink the box by cornerRadius, measure distance to that inner rect (clamped to 0 when

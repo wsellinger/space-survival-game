@@ -1,19 +1,20 @@
 {
-  "ExplosionBurstCount": 10,
-  "ExplosionSparkCountMin": 8,
-  "ExplosionSparkCountMax": 14,
-  "ExplosionSparkSpeedMinMetersPerSecond": 1.5,
-  "ExplosionSparkSpeedMaxMetersPerSecond": 4,
-  "ExplosionSparkLifetimeMinSeconds": 1.0,
-  "ExplosionSparkLifetimeMaxSeconds": 2.0,
-  "ExplosionSparkSizePixels": 6,
-  "FadeDelaySeconds": 0.5,
-  "FadeDurationSeconds": 1.5,
-  "ShipFragmentCount": 5,
-  "FragmentSizePixels": 22,
-  "FragmentMinSpeedMetersPerSecond": 0.1,
-  "FragmentMaxSpeedMetersPerSecond": 0.8,
-  "FragmentSpreadAngleRadians": 2,
-  "FragmentMinAngularVelocityRadiansPerSecond": 2,
-  "FragmentMaxAngularVelocityRadiansPerSecond": 12
+  "Explosion": {
+    "BurstCount": 10,
+    "SparkCountRange": [8, 14],
+    "SparkSpeedMetersPerSecondRange": [1.5, 4],
+    "SparkLifetimeSecondsRange": [1.0, 2.0],
+    "SparkSizePixels": 6
+  },
+  "Fade": {
+    "DelaySeconds": 0.5,
+    "DurationSeconds": 1.5
+  },
+  "Fragments": {
+    "Count": 5,
+    "SizePixels": 22,
+    "SpeedMetersPerSecondRange": [0.1, 0.8],
+    "SpreadAngleRadians": 2,
+    "AngularVelocityRadiansPerSecondRange": [2, 12]
+  }
 }

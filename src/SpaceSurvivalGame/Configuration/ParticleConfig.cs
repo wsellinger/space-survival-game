@@ -11,12 +11,9 @@ namespace SpaceSurvivalGame.Configuration;
 public class ParticleConfig
 {
     public int SparkTextureSizePixels { get; set; } = 6;
-    public int SparkCountMin { get; set; } = 8;
-    public int SparkCountMax { get; set; } = 14;
-    public float SparkSpeedMinMetersPerSecond { get; set; } = 1.5f;
-    public float SparkSpeedMaxMetersPerSecond { get; set; } = 4f;
-    public float SparkLifetimeMinSeconds { get; set; } = 0.2f;
-    public float SparkLifetimeMaxSeconds { get; set; } = 0.45f;
+    public IntRange SparkCountRange { get; set; } = new(8, 14);
+    public FloatRange SparkSpeedMetersPerSecondRange { get; set; } = new(1.5f, 4f);
+    public FloatRange SparkLifetimeSecondsRange { get; set; } = new(0.2f, 0.45f);
 
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 

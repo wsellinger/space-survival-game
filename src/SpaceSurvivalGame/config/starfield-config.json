@@ -31,6 +31,5 @@
       "Brightness": 0.35
     }
   ],
-  "MinTintStrength": 0.05,
-  "MaxTintStrength": 0.25
+  "TintStrengthRange": [0.05, 0.25]
 }

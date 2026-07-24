@@ -175,7 +175,7 @@ public class MainGame : Game
         {
             var color = Microsoft.Xna.Framework.Color.White * layer.Brightness;
             Starfield.Create(_world, GraphicsDevice, _shipSpawnPositionMeters, layer.HalfExtentMeters, layer.StarCount, layer.Parallax, color,
-                starfieldConfig.MinTintStrength, starfieldConfig.MaxTintStrength);
+                starfieldConfig.TintStrengthRange.Min, starfieldConfig.TintStrengthRange.Max);
         }
 
         AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig);
@@ -256,7 +256,7 @@ public class MainGame : Game
             ShipEntity.Hide(_world); // re-assert each frame — HitFlashSystem still runs once more in the Playing frame where death triggers (after the initial Hide() call) and clobbers it back to visible
 
             _deathElapsedSeconds += dyingDeltaSeconds;
-            if (_deathElapsedSeconds >= _deathSequenceConfig.FadeDelaySeconds + _deathSequenceConfig.FadeDurationSeconds)
+            if (_deathElapsedSeconds >= _deathSequenceConfig.Fade.DelaySeconds + _deathSequenceConfig.Fade.DurationSeconds)
                 _gameState = GameState.GameOver;
 
             _previousMenuMouseState = mouse;
@@ -351,7 +351,7 @@ public class MainGame : Game
         _world.Query(in HealthQuery, (ref Health health) => shipHealth = health.Current);
         if (shipHealth <= 0f && CameraFollowSystem.TryGetShipPositionMeters(_world, out var deathPositionMeters))
         {
-            for (var i = 0; i < _deathSequenceConfig.ExplosionBurstCount; i++)
+            for (var i = 0; i < _deathSequenceConfig.Explosion.BurstCount; i++)
                 ParticleEffects.SpawnExplosionBurst(_world, _sparkTexture, deathPositionMeters, _random, _deathSequenceConfig);
 
             // Read the Box2D body directly rather than the ECS Velocity component — PhysicsSyncSystem
@@ -491,17 +491,17 @@ public class MainGame : Game
         _world.Query(in SuffocationQuery, (ref Suffocation suffocation) => suffocationSeconds = suffocation.ElapsedSeconds);
         var suffocationProgress = MathHelper.Clamp(suffocationSeconds / _suffocationConfig.EffectDurationSeconds, 0f, 1f);
 
-        var pixelBlockSizePixels = _suffocationConfig.PixelationEnabled ? _suffocationConfig.MaxPixelationBlockSizePixels * suffocationProgress : 0f;
+        var pixelBlockSizePixels = _suffocationConfig.Pixelation.Enabled ? _suffocationConfig.Pixelation.MaxBlockSizePixels * suffocationProgress : 0f;
         _suffocationEffect.Parameters["PixelBlockSizeUV"].SetValue(new Vector2(pixelBlockSizePixels / WindowWidth, pixelBlockSizePixels / WindowHeight));
-        var grayscaleIntensity = MathF.Pow(suffocationProgress, _suffocationConfig.GrayscaleEaseExponent);
+        var grayscaleIntensity = MathF.Pow(suffocationProgress, _suffocationConfig.Grayscale.EaseExponent);
         _suffocationEffect.Parameters["GrayscaleIntensity"].SetValue(grayscaleIntensity);
-        var vignetteProgress = MathF.Pow(suffocationProgress, _suffocationConfig.VignetteEaseExponent);
-        _suffocationEffect.Parameters["VignetteRadius"].SetValue(MathHelper.Lerp(_suffocationConfig.VignetteStartRadius, 0f, vignetteProgress));
-        _suffocationEffect.Parameters["VignetteFeatherRadius"].SetValue(_suffocationConfig.VignetteFeatherRadius);
+        var vignetteProgress = MathF.Pow(suffocationProgress, _suffocationConfig.Vignette.EaseExponent);
+        _suffocationEffect.Parameters["VignetteRadius"].SetValue(MathHelper.Lerp(_suffocationConfig.Vignette.StartRadius, 0f, vignetteProgress));
+        _suffocationEffect.Parameters["VignetteFeatherRadius"].SetValue(_suffocationConfig.Vignette.FeatherRadius);
         _suffocationEffect.Parameters["AspectRatio"].SetValue(new Vector2(WindowWidth / (float)WindowHeight, 1f));
-        _suffocationEffect.Parameters["NoiseCellCount"].SetValue(new Vector2(WindowWidth / _suffocationConfig.NoiseGrainSizePixels, WindowHeight / _suffocationConfig.NoiseGrainSizePixels));
-        _suffocationEffect.Parameters["NoiseIntensity"].SetValue(_suffocationConfig.NoiseMaxIntensity * suffocationProgress);
-        _suffocationEffect.Parameters["NoiseAdditiveBlend"].SetValue(_suffocationConfig.NoiseAdditiveBlend ? 1f : 0f);
+        _suffocationEffect.Parameters["NoiseCellCount"].SetValue(new Vector2(WindowWidth / _suffocationConfig.Noise.GrainSizePixels, WindowHeight / _suffocationConfig.Noise.GrainSizePixels));
+        _suffocationEffect.Parameters["NoiseIntensity"].SetValue(_suffocationConfig.Noise.MaxIntensity * suffocationProgress);
+        _suffocationEffect.Parameters["NoiseAdditiveBlend"].SetValue(_suffocationConfig.Noise.AdditiveBlend ? 1f : 0f);
         _suffocationEffect.Parameters["NoiseTimeSeed"].SetValue((float)gameTime.TotalGameTime.TotalSeconds);
 
         _spriteBatch.Begin(effect: _suffocationEffect, samplerState: SamplerState.PointClamp);
@@ -514,8 +514,8 @@ public class MainGame : Game
         var deathFadeAlpha = 0f;
         if (_gameState == GameState.Dying || _gameState == GameState.GameOver)
         {
-            var fadeElapsed = _deathElapsedSeconds - _deathSequenceConfig.FadeDelaySeconds;
-            deathFadeAlpha = _gameState == GameState.GameOver ? 1f : MathHelper.Clamp(fadeElapsed / _deathSequenceConfig.FadeDurationSeconds, 0f, 1f);
+            var fadeElapsed = _deathElapsedSeconds - _deathSequenceConfig.Fade.DelaySeconds;
+            deathFadeAlpha = _gameState == GameState.GameOver ? 1f : MathHelper.Clamp(fadeElapsed / _deathSequenceConfig.Fade.DurationSeconds, 0f, 1f);
         }
 
         if (deathFadeAlpha > 0f)

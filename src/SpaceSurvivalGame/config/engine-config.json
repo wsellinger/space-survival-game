@@ -1,25 +1,31 @@
 {
   "KeyboardThrottleEaseSpeed": 4,
   "FlameTextureSizePixels": 16,
-  "MinFlameLengthPixels": 6,
-  "MaxFlameLengthPixels": 16,
-  "MinFlameWidthPixels": 2,
-  "MaxFlameWidthPixels": 8,
-  "ColorHex": "#6A8EAE4D",
-  "MinInnerFlameLengthPixels": 3,
-  "MaxInnerFlameLengthPixels": 7,
-  "MinInnerFlameWidthPixels": 1,
-  "MaxInnerFlameWidthPixels": 6,
-  "InnerColorHex": "#A5D6F722",
-  "FlickerSpeedHz": 14,
-  "FlickerIntensity": 0.3,
-  "StrafeJetEdgeMountFraction": 0.55,
-  "MinStrafeFlameLengthPixels": 6,
-  "MaxStrafeFlameLengthPixels": 16,
-  "MinStrafeFlameWidthPixels": 1,
-  "MaxStrafeFlameWidthPixels": 4,
-  "MinInnerStrafeFlameLengthPixels": 3,
-  "MaxInnerStrafeFlameLengthPixels": 7,
-  "MinInnerStrafeFlameWidthPixels": 1,
-  "MaxInnerStrafeFlameWidthPixels": 2.5
+  "Flicker": {
+    "SpeedHz": 14,
+    "Intensity": 0.3
+  },
+  "MainJet": {
+    "Outer": {
+      "LengthPixelsRange": [6, 16],
+      "WidthPixelsRange": [2, 8],
+      "ColorHex": "#6A8EAE4D"
+    },
+    "Inner": {
+      "LengthPixelsRange": [3, 7],
+      "WidthPixelsRange": [1, 6],
+      "ColorHex": "#A5D6F722"
+    }
+  },
+  "StrafeJets": {
+    "EdgeMountFraction": 0.55,
+    "Outer": {
+      "LengthPixelsRange": [6, 16],
+      "WidthPixelsRange": [1, 4]
+    },
+    "Inner": {
+      "LengthPixelsRange": [3, 7],
+      "WidthPixelsRange": [1, 2.5]
+    }
+  }
 }

@@ -29,12 +29,12 @@ public static class EngineJetRenderer
     {
         // A sum of two out-of-sync sine waves reads as an irregular flicker without needing
         // any per-frame random state; applied to both size and brightness together.
-        var flicker = 1f + config.FlickerIntensity * (
-            MathF.Sin(totalGameSeconds * config.FlickerSpeedHz * MathF.PI * 2f) * 0.6f +
-            MathF.Sin(totalGameSeconds * config.FlickerSpeedHz * 2.7f * MathF.PI * 2f) * 0.4f);
+        var flicker = 1f + config.Flicker.Intensity * (
+            MathF.Sin(totalGameSeconds * config.Flicker.SpeedHz * MathF.PI * 2f) * 0.6f +
+            MathF.Sin(totalGameSeconds * config.Flicker.SpeedHz * 2.7f * MathF.PI * 2f) * 0.4f);
 
-        var outerColor = ColorHex.Parse(config.ColorHex);
-        var innerColor = ColorHex.Parse(config.InnerColorHex);
+        var outerColor = ColorHex.Parse(config.MainJet.Outer.ColorHex);
+        var innerColor = ColorHex.Parse(config.MainJet.Inner.ColorHex);
 
         // Hull geometry in local ship space (+X forward, +Y right), matching ShipEntity's
         // physics triangle and CreateConcaveArrowShip's texture points, relative to the
@@ -49,11 +49,11 @@ public static class EngineJetRenderer
         // its lateral component gives forward-and-outward, i.e. a thruster flush-mounted on
         // that edge but venting away from the hull instead of along it.
         var rightEdge = noseLocal - rightCornerLocal;
-        var rightMountLocal = rightCornerLocal + rightEdge * config.StrafeJetEdgeMountFraction;
+        var rightMountLocal = rightCornerLocal + rightEdge * config.StrafeJets.EdgeMountFraction;
         var rightExhaustLocal = NVector2.Normalize(new NVector2(rightEdge.X, -rightEdge.Y));
 
         var leftEdge = noseLocal - leftCornerLocal;
-        var leftMountLocal = leftCornerLocal + leftEdge * config.StrafeJetEdgeMountFraction;
+        var leftMountLocal = leftCornerLocal + leftEdge * config.StrafeJets.EdgeMountFraction;
         var leftExhaustLocal = NVector2.Normalize(new NVector2(leftEdge.X, -leftEdge.Y));
 
         world.Query(in Query, (ref Transform transform, ref EngineThrottle throttle) =>
@@ -74,11 +74,11 @@ public static class EngineJetRenderer
                 var alpha = MathHelper.Clamp(throttle.Current * flicker, 0f, 1f);
 
                 DrawLayer(spriteBatch, flameTexture, screenPosition, rotation, origin, config.FlameTextureSizePixels,
-                    config.MinFlameLengthPixels, config.MaxFlameLengthPixels, config.MinFlameWidthPixels, config.MaxFlameWidthPixels,
+                    config.MainJet.Outer.LengthPixelsRange, config.MainJet.Outer.WidthPixelsRange,
                     throttle.Current, flicker, outerColor * alpha, layerDepth: 0.11f);
 
                 DrawLayer(spriteBatch, flameTexture, screenPosition, rotation, origin, config.FlameTextureSizePixels,
-                    config.MinInnerFlameLengthPixels, config.MaxInnerFlameLengthPixels, config.MinInnerFlameWidthPixels, config.MaxInnerFlameWidthPixels,
+                    config.MainJet.Inner.LengthPixelsRange, config.MainJet.Inner.WidthPixelsRange,
                     throttle.Current, flicker, innerColor * alpha, layerDepth: 0.1f); // smaller layerDepth so it draws on top of the outer layer, both still behind the ship's own sprite (layerDepth 0)
             }
 
@@ -101,20 +101,20 @@ public static class EngineJetRenderer
         var alpha = MathHelper.Clamp(magnitude * flicker, 0f, 1f);
 
         DrawLayer(spriteBatch, flameTexture, screenPosition, rotation, origin, config.FlameTextureSizePixels,
-            config.MinStrafeFlameLengthPixels, config.MaxStrafeFlameLengthPixels, config.MinStrafeFlameWidthPixels, config.MaxStrafeFlameWidthPixels,
+            config.StrafeJets.Outer.LengthPixelsRange, config.StrafeJets.Outer.WidthPixelsRange,
             magnitude, flicker, outerColor * alpha, layerDepth: 0.11f);
 
         DrawLayer(spriteBatch, flameTexture, screenPosition, rotation, origin, config.FlameTextureSizePixels,
-            config.MinInnerStrafeFlameLengthPixels, config.MaxInnerStrafeFlameLengthPixels, config.MinInnerStrafeFlameWidthPixels, config.MaxInnerStrafeFlameWidthPixels,
+            config.StrafeJets.Inner.LengthPixelsRange, config.StrafeJets.Inner.WidthPixelsRange,
             magnitude, flicker, innerColor * alpha, layerDepth: 0.1f);
     }
 
     private static void DrawLayer(SpriteBatch spriteBatch, Texture2D flameTexture, Vector2 screenPosition, float rotation, Vector2 origin,
-        int flameTextureSizePixels, float minLengthPixels, float maxLengthPixels, float minWidthPixels, float maxWidthPixels,
+        int flameTextureSizePixels, FloatRange lengthPixelsRange, FloatRange widthPixelsRange,
         float throttle, float flicker, Color color, float layerDepth)
     {
-        var lengthPixels = MathHelper.Lerp(minLengthPixels, maxLengthPixels, throttle) * flicker;
-        var widthPixels = MathHelper.Lerp(minWidthPixels, maxWidthPixels, throttle) * flicker;
+        var lengthPixels = MathHelper.Lerp(lengthPixelsRange.Min, lengthPixelsRange.Max, throttle) * flicker;
+        var widthPixels = MathHelper.Lerp(widthPixelsRange.Min, widthPixelsRange.Max, throttle) * flicker;
         var scale = new Vector2(lengthPixels, widthPixels) / flameTextureSizePixels; // X = length (tip direction), Y = width
 
         spriteBatch.Draw(flameTexture, screenPosition, null, color, rotation, origin, scale, SpriteEffects.None, layerDepth);

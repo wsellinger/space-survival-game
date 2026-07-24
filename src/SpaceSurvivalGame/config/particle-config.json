@@ -1,9 +1,6 @@
 {
   "SparkTextureSizePixels": 3,
-  "SparkCountMin": 8,
-  "SparkCountMax": 14,
-  "SparkSpeedMinMetersPerSecond": 1.5,
-  "SparkSpeedMaxMetersPerSecond": 4,
-  "SparkLifetimeMinSeconds": 0.2,
-  "SparkLifetimeMaxSeconds": 0.45
+  "SparkCountRange": [8, 14],
+  "SparkSpeedMetersPerSecondRange": [1.5, 4],
+  "SparkLifetimeSecondsRange": [0.2, 0.45]
 }

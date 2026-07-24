@@ -1,10 +1,14 @@
 {
-  "ThrustAcceleration": 3.8,
   "MaxSpeedMetersPerSecond": 4,
-  "StrafeMaxSpeedMetersPerSecond": 3,
-  "StrafeSpeedCapAngleThresholdDegrees": 30,
   "TurnSpeedRadiansPerSecond": 10,
   "SpriteSize": 24,
-  "ThrustAngleThresholdDegrees": 45,
-  "NotchDepthFraction": 0.15
+  "NotchDepthFraction": 0.15,
+  "Thrust": {
+    "Acceleration": 3.8,
+    "AngleThresholdDegrees": 45
+  },
+  "Strafe": {
+    "MaxSpeedMetersPerSecond": 3,
+    "SpeedCapAngleThresholdDegrees": 30
+  }
 }

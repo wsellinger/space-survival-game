@@ -1,5 +1,4 @@
 {
-  "MinShakeMagnitudePixels": 2,
-  "MaxShakeMagnitudePixels": 20,
+  "MagnitudePixelsRange": [2, 20],
   "ShakeDecaySpeed": 6
 }

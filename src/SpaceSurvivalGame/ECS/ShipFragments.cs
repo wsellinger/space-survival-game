@@ -33,15 +33,15 @@ public static class ShipFragments
 
     public static void SpawnDebris(World world, Texture2D[] fragmentTextures, Vector2 positionMeters, Vector2 shipVelocityMetersPerSecond, Random random, DeathSequenceConfig config)
     {
-        var lifetime = config.FadeDelaySeconds + config.FadeDurationSeconds;
-        var scale = config.FragmentSizePixels / (float)FragmentTextureSize;
+        var lifetime = config.Fade.DelaySeconds + config.Fade.DurationSeconds;
+        var scale = config.Fragments.SizePixels / (float)FragmentTextureSize;
 
         var shipSpeed = shipVelocityMetersPerSecond.Length();
         var baseAngle = shipSpeed > 0.01f
             ? MathF.Atan2(shipVelocityMetersPerSecond.Y, shipVelocityMetersPerSecond.X)
             : (float)(random.NextDouble() * Math.PI * 2);
 
-        for (var i = 0; i < config.ShipFragmentCount; i++)
+        for (var i = 0; i < config.Fragments.Count; i++)
         {
             var texture = fragmentTextures[random.Next(fragmentTextures.Length)];
 
@@ -49,12 +49,12 @@ public static class ShipFragments
             // independent kick vector) so the spread is actually visible regardless of how fast
             // the ship was going — a small kick added to a large ship-speed vector barely
             // changes the resulting direction at all.
-            var fragmentAngle = baseAngle + ((float)random.NextDouble() * 2f - 1f) * config.FragmentSpreadAngleRadians;
-            var kickSpeed = config.FragmentMinSpeedMetersPerSecond + (float)random.NextDouble() * (config.FragmentMaxSpeedMetersPerSecond - config.FragmentMinSpeedMetersPerSecond);
+            var fragmentAngle = baseAngle + ((float)random.NextDouble() * 2f - 1f) * config.Fragments.SpreadAngleRadians;
+            var kickSpeed = config.Fragments.SpeedMetersPerSecondRange.Min + (float)random.NextDouble() * (config.Fragments.SpeedMetersPerSecondRange.Max - config.Fragments.SpeedMetersPerSecondRange.Min);
             var velocity = new Vector2(MathF.Cos(fragmentAngle), MathF.Sin(fragmentAngle)) * (shipSpeed + kickSpeed);
 
-            var angularSpeed = config.FragmentMinAngularVelocityRadiansPerSecond +
-                                (float)random.NextDouble() * (config.FragmentMaxAngularVelocityRadiansPerSecond - config.FragmentMinAngularVelocityRadiansPerSecond);
+            var angularSpeed = config.Fragments.AngularVelocityRadiansPerSecondRange.Min +
+                                (float)random.NextDouble() * (config.Fragments.AngularVelocityRadiansPerSecondRange.Max - config.Fragments.AngularVelocityRadiansPerSecondRange.Min);
             var angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
             world.Create(

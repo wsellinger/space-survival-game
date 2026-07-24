@@ -14,8 +14,7 @@ public class HudFeedbackConfig
 
     // Shake magnitude is a linear map from collision damage to pixels of jitter on the
     // health bar itself, clamped between these two, same convention as ScreenShakeConfig.
-    public float MinShakeMagnitudePixels { get; set; } = 1f;
-    public float MaxShakeMagnitudePixels { get; set; } = 6f;
+    public FloatRange ShakeMagnitudePixelsRange { get; set; } = new(1f, 6f);
     public float ShakeDecaySpeed { get; set; } = 10f;
 
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };

@@ -1,6 +1,5 @@
 {
   "FlashDurationSeconds": 0.25,
-  "MinShakeMagnitudePixels": 2,
-  "MaxShakeMagnitudePixels": 8,
+  "ShakeMagnitudePixelsRange": [2, 8],
   "ShakeDecaySpeed": 10
 }

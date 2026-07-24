@@ -12,8 +12,7 @@ public class ScreenShakeConfig
 {
     // Shake magnitude is a linear map from collision damage to pixels of jitter,
     // clamped between these two — a trivial tap barely shakes, a max-damage hit shakes hard.
-    public float MinShakeMagnitudePixels { get; set; } = 2f;
-    public float MaxShakeMagnitudePixels { get; set; } = 20f;
+    public FloatRange MagnitudePixelsRange { get; set; } = new(2f, 20f);
 
     // Exponential decay rate — higher settles back to still faster, same convention as
     // CameraConfig.TweenSpeed.

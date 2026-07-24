@@ -18,11 +18,11 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// (see ShipEntity.Create), every hit event involving the ship fires regardless of what it hit,
 /// so the Damaging check is what keeps harmless things like O2 pickups from ever dealing
 /// damage. Damage is a linear map from the event's approach speed to HP, clamped at both ends
-/// by PlayerConfig's Min/MaxCollisionSpeedMetersPerSecond and Min/MaxCollisionDamage. Each
-/// qualifying hit also spawns a spark burst at the impact point; total damage this frame also
-/// triggers the ship's hit-flash and a screen shake scaled by how much of MaxCollisionDamage it
-/// represents. Must run after PhysicsWorld.Step (hit events are only populated post-step) and
-/// before the next Step call overwrites them.
+/// by PlayerConfig.Collision's SpeedMetersPerSecondRange and DamageRange. Each qualifying hit
+/// also spawns a spark burst at the impact point; total damage this frame also triggers the
+/// ship's hit-flash and a screen shake scaled by how much of DamageRange.Max it represents.
+/// Must run after PhysicsWorld.Step (hit events are only populated post-step) and before the
+/// next Step call overwrites them.
 /// </summary>
 public static class CollisionDamageSystem
 {
@@ -63,23 +63,23 @@ public static class CollisionDamageSystem
 
             if (!damagingBodyIds.Contains(BodyIdKey(otherBody))) continue; // e.g. an O2 pickup — never deals damage
 
-            var speedFraction = (hitEvent.approachSpeed - config.MinCollisionSpeedMetersPerSecond) /
-                                 (config.MaxCollisionSpeedMetersPerSecond - config.MinCollisionSpeedMetersPerSecond);
+            var speedFraction = (hitEvent.approachSpeed - config.Collision.SpeedMetersPerSecondRange.Min) /
+                                 (config.Collision.SpeedMetersPerSecondRange.Max - config.Collision.SpeedMetersPerSecondRange.Min);
             speedFraction = System.Math.Clamp(speedFraction, 0f, 1f);
-            totalDamage += config.MinCollisionDamage + speedFraction * (config.MaxCollisionDamage - config.MinCollisionDamage);
+            totalDamage += config.Collision.DamageRange.Min + speedFraction * (config.Collision.DamageRange.Max - config.Collision.DamageRange.Min);
 
             ParticleEffects.SpawnSparkBurst(world, sparkTexture, hitEvent.point, random, particleConfig);
         }
 
         if (totalDamage <= 0f) return;
 
-        var damageFraction = System.Math.Clamp(totalDamage / config.MaxCollisionDamage, 0f, 1f);
-        var shakeMagnitude = screenShakeConfig.MinShakeMagnitudePixels +
-                              damageFraction * (screenShakeConfig.MaxShakeMagnitudePixels - screenShakeConfig.MinShakeMagnitudePixels);
+        var damageFraction = System.Math.Clamp(totalDamage / config.Collision.DamageRange.Max, 0f, 1f);
+        var shakeMagnitude = screenShakeConfig.MagnitudePixelsRange.Min +
+                              damageFraction * (screenShakeConfig.MagnitudePixelsRange.Max - screenShakeConfig.MagnitudePixelsRange.Min);
         camera.AddShake(shakeMagnitude);
 
-        var hudShakeMagnitude = hudFeedbackConfig.MinShakeMagnitudePixels +
-                                 damageFraction * (hudFeedbackConfig.MaxShakeMagnitudePixels - hudFeedbackConfig.MinShakeMagnitudePixels);
+        var hudShakeMagnitude = hudFeedbackConfig.ShakeMagnitudePixelsRange.Min +
+                                 damageFraction * (hudFeedbackConfig.ShakeMagnitudePixelsRange.Max - hudFeedbackConfig.ShakeMagnitudePixelsRange.Min);
 
         world.Query(in ShipQuery, (ref Health health, ref HitFlash hitFlash, ref HealthBarFeedback healthBarFeedback) =>
         {

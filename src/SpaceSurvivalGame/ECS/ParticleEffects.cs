@@ -13,16 +13,18 @@ public static class ParticleEffects
 {
     public static void SpawnSparkBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, ParticleConfig config) =>
         SpawnBurst(world, sparkTexture, positionMeters, random,
-            config.SparkCountMin, config.SparkCountMax, config.SparkSpeedMinMetersPerSecond, config.SparkSpeedMaxMetersPerSecond,
-            config.SparkLifetimeMinSeconds, config.SparkLifetimeMaxSeconds, config.SparkTextureSizePixels,
+            config.SparkCountRange.Min, config.SparkCountRange.Max,
+            config.SparkSpeedMetersPerSecondRange.Min, config.SparkSpeedMetersPerSecondRange.Max,
+            config.SparkLifetimeSecondsRange.Min, config.SparkLifetimeSecondsRange.Max, config.SparkTextureSizePixels,
             new Microsoft.Xna.Framework.Color(255, 140, 0),   // orange
             new Microsoft.Xna.Framework.Color(255, 215, 60)); // yellow
 
     /// <summary>Independently tunable from regular collision taps (DeathSequenceConfig rather than ParticleConfig) so the death explosion can be made bigger/longer-lived without affecting ordinary hit sparks.</summary>
     public static void SpawnExplosionBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, DeathSequenceConfig config) =>
         SpawnBurst(world, sparkTexture, positionMeters, random,
-            config.ExplosionSparkCountMin, config.ExplosionSparkCountMax, config.ExplosionSparkSpeedMinMetersPerSecond, config.ExplosionSparkSpeedMaxMetersPerSecond,
-            config.ExplosionSparkLifetimeMinSeconds, config.ExplosionSparkLifetimeMaxSeconds, config.ExplosionSparkSizePixels,
+            config.Explosion.SparkCountRange.Min, config.Explosion.SparkCountRange.Max,
+            config.Explosion.SparkSpeedMetersPerSecondRange.Min, config.Explosion.SparkSpeedMetersPerSecondRange.Max,
+            config.Explosion.SparkLifetimeSecondsRange.Min, config.Explosion.SparkLifetimeSecondsRange.Max, config.Explosion.SparkSizePixels,
             new Microsoft.Xna.Framework.Color(255, 140, 0),   // orange
             new Microsoft.Xna.Framework.Color(255, 215, 60)); // yellow
 
@@ -33,12 +35,12 @@ public static class ParticleEffects
     /// </summary>
     public static void SpawnPickupBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, ParticleConfig config)
     {
-        var count = random.Next(config.SparkCountMin, config.SparkCountMax + 1);
+        var count = random.Next(config.SparkCountRange.Min, config.SparkCountRange.Max + 1);
         for (var i = 0; i < count; i++)
         {
             var angle = (float)(random.NextDouble() * Math.PI * 2);
-            var speed = config.SparkSpeedMinMetersPerSecond + (float)random.NextDouble() * (config.SparkSpeedMaxMetersPerSecond - config.SparkSpeedMinMetersPerSecond);
-            var lifetime = config.SparkLifetimeMinSeconds + (float)random.NextDouble() * (config.SparkLifetimeMaxSeconds - config.SparkLifetimeMinSeconds);
+            var speed = config.SparkSpeedMetersPerSecondRange.Min + (float)random.NextDouble() * (config.SparkSpeedMetersPerSecondRange.Max - config.SparkSpeedMetersPerSecondRange.Min);
+            var lifetime = config.SparkLifetimeSecondsRange.Min + (float)random.NextDouble() * (config.SparkLifetimeSecondsRange.Max - config.SparkLifetimeSecondsRange.Min);
             var color = random.Next(2) == 0 ? Microsoft.Xna.Framework.Color.CornflowerBlue : Microsoft.Xna.Framework.Color.White;
 
             var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));

@@ -54,11 +54,11 @@ public static class AsteroidField
         // Cell size = the largest possible sum-of-radii between any two asteroids,
         // which is the standard correctness condition for checking only the 3x3
         // neighborhood during overlap tests.
-        var grid = new SpatialGrid(config.AsteroidMaxRadiusMeters * 2f);
+        var grid = new SpatialGrid(config.Asteroid.RadiusMetersRange.Max * 2f);
 
         var fieldSideMeters = config.FieldHalfExtentMeters * 2f;
         var fieldAreaSquareMeters = fieldSideMeters * fieldSideMeters;
-        var asteroidCount = (int)(config.AsteroidSpawnDensityPerSquareMeter * fieldAreaSquareMeters);
+        var asteroidCount = (int)(config.Asteroid.SpawnDensityPerSquareMeter * fieldAreaSquareMeters);
 
         for (var i = 0; i < asteroidCount; i++)
         {
@@ -71,13 +71,13 @@ public static class AsteroidField
             bodyDef.type = b2BodyType.b2_dynamicBody;
             bodyDef.position = positionMeters;
 
-            var speed = config.AsteroidMinSpeedMetersPerSecond +
-                        (float)random.NextDouble() * (config.AsteroidMaxSpeedMetersPerSecond - config.AsteroidMinSpeedMetersPerSecond);
+            var speed = config.Asteroid.SpeedMetersPerSecondRange.Min +
+                        (float)random.NextDouble() * (config.Asteroid.SpeedMetersPerSecondRange.Max - config.Asteroid.SpeedMetersPerSecondRange.Min);
             var angle = (float)(random.NextDouble() * Math.PI * 2);
             bodyDef.linearVelocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
 
-            var angularSpeed = config.AsteroidMinAngularVelocityRadiansPerSecond +
-                                (float)random.NextDouble() * (config.AsteroidMaxAngularVelocityRadiansPerSecond - config.AsteroidMinAngularVelocityRadiansPerSecond);
+            var angularSpeed = config.Asteroid.AngularVelocityRadiansPerSecondRange.Min +
+                                (float)random.NextDouble() * (config.Asteroid.AngularVelocityRadiansPerSecondRange.Max - config.Asteroid.AngularVelocityRadiansPerSecondRange.Min);
             bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
             var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
@@ -88,8 +88,8 @@ public static class AsteroidField
             for (var p = 0; p < unitVertices.Length; p++) points[p] = unitVertices[p] * radiusMeters;
 
             var shapeDef = B2Api.b2DefaultShapeDef();
-            shapeDef.density = config.AsteroidMaterialDensity;
-            shapeDef.material.restitution = config.AsteroidRestitution;
+            shapeDef.density = config.Asteroid.MaterialDensity;
+            shapeDef.material.restitution = config.Asteroid.Restitution;
             var hull = B2Api.b2ComputeHull(points, points.Length);
             var polygon = B2Api.b2MakePolygon(hull, 0f);
             B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);
@@ -141,8 +141,8 @@ public static class AsteroidField
             var candidatePosition = centerMeters + new Vector2(
                 (float)(random.NextDouble() * 2 - 1) * config.FieldHalfExtentMeters,
                 (float)(random.NextDouble() * 2 - 1) * config.FieldHalfExtentMeters);
-            var candidateRadius = config.AsteroidMinRadiusMeters +
-                                   (float)random.NextDouble() * (config.AsteroidMaxRadiusMeters - config.AsteroidMinRadiusMeters);
+            var candidateRadius = config.Asteroid.RadiusMetersRange.Min +
+                                   (float)random.NextDouble() * (config.Asteroid.RadiusMetersRange.Max - config.Asteroid.RadiusMetersRange.Min);
 
             var minDistanceFromCenter = clearRadiusMeters + candidateRadius;
             if (Vector2.DistanceSquared(candidatePosition, centerMeters) < minDistanceFromCenter * minDistanceFromCenter)

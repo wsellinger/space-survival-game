@@ -1,14 +1,13 @@
 {
   "FieldHalfExtentMeters": 50,
   "ShipSpawnClearRadiusPixels": 50,
-  "AsteroidSpawnDensityPerSquareMeter": 0.2,
-  "AsteroidMinRadiusMeters": 0.1,
-  "AsteroidMaxRadiusMeters": 0.5,
-  "AsteroidMinSpeedMetersPerSecond": 0.1,
-  "AsteroidMaxSpeedMetersPerSecond": 0.5,
-  "AsteroidMinAngularVelocityRadiansPerSecond": 0.1,
-  "AsteroidMaxAngularVelocityRadiansPerSecond": 1,
-  "AsteroidRestitution": 0.6,
-  "AsteroidMaterialDensity": 1.83,
-  "WorldSeed": 12345
+  "WorldSeed": 12345,
+  "Asteroid": {
+    "SpawnDensityPerSquareMeter": 0.2,
+    "RadiusMetersRange": [0.1, 0.5],
+    "SpeedMetersPerSecondRange": [0.1, 0.5],
+    "AngularVelocityRadiansPerSecondRange": [0.1, 1],
+    "Restitution": 0.6,
+    "MaterialDensity": 1.83
+  }
 }

@@ -36,8 +36,7 @@ public class StarfieldConfig
 
     // Each star randomly dims one or two color channels by an amount in this range, giving
     // it a slight red/yellow/blue cast instead of plain white. 0 = no tint at all.
-    public float MinTintStrength { get; set; } = 0.05f;
-    public float MaxTintStrength { get; set; } = 0.15f;
+    public FloatRange TintStrengthRange { get; set; } = new(0.05f, 0.15f);
 
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 

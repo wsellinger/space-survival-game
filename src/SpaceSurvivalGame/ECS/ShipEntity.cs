@@ -53,12 +53,12 @@ public static class ShipEntity
             new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = config.SpriteSize, Scale = 1f, Parallax = 1f },
             new ShipMovement
             {
-                ThrustAcceleration = config.ThrustAcceleration,
+                ThrustAcceleration = config.Thrust.Acceleration,
                 MaxSpeedMetersPerSecond = config.MaxSpeedMetersPerSecond,
-                StrafeMaxSpeedMetersPerSecond = config.StrafeMaxSpeedMetersPerSecond,
-                StrafeSpeedCapAngleThresholdRadians = config.StrafeSpeedCapAngleThresholdDegrees * MathF.PI / 180f,
+                StrafeMaxSpeedMetersPerSecond = config.Strafe.MaxSpeedMetersPerSecond,
+                StrafeSpeedCapAngleThresholdRadians = config.Strafe.SpeedCapAngleThresholdDegrees * MathF.PI / 180f,
                 TurnSpeedRadiansPerSecond = config.TurnSpeedRadiansPerSecond,
-                ThrustAngleThresholdRadians = config.ThrustAngleThresholdDegrees * MathF.PI / 180f
+                ThrustAngleThresholdRadians = config.Thrust.AngleThresholdDegrees * MathF.PI / 180f
             },
             new Health { Current = playerConfig.MaxHealth, Max = playerConfig.MaxHealth },
             new Oxygen { Current = playerConfig.MaxOxygen, Max = playerConfig.MaxOxygen },

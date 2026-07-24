@@ -21,12 +21,10 @@ public class PickupConfig
 
     public float MaterialDensity { get; set; } = 0.3f;
     public float Restitution { get; set; } = 0.6f;
-    public float MinSpeedMetersPerSecond { get; set; } = 0.1f;
-    public float MaxSpeedMetersPerSecond { get; set; } = 0.5f;
+    public FloatRange SpeedMetersPerSecondRange { get; set; } = new(0.1f, 0.5f);
 
     // Initial spin, magnitude only — sign (direction) is randomized separately at spawn time.
-    public float MinAngularVelocityRadiansPerSecond { get; set; } = 0.1f;
-    public float MaxAngularVelocityRadiansPerSecond { get; set; } = 1f;
+    public FloatRange AngularVelocityRadiansPerSecondRange { get; set; } = new(0.1f, 1f);
 
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 

@@ -14,9 +14,7 @@ public class CrosshairConfig
     public float GapRadiusPixels { get; set; } = 4f;
     public float TickLengthPixels { get; set; } = 5f;
     public float ThicknessPixels { get; set; } = 2f;
-    public int ColorR { get; set; } = 255;
-    public int ColorG { get; set; } = 255;
-    public int ColorB { get; set; } = 255;
+    public string ColorHex { get; set; } = "#FFFFFF";
 
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 

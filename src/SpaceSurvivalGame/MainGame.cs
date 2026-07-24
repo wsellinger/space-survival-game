@@ -163,7 +163,7 @@ public class MainGame : Game
 
         var crosshairConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "crosshair-config.json");
         _crosshairConfig = CrosshairConfig.Load(crosshairConfigPath);
-        var crosshairColor = new Microsoft.Xna.Framework.Color(_crosshairConfig.ColorR, _crosshairConfig.ColorG, _crosshairConfig.ColorB);
+        var crosshairColor = ColorHex.Parse(_crosshairConfig.ColorHex);
         _crosshairTexture = ProceduralTextures.CreateCrosshair(GraphicsDevice, _crosshairConfig.SizePixels, _crosshairConfig.GapRadiusPixels, _crosshairConfig.TickLengthPixels, _crosshairConfig.ThicknessPixels, crosshairColor);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));

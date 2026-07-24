@@ -21,9 +21,7 @@ public class EngineConfig
     public float MaxFlameLengthPixels { get; set; } = 26f;
     public float MinFlameWidthPixels { get; set; } = 4f;
     public float MaxFlameWidthPixels { get; set; } = 14f;
-    public int ColorR { get; set; } = 255;
-    public int ColorG { get; set; } = 170;
-    public int ColorB { get; set; } = 40;
+    public string ColorHex { get; set; } = "#FFAA28";
 
     // Inner flame — a smaller, independently colored core drawn on top of the outer one
     // (both anchored/rotated the same way).
@@ -31,9 +29,7 @@ public class EngineConfig
     public float MaxInnerFlameLengthPixels { get; set; } = 14f;
     public float MinInnerFlameWidthPixels { get; set; } = 2f;
     public float MaxInnerFlameWidthPixels { get; set; } = 7f;
-    public int InnerColorR { get; set; } = 255;
-    public int InnerColorG { get; set; } = 255;
-    public int InnerColorB { get; set; } = 220;
+    public string InnerColorHex { get; set; } = "#FFFFDC";
 
     // Flicker is a sum of two out-of-sync sine waves (not random) so the flame stays
     // reproducible frame-to-frame; FlickerIntensity is the max fraction the size/brightness

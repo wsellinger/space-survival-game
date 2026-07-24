@@ -33,8 +33,8 @@ public static class EngineJetRenderer
             MathF.Sin(totalGameSeconds * config.FlickerSpeedHz * MathF.PI * 2f) * 0.6f +
             MathF.Sin(totalGameSeconds * config.FlickerSpeedHz * 2.7f * MathF.PI * 2f) * 0.4f);
 
-        var outerColor = new Color(config.ColorR, config.ColorG, config.ColorB);
-        var innerColor = new Color(config.InnerColorR, config.InnerColorG, config.InnerColorB);
+        var outerColor = ColorHex.Parse(config.ColorHex);
+        var innerColor = ColorHex.Parse(config.InnerColorHex);
 
         // Hull geometry in local ship space (+X forward, +Y right), matching ShipEntity's
         // physics triangle and CreateConcaveArrowShip's texture points, relative to the

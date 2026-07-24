@@ -46,6 +46,44 @@ public static class ProceduralTextures
         return texture;
     }
 
+    /// <summary>
+    /// Like CreateRightFacingTriangle, but concave: the flat back edge is replaced by a notch
+    /// pulled forward to a point between the two wing corners, giving a chevron/arrowhead
+    /// silhouette. notchDepthFraction (0-1) is how far forward that point sits, as a fraction
+    /// of the distance from the wing corners to the nose (0 = degenerates back to a plain flat
+    /// back). Splits into the two triangles sharing the nose-notch diagonal for the inside test.
+    /// </summary>
+    public static Texture2D CreateConcaveArrowShip(GraphicsDevice graphicsDevice, int size, float notchDepthFraction, Color color, Color accentColor)
+    {
+        var data = new Color[size * size];
+        var nose = new Vector2(size - 1, size / 2f);
+        var wingTop = new Vector2(0, 0);
+        var wingBottom = new Vector2(0, size - 1);
+        var notch = new Vector2(MathHelper.Lerp(0, size - 1, notchDepthFraction), size / 2f);
+        var center = new Vector2(size / 2f, size / 2f);
+        var lineThickness = MathHelper.Max(1f, size * 0.06f);
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var point = new Vector2(x, y);
+                var inside = IsInsideTriangle(point, nose, wingTop, notch) || IsInsideTriangle(point, nose, notch, wingBottom);
+                if (!inside)
+                {
+                    data[y * size + x] = Color.Transparent;
+                    continue;
+                }
+
+                data[y * size + x] = DistanceToSegment(point, nose, center) <= lineThickness ? accentColor : color;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
     private static bool IsInsideTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
     {
         float Sign(Vector2 p1, Vector2 p2, Vector2 p3) =>

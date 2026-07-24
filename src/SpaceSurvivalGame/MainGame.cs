@@ -317,7 +317,7 @@ public class MainGame : Game
             _useController = false;
 
         // The cursor's direction from the ship's on-screen position — used both as a mouse
-        // facing override (while LMB is held, mirroring the right stick) and for the camera
+        // facing override (while RMB is held, mirroring the right stick) and for the camera
         // look-ahead below. Uses last frame's synced Transform (one frame stale, imperceptible).
         // Only while focused — unfocused input shouldn't affect facing/camera at all.
         System.Numerics.Vector2? cursorDirectionFromShip = null;
@@ -328,7 +328,7 @@ public class MainGame : Game
             cursorDirectionFromShip = cursorScreenPixels - shipScreenPixels;
         }
 
-        var mouseFacingDirection = mouse.LeftButton == ButtonState.Pressed ? cursorDirectionFromShip : null;
+        var mouseFacingDirection = mouse.RightButton == ButtonState.Pressed ? cursorDirectionFromShip : null;
 
         var deltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -393,7 +393,7 @@ public class MainGame : Game
         // Camera casts out toward wherever the aim input points, not the ship's facing
         // (which lags behind at a capped turn rate): the right stick's own direction in
         // controller mode; in mouse mode, a point MouseFocusRatio of the way from the
-        // ship's on-screen position to the cursor's — only while LMB is held (same gate as
+        // ship's on-screen position to the cursor's — only while RMB is held (same gate as
         // mouseFacingDirection), so idly moving the mouse without aiming doesn't drag the
         // camera around.
         System.Numerics.Vector2 lookAheadOffsetMeters;
@@ -413,7 +413,7 @@ public class MainGame : Game
         }
 
         // Tweens in both modes now — since the look-ahead offset itself only engages while
-        // LMB is held (or the right stick is pushed), an instant snap read as an abrupt jump
+        // RMB is held (or the right stick is pushed), an instant snap read as an abrupt jump
         // right at the moment of pressing/releasing; easing that transition in and out feels
         // smoother without lagging behind the cursor's own live position while held.
         CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, _cameraConfig.TweenSpeed);
@@ -470,7 +470,7 @@ public class MainGame : Game
         // crisp edges instead of blurring when magnified/minified.
         _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
-        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds);
+        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _shipConfig.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds);
         _spriteBatch.End();
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.

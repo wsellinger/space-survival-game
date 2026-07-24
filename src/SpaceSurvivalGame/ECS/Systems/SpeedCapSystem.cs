@@ -4,7 +4,14 @@ using SpaceSurvivalGame.ECS.Components;
 
 namespace SpaceSurvivalGame.ECS.Systems;
 
-/// <summary>No drag means nothing else slows entities down, so this hard-caps speed instead. Run once per frame after the physics step.</summary>
+/// <summary>
+/// No drag means nothing else slows entities down, so this hard-caps speed instead. Run once
+/// per frame after the physics step. Ships get a separate, lower cap while
+/// ShipMovement.UseStrafeSpeedCap is set — meaning this frame's actual thrust was angled more
+/// than StrafeSpeedCapAngleThresholdRadians off facing, i.e. meaningfully using the weaker
+/// side/reverse jets rather than the main one. That flag is set fresh by ShipInputSystem
+/// earlier the same frame, before the step this cap is enforcing against.
+/// </summary>
 public static class SpeedCapSystem
 {
     private static readonly QueryDescription Query =
@@ -17,9 +24,10 @@ public static class SpeedCapSystem
             var bodyId = physicsBody.BodyId;
             var velocity = B2Api.b2Body_GetLinearVelocity(bodyId);
             var speed = velocity.Length();
-            if (speed > movement.MaxSpeedMetersPerSecond)
+            var maxSpeed = movement.UseStrafeSpeedCap ? movement.StrafeMaxSpeedMetersPerSecond : movement.MaxSpeedMetersPerSecond;
+            if (speed > maxSpeed)
             {
-                B2Api.b2Body_SetLinearVelocity(bodyId, velocity * (movement.MaxSpeedMetersPerSecond / speed));
+                B2Api.b2Body_SetLinearVelocity(bodyId, velocity * (maxSpeed / speed));
             }
         });
     }

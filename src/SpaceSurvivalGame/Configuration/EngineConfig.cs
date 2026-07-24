@@ -41,6 +41,21 @@ public class EngineConfig
     public float FlickerSpeedHz { get; set; } = 14f;
     public float FlickerIntensity { get; set; } = 0.15f;
 
+    // Strafe thrusters — 2 smaller jets flush-mounted on the ship's own side edges (nose to
+    // wing corner), firing tangent to that edge but mirrored to point forward-and-outward
+    // rather than backward-and-inward (like an RCS thruster venting away from the hull) —
+    // see EngineJetRenderer. EdgeMountFraction picks where along that edge they sit (0 = at
+    // the wing corner, 1 = at the nose). Share the tail jet's colors and flicker, just smaller.
+    public float StrafeJetEdgeMountFraction { get; set; } = 0.55f;
+    public float MinStrafeFlameLengthPixels { get; set; } = 3f;
+    public float MaxStrafeFlameLengthPixels { get; set; } = 8f;
+    public float MinStrafeFlameWidthPixels { get; set; } = 1f;
+    public float MaxStrafeFlameWidthPixels { get; set; } = 4f;
+    public float MinInnerStrafeFlameLengthPixels { get; set; } = 1.5f;
+    public float MaxInnerStrafeFlameLengthPixels { get; set; } = 4f;
+    public float MinInnerStrafeFlameWidthPixels { get; set; } = 1f;
+    public float MaxInnerStrafeFlameWidthPixels { get; set; } = 2.5f;
+
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 
     public static EngineConfig Load(string path)

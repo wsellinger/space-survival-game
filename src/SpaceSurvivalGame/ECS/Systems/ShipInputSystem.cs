@@ -14,21 +14,37 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// based on whichever device was used most recently, picks one and the other
 /// is ignored). Facing: in controller mode the right stick aims independently
 /// whenever it's pushed past its deadzone, falling back to the left stick's
-/// direction otherwise; in keyboard/mouse mode, holding the left mouse button
+/// direction otherwise; in keyboard/mouse mode, holding the right mouse button
 /// aims the same way (<paramref name="mouseFacingDirection"/>, precomputed by
 /// MainGame as the cursor's direction from the ship), falling back to WASD
-/// direction otherwise. WASD/left-stick input doesn't push the ship directly —
-/// it only triggers thrust (any nonzero input) and, absent an independent aim
-/// input, sets where the ship turns to face. The actual thrust force always
+/// direction otherwise.
+///
+/// Whenever that independent aim input is actually held (right stick pushed, or
+/// RMB down) — "strafe mode" — WASD/left-stick pushes the ship directly in the
+/// input's own direction, same as a raw twin-stick shooter, letting you aim one
+/// way and fly another. The rest of the time, WASD/left-stick only triggers
+/// thrust and steers where the ship turns to face; the actual thrust force
 /// points along the ship's current facing (its real body rotation, not the aim
-/// target it's turning towards), scaled by how far the input is pushed, so the
-/// ship always visibly accelerates out of its own nose; SpeedCapSystem enforces
-/// a flat top speed on top of this.
-/// Also maintains EngineThrottle (0-1, drives the exhaust flame drawn by
-/// EngineJetRenderer): the raw left-stick magnitude for controller input, or an
-/// eased ramp toward 0/1 for keyboard's inherently on-off input — zero either
-/// way whenever thrust itself is cut out by the angle threshold, so the flame
-/// never shows while the engine isn't actually firing.
+/// target it's turning towards) and cuts out entirely once facing has drifted
+/// more than ThrustAngleThresholdRadians from the requested direction, instead
+/// of firing off-target while turning to catch up. SpeedCapSystem enforces a
+/// top speed on top of either mode — normally ShipMovement.MaxSpeedMetersPerSecond,
+/// but StrafeMaxSpeedMetersPerSecond instead whenever the actual thrust direction
+/// is more than StrafeSpeedCapAngleThresholdRadians off facing (representing the
+/// side/reverse jets being weaker than the main one), regardless of which mode
+/// produced that thrust — thrust is always facing-aligned outside strafe mode, so
+/// this only ever engages while actually strafing hard.
+///
+/// Also maintains EngineThrottle by decomposing whatever thrust actually fired
+/// onto the ship's own forward/right axes: Current (0-1, forward) drives the
+/// main tail jet. LeftStrafe/RightStrafe drive the two strafe jets near the
+/// nose — a sideways push lights up just the one opposite the push direction
+/// (reaction thrust), while a backward push (no rear jet exists) lights up
+/// both, so reversing still visibly fires the engines; diagonal thrust blends
+/// the two. Outside strafe mode thrust is always exactly forward-aligned, so
+/// both strafe jets naturally stay zero and only the tail jet ever lights up —
+/// the two modes share one code path rather than branching the rendering
+/// separately.
 /// </summary>
 public static class ShipInputSystem
 {
@@ -43,6 +59,7 @@ public static class ShipInputSystem
 
             var direction = Vector2.Zero;
             Vector2? facingDirection = null;
+            var strafeMode = false;
 
             if (useController)
             {
@@ -52,7 +69,8 @@ public static class ShipInputSystem
                 if (direction.LengthSquared() > 1f) direction = Vector2.Normalize(direction);
 
                 var rightStick = gamePad.ThumbSticks.Right;
-                if (rightStick.LengthSquared() > 0f)
+                strafeMode = rightStick.LengthSquared() > 0f;
+                if (strafeMode)
                     facingDirection = new Vector2(rightStick.X, -rightStick.Y);
                 else if (direction != Vector2.Zero)
                     facingDirection = direction;
@@ -65,43 +83,83 @@ public static class ShipInputSystem
                 if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right)) direction += new Vector2(1, 0);
                 if (direction != Vector2.Zero) direction = Vector2.Normalize(direction);
 
-                if (mouseFacingDirection.HasValue)
+                strafeMode = mouseFacingDirection.HasValue;
+                if (strafeMode)
                     facingDirection = mouseFacingDirection.Value;
                 else if (direction != Vector2.Zero)
                     facingDirection = direction;
             }
 
-            // Thrust always fires out of the ship's actual current nose direction, not the raw
-            // input vector — input only triggers thrust and (elsewhere) steers where it turns to.
-            // But it cuts out entirely (force AND flame) once facing has drifted more than
-            // ThrustAngleThresholdRadians from the requested direction, instead of firing wildly
-            // off-target while turning to catch up.
             var currentAngle = B2Api.b2Body_GetRotation(bodyId).GetAngle();
-            var thrustDirection = new Vector2(MathF.Cos(currentAngle), MathF.Sin(currentAngle));
-            var thrustAllowed = false;
+            var facingVector = new Vector2(MathF.Cos(currentAngle), MathF.Sin(currentAngle));
+            var rightVector = new Vector2(-facingVector.Y, facingVector.X);
+
+            var thrustFiring = false;
+            var thrustDirection = Vector2.Zero;
+            var thrustMagnitude = 0f;
 
             if (direction != Vector2.Zero)
             {
-                var inputDirection = Vector2.Normalize(direction);
-                var angleFromInput = MathF.Acos(Math.Clamp(Vector2.Dot(thrustDirection, inputDirection), -1f, 1f));
-                thrustAllowed = angleFromInput <= movement.ThrustAngleThresholdRadians;
+                if (strafeMode)
+                {
+                    // Strafe mode: thrust matches the raw input direction directly, no facing
+                    // lock and no angle gating — free twin-stick-style movement while aiming.
+                    thrustDirection = Vector2.Normalize(direction);
+                    thrustMagnitude = direction.Length();
+                    thrustFiring = true;
+                }
+                else
+                {
+                    // Normal mode: thrust only fires out of the ship's actual nose, and only
+                    // within the angle cone around the requested direction.
+                    var inputDirection = Vector2.Normalize(direction);
+                    var angleFromInput = MathF.Acos(Math.Clamp(Vector2.Dot(facingVector, inputDirection), -1f, 1f));
+                    if (angleFromInput <= movement.ThrustAngleThresholdRadians)
+                    {
+                        thrustDirection = facingVector;
+                        thrustMagnitude = direction.Length();
+                        thrustFiring = true;
+                    }
+                }
             }
 
-            if (thrustAllowed)
+            if (thrustFiring)
             {
                 var mass = B2Api.b2Body_GetMass(bodyId);
-                B2Api.b2Body_ApplyForceToCenter(bodyId, thrustDirection * (mass * movement.ThrustAcceleration * direction.Length()), wake: true);
+                B2Api.b2Body_ApplyForceToCenter(bodyId, thrustDirection * (mass * movement.ThrustAcceleration * thrustMagnitude), wake: true);
             }
+
+            // Decompose the actual applied thrust onto the ship's own axes for the jet visuals.
+            // Forward-Backward and Left-Right are the (orthogonal, so their squares sum to 1
+            // when thrust is firing) components of thrustDirection along facing/right. There's
+            // no rear thruster modeled, so a backward component (BackwardComponent) instead
+            // lights up BOTH strafe jets equally, on top of whatever sideways lean they already
+            // have from LeftRightComponent — reversing still reads as the engines firing.
+            var forwardComponent = thrustFiring ? Vector2.Dot(thrustDirection, facingVector) : 0f;
+            var leftRightComponent = thrustFiring ? Vector2.Dot(thrustDirection, rightVector) : 0f;
+            var backwardComponent = MathF.Max(0f, -forwardComponent);
+
+            // The weaker strafe cap only kicks in once actual thrust is angled far enough off
+            // facing that it's meaningfully using the side/reverse jets rather than the main one.
+            var angleFromFacing = thrustFiring ? MathF.Acos(Math.Clamp(forwardComponent, -1f, 1f)) : 0f;
+            movement.UseStrafeSpeedCap = thrustFiring && angleFromFacing > movement.StrafeSpeedCapAngleThresholdRadians;
+
+            var targetForward = MathF.Max(0f, forwardComponent) * thrustMagnitude;
+            var targetLeftStrafe = MathF.Min(1f, MathF.Max(0f, leftRightComponent) + backwardComponent) * thrustMagnitude;
+            var targetRightStrafe = MathF.Min(1f, MathF.Max(0f, -leftRightComponent) + backwardComponent) * thrustMagnitude;
 
             if (useController)
             {
-                throttle.Current = thrustAllowed ? direction.Length() : 0f;
+                throttle.Current = targetForward;
+                throttle.LeftStrafe = targetLeftStrafe;
+                throttle.RightStrafe = targetRightStrafe;
             }
             else
             {
-                var targetThrottle = thrustAllowed ? 1f : 0f;
                 var maxStep = engineConfig.KeyboardThrottleEaseSpeed * deltaSeconds;
-                throttle.Current += Math.Clamp(targetThrottle - throttle.Current, -maxStep, maxStep);
+                throttle.Current += Math.Clamp(targetForward - throttle.Current, -maxStep, maxStep);
+                throttle.LeftStrafe += Math.Clamp(targetLeftStrafe - throttle.LeftStrafe, -maxStep, maxStep);
+                throttle.RightStrafe += Math.Clamp(targetRightStrafe - throttle.RightStrafe, -maxStep, maxStep);
             }
 
             if (facingDirection.HasValue)

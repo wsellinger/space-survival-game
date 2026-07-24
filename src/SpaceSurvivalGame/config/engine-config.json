@@ -16,5 +16,14 @@
   "InnerColorG": 164,
   "InnerColorB": 145,
   "FlickerSpeedHz": 14,
-  "FlickerIntensity": 0.3
+  "FlickerIntensity": 0.3,
+  "StrafeJetEdgeMountFraction": 0.55,
+  "MinStrafeFlameLengthPixels": 6,
+  "MaxStrafeFlameLengthPixels": 16,
+  "MinStrafeFlameWidthPixels": 1,
+  "MaxStrafeFlameWidthPixels": 4,
+  "MinInnerStrafeFlameLengthPixels": 3,
+  "MaxInnerStrafeFlameLengthPixels": 7,
+  "MinInnerStrafeFlameWidthPixels": 1,
+  "MaxInnerStrafeFlameWidthPixels": 2.5
 }

@@ -43,7 +43,8 @@ public static class ShipEntity
         var triangle = B2Api.b2MakePolygon(hull, 0f);
         B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in triangle);
 
-        var texture = ProceduralTextures.CreateRightFacingTriangle(graphicsDevice, config.SpriteSize, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.Red);
+        // Visual only — the physics collider above stays the simpler flat-back triangle.
+        var texture = ProceduralTextures.CreateConcaveArrowShip(graphicsDevice, config.SpriteSize, config.NotchDepthFraction, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.Red);
 
         return world.Create(
             new PhysicsBody { BodyId = bodyId },
@@ -54,6 +55,8 @@ public static class ShipEntity
             {
                 ThrustAcceleration = config.ThrustAcceleration,
                 MaxSpeedMetersPerSecond = config.MaxSpeedMetersPerSecond,
+                StrafeMaxSpeedMetersPerSecond = config.StrafeMaxSpeedMetersPerSecond,
+                StrafeSpeedCapAngleThresholdRadians = config.StrafeSpeedCapAngleThresholdDegrees * MathF.PI / 180f,
                 TurnSpeedRadiansPerSecond = config.TurnSpeedRadiansPerSecond,
                 ThrustAngleThresholdRadians = config.ThrustAngleThresholdDegrees * MathF.PI / 180f
             },
@@ -63,7 +66,7 @@ public static class ShipEntity
             new HealthBarFeedback(),
             new Suffocation { ElapsedSeconds = 0f },
             new Damaging(),
-            new EngineThrottle { Current = 0f },
+            new EngineThrottle { Current = 0f, LeftStrafe = 0f, RightStrafe = 0f },
             new PlayerControlled());
     }
 
@@ -86,6 +89,8 @@ public static class ShipEntity
             suffocation.ElapsedSeconds = 0f;
             sprite.Color = Microsoft.Xna.Framework.Color.White; // undo the hide-on-death from the collision death sequence
             throttle.Current = 0f;
+            throttle.LeftStrafe = 0f;
+            throttle.RightStrafe = 0f;
         });
     }
 
@@ -98,6 +103,8 @@ public static class ShipEntity
         {
             sprite.Color = Microsoft.Xna.Framework.Color.Transparent;
             throttle.Current = 0f;
+            throttle.LeftStrafe = 0f;
+            throttle.RightStrafe = 0f;
         });
     }
 }

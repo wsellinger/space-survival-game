@@ -5,6 +5,12 @@ public struct ShipMovement
 {
     public float ThrustAcceleration; // meters/sec^2; Force = mass * this
     public float MaxSpeedMetersPerSecond;
+    public float StrafeMaxSpeedMetersPerSecond;
+    public float StrafeSpeedCapAngleThresholdRadians; // beyond this angle off facing, thrust is weak enough to use StrafeMaxSpeedMetersPerSecond instead
     public float TurnSpeedRadiansPerSecond;
     public float ThrustAngleThresholdRadians; // thrust cuts out once facing strays further than this from the requested input direction
+
+    // Runtime state, not static config: set by ShipInputSystem each frame so SpeedCapSystem
+    // (which runs later the same frame, after the physics step) knows which speed cap to enforce.
+    public bool UseStrafeSpeedCap;
 }

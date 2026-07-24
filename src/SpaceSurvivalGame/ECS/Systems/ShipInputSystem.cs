@@ -90,6 +90,8 @@ public static class ShipInputSystem
                     facingDirection = direction;
             }
 
+            movement.IsStrafing = strafeMode;
+
             var currentAngle = B2Api.b2Body_GetRotation(bodyId).GetAngle();
             var facingVector = new Vector2(MathF.Cos(currentAngle), MathF.Sin(currentAngle));
             var rightVector = new Vector2(-facingVector.Y, facingVector.X);

@@ -63,6 +63,8 @@ public class MainGame : Game
     private Texture2D _flameTexture;
     private CrosshairConfig _crosshairConfig;
     private Texture2D _crosshairTexture;
+    private StrafeModeIndicatorConfig _strafeModeIndicatorConfig;
+    private Texture2D _strafeModeIndicatorTexture;
     private Texture2D _sparkTexture;
     private RenderTarget2D _sceneRenderTarget;
     private Effect _suffocationEffect;
@@ -165,6 +167,12 @@ public class MainGame : Game
         _crosshairConfig = CrosshairConfig.Load(crosshairConfigPath);
         var crosshairColor = ColorHex.Parse(_crosshairConfig.ColorHex);
         _crosshairTexture = ProceduralTextures.CreateCrosshair(GraphicsDevice, _crosshairConfig.SizePixels, _crosshairConfig.GapRadiusPixels, _crosshairConfig.TickLengthPixels, _crosshairConfig.ThicknessPixels, crosshairColor);
+
+        var strafeModeIndicatorConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "strafe-mode-indicator-config.json");
+        _strafeModeIndicatorConfig = StrafeModeIndicatorConfig.Load(strafeModeIndicatorConfigPath);
+        var strafeIndicatorInset = (int)_strafeModeIndicatorConfig.InsetPixels;
+        _strafeModeIndicatorTexture = ProceduralTextures.CreateCornerBrackets(GraphicsDevice, WindowWidth - strafeIndicatorInset * 2, WindowHeight - strafeIndicatorInset * 2,
+            _strafeModeIndicatorConfig.CornerRadiusPixels, _strafeModeIndicatorConfig.OutlineThicknessPixels, _strafeModeIndicatorConfig.ArmLengthPixels, Microsoft.Xna.Framework.Color.White);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
@@ -475,10 +483,11 @@ public class MainGame : Game
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
         _spriteBatch.Begin();
-        HudRenderer.Run(_world, _spriteBatch, WindowHeight, _hudConfig, _hudFeedbackConfig, _healthWarningConfig, _oxygenWarningConfig,
+        HudRenderer.Run(_world, _spriteBatch, WindowWidth, WindowHeight, _hudConfig, _hudFeedbackConfig, _healthWarningConfig, _oxygenWarningConfig,
             (float)gameTime.TotalGameTime.TotalSeconds, _hudBarFillTexture, _hudBarOutlineTexture);
         ScreenWarningRenderer.Run(_world, _spriteBatch, _screenWarningConfig, _healthWarningConfig, _oxygenWarningConfig, _hudFeedbackConfig,
             (float)gameTime.TotalGameTime.TotalSeconds, _screenWarningOutlineTexture, _screenWarningVignetteTexture);
+        StrafeModeIndicatorRenderer.Run(_world, _spriteBatch, _uiFont, _strafeModeIndicatorConfig, _strafeModeIndicatorTexture, (float)gameTime.TotalGameTime.TotalSeconds);
 #if DEBUG
         _spriteBatch.DrawString(_uiFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
 #endif
@@ -563,6 +572,7 @@ public class MainGame : Game
         foreach (var texture in _shipFragmentTextures) texture.Dispose();
         _flameTexture.Dispose();
         _crosshairTexture.Dispose();
+        _strafeModeIndicatorTexture.Dispose();
         _sparkTexture.Dispose();
         _buttonFillTexture.Dispose();
         _buttonOutlineTexture.Dispose();

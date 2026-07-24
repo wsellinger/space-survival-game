@@ -267,6 +267,37 @@ public static class ProceduralTextures
     }
 
     /// <summary>
+    /// 4 L-shaped corner brackets (viewfinder/target-reticle style), each arm armLengthPixels
+    /// long from its corner, outlineThickness wide, with cornerRadius rounding the bend.
+    /// Reuses the rounded-rect outline SDF from CreateRoundedRectOutline, masked down to just
+    /// the regions near each of the 4 corners — since a straight edge's outline pixels there
+    /// are already just that corner's two arms, no separate line-segment geometry is needed.
+    /// </summary>
+    public static Texture2D CreateCornerBrackets(GraphicsDevice graphicsDevice, int width, int height, float cornerRadius, float outlineThickness, float armLengthPixels, Color color)
+    {
+        var data = new Color[width * height];
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var distance = RoundedRectSignedDistance(point, width, height, cornerRadius);
+                var onOutline = distance <= 0f && distance > -outlineThickness;
+
+                var nearLeftOrRight = x <= armLengthPixels || x >= width - armLengthPixels;
+                var nearTopOrBottom = y <= armLengthPixels || y >= height - armLengthPixels;
+
+                data[y * width + x] = onOutline && nearLeftOrRight && nearTopOrBottom ? color : Color.Transparent;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, width, height);
+        texture.SetData(data);
+        return texture;
+    }
+
+    /// <summary>
     /// A soft edge vignette: full color right at the width x height rectangle's boundary,
     /// easing out to transparent depthPixels inward. Meant to be shared/tinted at draw time
     /// (e.g. a red or blue full-screen warning).

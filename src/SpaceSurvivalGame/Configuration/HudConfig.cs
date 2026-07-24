@@ -13,7 +13,7 @@ public class HudConfig
     public int BarLengthPixels { get; set; } = 200;
     public int BarThicknessPixels { get; set; } = 20;
     public int BarOutlineThicknessPixels { get; set; } = 2;
-    public int MarginPixels { get; set; } = 16;
+    public int MarginPixels { get; set; } = 16; // bottom offset — horizontally the bars are centered on the viewport instead of margin-based
     public int BarSpacingPixels { get; set; } = 6;
 
     // Shared by both bars' low-resource blink (flash-off-flash-off-off-off-off) so they stay

@@ -71,12 +71,12 @@ public static class ShipEntity
     }
 
     private static readonly QueryDescription RespawnQuery =
-        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, HitFlash, HealthBarFeedback, Suffocation, Sprite, EngineThrottle>();
+        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, HitFlash, HealthBarFeedback, Suffocation, Sprite, EngineThrottle, ShipMovement>();
 
     public static void Respawn(World world, Vector2 positionMeters)
     {
         world.Query(in RespawnQuery, (ref PhysicsBody physicsBody, ref Health health, ref Oxygen oxygen, ref HitFlash hitFlash,
-            ref HealthBarFeedback healthBarFeedback, ref Suffocation suffocation, ref Sprite sprite, ref EngineThrottle throttle) =>
+            ref HealthBarFeedback healthBarFeedback, ref Suffocation suffocation, ref Sprite sprite, ref EngineThrottle throttle, ref ShipMovement movement) =>
         {
             var bodyId = physicsBody.BodyId;
             B2Api.b2Body_SetTransform(bodyId, positionMeters, b2Rot.FromAngle(0f));
@@ -91,20 +91,22 @@ public static class ShipEntity
             throttle.Current = 0f;
             throttle.LeftStrafe = 0f;
             throttle.RightStrafe = 0f;
+            movement.IsStrafing = false;
         });
     }
 
-    private static readonly QueryDescription HideQuery = new QueryDescription().WithAll<PlayerControlled, Sprite, EngineThrottle>();
+    private static readonly QueryDescription HideQuery = new QueryDescription().WithAll<PlayerControlled, Sprite, EngineThrottle, ShipMovement>();
 
     /// <summary>Hides the ship's own sprite (in favor of ShipFragments' debris) and kills its engine throttle so EngineJetRenderer stops drawing a flame with no ship attached to it, for the collision death sequence.</summary>
     public static void Hide(World world)
     {
-        world.Query(in HideQuery, (ref Sprite sprite, ref EngineThrottle throttle) =>
+        world.Query(in HideQuery, (ref Sprite sprite, ref EngineThrottle throttle, ref ShipMovement movement) =>
         {
             sprite.Color = Microsoft.Xna.Framework.Color.Transparent;
             throttle.Current = 0f;
             throttle.LeftStrafe = 0f;
             throttle.RightStrafe = 0f;
+            movement.IsStrafing = false;
         });
     }
 }

@@ -1,0 +1,10 @@
+{
+  "CornerRadiusPixels": 12,
+  "OutlineThicknessPixels": 4,
+  "ArmLengthPixels": 120,
+  "InsetPixels": 24,
+  "ColorHex": "#FFFFFF",
+  "TextScale": 2,
+  "TextMarginPixels": 28,
+  "BlinkFrequencyHz": 1
+}

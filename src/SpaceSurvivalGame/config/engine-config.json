@@ -9,12 +9,12 @@
     "Outer": {
       "LengthPixelsRange": [6, 16],
       "WidthPixelsRange": [2, 8],
-      "ColorHex": "#6A8EAE4D"
+      "ColorHex": "#6A8EAEE0"
     },
     "Inner": {
       "LengthPixelsRange": [3, 7],
       "WidthPixelsRange": [1, 6],
-      "ColorHex": "#A5D6F722"
+      "ColorHex": "#A5D6F7C0"
     }
   },
   "StrafeJets": {

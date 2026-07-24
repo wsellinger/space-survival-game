@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Arch.Core;
 using Box2dNet.Interop;
@@ -53,7 +54,8 @@ public static class ShipEntity
             {
                 ThrustAcceleration = config.ThrustAcceleration,
                 MaxSpeedMetersPerSecond = config.MaxSpeedMetersPerSecond,
-                TurnSpeedRadiansPerSecond = config.TurnSpeedRadiansPerSecond
+                TurnSpeedRadiansPerSecond = config.TurnSpeedRadiansPerSecond,
+                ThrustAngleThresholdRadians = config.ThrustAngleThresholdDegrees * MathF.PI / 180f
             },
             new Health { Current = playerConfig.MaxHealth, Max = playerConfig.MaxHealth },
             new Oxygen { Current = playerConfig.MaxOxygen, Max = playerConfig.MaxOxygen },

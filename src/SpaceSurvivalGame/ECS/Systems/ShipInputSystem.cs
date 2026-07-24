@@ -17,12 +17,18 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// direction otherwise; in keyboard/mouse mode, holding the left mouse button
 /// aims the same way (<paramref name="mouseFacingDirection"/>, precomputed by
 /// MainGame as the cursor's direction from the ship), falling back to WASD
-/// direction otherwise. Thrust acceleration is facing-agnostic — same
-/// magnitude regardless of which way the ship is pointed relative to its
-/// velocity; SpeedCapSystem enforces a flat top speed on top of this.
+/// direction otherwise. WASD/left-stick input doesn't push the ship directly —
+/// it only triggers thrust (any nonzero input) and, absent an independent aim
+/// input, sets where the ship turns to face. The actual thrust force always
+/// points along the ship's current facing (its real body rotation, not the aim
+/// target it's turning towards), scaled by how far the input is pushed, so the
+/// ship always visibly accelerates out of its own nose; SpeedCapSystem enforces
+/// a flat top speed on top of this.
 /// Also maintains EngineThrottle (0-1, drives the exhaust flame drawn by
 /// EngineJetRenderer): the raw left-stick magnitude for controller input, or an
-/// eased ramp toward 0/1 for keyboard's inherently on-off input.
+/// eased ramp toward 0/1 for keyboard's inherently on-off input — zero either
+/// way whenever thrust itself is cut out by the angle threshold, so the flame
+/// never shows while the engine isn't actually firing.
 /// </summary>
 public static class ShipInputSystem
 {
@@ -44,7 +50,6 @@ public static class ShipInputSystem
                 var leftStick = gamePad.ThumbSticks.Left;
                 direction = new Vector2(leftStick.X, -leftStick.Y);
                 if (direction.LengthSquared() > 1f) direction = Vector2.Normalize(direction);
-                throttle.Current = direction.Length();
 
                 var rightStick = gamePad.ThumbSticks.Right;
                 if (rightStick.LengthSquared() > 0f)
@@ -60,20 +65,43 @@ public static class ShipInputSystem
                 if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right)) direction += new Vector2(1, 0);
                 if (direction != Vector2.Zero) direction = Vector2.Normalize(direction);
 
-                var targetThrottle = direction != Vector2.Zero ? 1f : 0f;
-                var maxStep = engineConfig.KeyboardThrottleEaseSpeed * deltaSeconds;
-                throttle.Current += Math.Clamp(targetThrottle - throttle.Current, -maxStep, maxStep);
-
                 if (mouseFacingDirection.HasValue)
                     facingDirection = mouseFacingDirection.Value;
                 else if (direction != Vector2.Zero)
                     facingDirection = direction;
             }
 
+            // Thrust always fires out of the ship's actual current nose direction, not the raw
+            // input vector — input only triggers thrust and (elsewhere) steers where it turns to.
+            // But it cuts out entirely (force AND flame) once facing has drifted more than
+            // ThrustAngleThresholdRadians from the requested direction, instead of firing wildly
+            // off-target while turning to catch up.
+            var currentAngle = B2Api.b2Body_GetRotation(bodyId).GetAngle();
+            var thrustDirection = new Vector2(MathF.Cos(currentAngle), MathF.Sin(currentAngle));
+            var thrustAllowed = false;
+
             if (direction != Vector2.Zero)
             {
+                var inputDirection = Vector2.Normalize(direction);
+                var angleFromInput = MathF.Acos(Math.Clamp(Vector2.Dot(thrustDirection, inputDirection), -1f, 1f));
+                thrustAllowed = angleFromInput <= movement.ThrustAngleThresholdRadians;
+            }
+
+            if (thrustAllowed)
+            {
                 var mass = B2Api.b2Body_GetMass(bodyId);
-                B2Api.b2Body_ApplyForceToCenter(bodyId, direction * (mass * movement.ThrustAcceleration), wake: true);
+                B2Api.b2Body_ApplyForceToCenter(bodyId, thrustDirection * (mass * movement.ThrustAcceleration * direction.Length()), wake: true);
+            }
+
+            if (useController)
+            {
+                throttle.Current = thrustAllowed ? direction.Length() : 0f;
+            }
+            else
+            {
+                var targetThrottle = thrustAllowed ? 1f : 0f;
+                var maxStep = engineConfig.KeyboardThrottleEaseSpeed * deltaSeconds;
+                throttle.Current += Math.Clamp(targetThrottle - throttle.Current, -maxStep, maxStep);
             }
 
             if (facingDirection.HasValue)

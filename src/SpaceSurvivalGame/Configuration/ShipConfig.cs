@@ -15,6 +15,11 @@ public class ShipConfig
     public float TurnSpeedRadiansPerSecond { get; set; } = 8f;
     public int SpriteSize { get; set; } = 24;
 
+    // Thrust cuts out entirely once the ship's actual facing strays this many degrees from
+    // the requested WASD/left-stick direction — has to turn back within the cone before it
+    // fires again, rather than always burning out of whatever way it currently happens to face.
+    public float ThrustAngleThresholdDegrees { get; set; } = 90f;
+
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 
     public static ShipConfig Load(string path)

@@ -398,7 +398,7 @@ public class MainGame : Game
         ParticleSystem.Run(_world, deltaSeconds);
         HitFlashSystem.Run(_world, deltaSeconds, _hitFlashConfig);
         HudFeedbackSystem.Run(_world, deltaSeconds, _hudFeedbackConfig, _random);
-        SpeedCapSystem.Run(_world);
+        SpeedCapSystem.Run(_world, deltaSeconds, _shipConfig.SpeedCapEaseSpeed);
         PhysicsSyncSystem.Run(_world);
 
         // Camera casts out toward wherever the aim input points, not the ship's facing

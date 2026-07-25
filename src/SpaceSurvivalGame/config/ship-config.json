@@ -3,6 +3,7 @@
   "TurnSpeedRadiansPerSecond": 10,
   "SpriteSize": 24,
   "NotchDepthFraction": 0.15,
+  "SpeedCapEaseSpeed": 8,
   "Thrust": {
     "Acceleration": 3.8,
     "AngleThresholdDegrees": 45

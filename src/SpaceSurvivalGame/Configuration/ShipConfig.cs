@@ -34,6 +34,14 @@ public class ShipConfig
     public float TurnSpeedRadiansPerSecond { get; set; } = 8f;
     public int SpriteSize { get; set; } = 24;
 
+    // How quickly SpeedCapSystem eases speed down toward whichever cap currently applies
+    // (MaxSpeedMetersPerSecond, or StrafeMaxSpeedMetersPerSecond while UseStrafeSpeedCap is
+    // set) once it's exceeded, rather than clamping instantly — same TweenSpeed-style
+    // exponential-decay convention as CameraConfig.TweenSpeed. Most noticeable the moment
+    // strafe mode's lower cap first engages while already going faster than it. <= 0 disables
+    // easing entirely and snaps straight to the cap, like before this existed.
+    public float SpeedCapEaseSpeed { get; set; } = 8f;
+
     // How far forward the hull's back notch is pulled, as a fraction of the distance from the
     // wing corners to the nose (0 = flat back/plain triangle, higher = deeper concave notch).
     // Visual only — the physics collider stays the simpler flat-back triangle. The main engine

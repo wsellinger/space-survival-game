@@ -57,6 +57,31 @@ public class StrafeJetsConfig
 }
 
 /// <summary>
+/// Small particle puffs (not the flame-triangle jets above, drawn via the generic particle
+/// system instead — see RotationJetSystem/ParticleEffects.SpawnRotationJetPuff) mounted at the
+/// nose-side edges and wing-tip corners, fired while the ship is actively turning. Which
+/// diagonal pair fires depends on turn direction — see RotationJetSystem.
+/// </summary>
+public class RotationJetConfig
+{
+    // Where the nose-side jets mount along the nose-to-wing-corner edge — 0 = at the wing
+    // corner, 1 = at the nose. Same convention as StrafeJetsConfig.EdgeMountFraction, just
+    // biased toward the opposite (nose) end. The wing-corner jets mount exactly at the corner
+    // itself, no equivalent fraction needed.
+    public float NoseMountFraction { get; set; } = 0.8f;
+
+    public IntRange ParticleCountPerFrame { get; set; } = new(1, 2);
+    public FloatRange ParticleSpeedMetersPerSecondRange { get; set; } = new(0.5f, 1.2f);
+    public FloatRange ParticleLifetimeSecondsRange { get; set; } = new(0.08f, 0.16f);
+    public int ParticleSizePixels { get; set; } = 3;
+
+    // Half-angle of random spread around each jet's own outward direction, in degrees.
+    public float SpreadAngleDegrees { get; set; } = 20f;
+
+    public string ColorHex { get; set; } = "#CFE8FFFF"; // pale blue-white, like a puff of gas
+}
+
+/// <summary>
 /// Tunable engine exhaust flame values, loaded from a JSON file next to the executable so
 /// they can be edited without recompiling. If the file is missing, a default one is written
 /// out so there's always something to open and tweak.
@@ -72,6 +97,7 @@ public class EngineConfig
     public FlickerConfig Flicker { get; set; } = new();
     public MainJetConfig MainJet { get; set; } = new();
     public StrafeJetsConfig StrafeJets { get; set; } = new();
+    public RotationJetConfig RotationJets { get; set; } = new();
 
     public static EngineConfig Load(string path) => ConfigLoader.Load<EngineConfig>(path);
 }

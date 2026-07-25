@@ -56,6 +56,35 @@ public static class ParticleEffects
         }
     }
 
+    /// <summary>
+    /// A small handful of short-lived particles puffing outward from a hull mount point, spread
+    /// randomly around outwardDirection — see RotationJetSystem, which calls this once per
+    /// active jet per frame while the ship is turning.
+    /// </summary>
+    public static void SpawnRotationJetPuff(World world, Texture2D particleTexture, Vector2 positionMeters, Vector2 outwardDirection,
+        Random random, RotationJetConfig config, Microsoft.Xna.Framework.Color color)
+    {
+        var count = random.Next(config.ParticleCountPerFrame.Min, config.ParticleCountPerFrame.Max + 1);
+        var spreadRadians = config.SpreadAngleDegrees * MathF.PI / 180f;
+        var baseAngle = MathF.Atan2(outwardDirection.Y, outwardDirection.X);
+
+        for (var i = 0; i < count; i++)
+        {
+            var angle = baseAngle + ((float)random.NextDouble() * 2f - 1f) * spreadRadians;
+            var speed = config.ParticleSpeedMetersPerSecondRange.Min +
+                        (float)random.NextDouble() * (config.ParticleSpeedMetersPerSecondRange.Max - config.ParticleSpeedMetersPerSecondRange.Min);
+            var lifetime = config.ParticleLifetimeSecondsRange.Min +
+                           (float)random.NextDouble() * (config.ParticleLifetimeSecondsRange.Max - config.ParticleLifetimeSecondsRange.Min);
+            var velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
+
+            world.Create(
+                new Transform { PositionMeters = positionMeters, RotationRadians = 0f },
+                new Velocity { LinearMetersPerSecond = velocity, AngularRadiansPerSecond = 0f },
+                new Sprite { Texture = particleTexture, Color = color, Size = config.ParticleSizePixels, Scale = 1f, LayerDepth = 0f, Parallax = 1f },
+                new Particle { RemainingSeconds = lifetime, TotalSeconds = lifetime, BaseColor = color });
+        }
+    }
+
     private static void SpawnBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random,
         int countMin, int countMax, float speedMin, float speedMax, float lifetimeMin, float lifetimeMax, int textureSizePixels,
         Microsoft.Xna.Framework.Color colorA, Microsoft.Xna.Framework.Color colorB)

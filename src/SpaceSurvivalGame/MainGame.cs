@@ -63,6 +63,8 @@ public class MainGame : Game
     private Texture2D[] _shipFragmentTextures;
     private EngineConfig _engineConfig;
     private Texture2D _flameTexture;
+    private Texture2D _rotationJetTexture;
+    private Microsoft.Xna.Framework.Color _rotationJetColor;
     private CrosshairConfig _crosshairConfig;
     private Texture2D _crosshairTexture;
     private StrafeModeIndicatorConfig _strafeModeIndicatorConfig;
@@ -164,6 +166,8 @@ public class MainGame : Game
         // Baked white and tinted per-layer at draw time (see EngineJetRenderer) — shared by
         // both the outer and inner flame layers, which have independent colors.
         _flameTexture = ProceduralTextures.CreateRightFacingTriangle(GraphicsDevice, _engineConfig.FlameTextureSizePixels, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.White);
+        _rotationJetTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _engineConfig.RotationJets.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
+        _rotationJetColor = ColorHex.Parse(_engineConfig.RotationJets.ColorHex);
 
         var crosshairConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "crosshair-config.json");
         _crosshairConfig = CrosshairConfig.Load(crosshairConfigPath);
@@ -354,6 +358,7 @@ public class MainGame : Game
 #endif
 
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds, _engineConfig);
+        RotationJetSystem.Run(_world, _rotationJetTexture, _engineConfig, _shipConfig.SpriteSize, _rotationJetColor, _random);
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
         OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _pickupConfig, _worldConfig.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
@@ -574,6 +579,7 @@ public class MainGame : Game
         _screenWarningVignetteTexture.Dispose();
         foreach (var texture in _shipFragmentTextures) texture.Dispose();
         _flameTexture.Dispose();
+        _rotationJetTexture.Dispose();
         _crosshairTexture.Dispose();
         _strafeModeIndicatorTexture.Dispose();
         _sparkTexture.Dispose();

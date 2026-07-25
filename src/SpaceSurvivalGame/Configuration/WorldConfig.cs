@@ -23,6 +23,20 @@ public class OxygenRichAsteroidConfig
     // How far each speckle's glow extends beyond its own edge, as a multiple of that speckle's
     // own radius — same convention as PickupConfig.GlowRadius.
     public float CrystalGlowRadiusMultiplier { get; set; } = 1.4f;
+
+    // Chance, per qualifying Box2D hit event (any physics collision this asteroid is part of —
+    // another asteroid bumping it, the ship ramming it, etc., not just ship impacts), that
+    // OxygenCrystalReleaseSystem pops loose a fresh O2 pickup crystal at the impact point. Kept
+    // low by default since a dense field means an oxygen-rich asteroid can rack up many
+    // qualifying hits per second just from other asteroids drifting into it.
+    public float CrystalReleaseChanceOnCollision { get; set; } = 0.05f;
+
+    // After successfully popping loose a crystal, this asteroid won't roll for another one for
+    // this many seconds — a single real-world impact can jitter across several consecutive
+    // Box2D hit events (the two bodies briefly separating and re-touching as the solver settles
+    // them), which would otherwise read as one collision but could pop loose a dozen-plus
+    // crystals in the same instant.
+    public float CrystalReleaseCooldownSeconds { get; set; } = 1f;
 }
 
 public class AsteroidConfig

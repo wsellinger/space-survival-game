@@ -30,7 +30,20 @@ public static class OxygenPickupField
     public const float CrystalAngleJitterFraction = 0.35f;
     public const float CrystalElongationFactor = 1.4f; // stretches vertically for a gem-like silhouette rather than a round rock
 
-    public static void Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 centerMeters, WorldConfig worldConfig, PickupConfig pickupConfig)
+    /// <summary>Already-baked shape data shared by every pickup crystal, so a new one can be spawned at runtime (see SpawnPickup) without re-baking textures.</summary>
+    public readonly struct PickupAssets
+    {
+        public readonly Vector2[][] ShapeVariants;
+        public readonly Texture2D[] ShapeTextures;
+
+        public PickupAssets(Vector2[][] shapeVariants, Texture2D[] shapeTextures)
+        {
+            ShapeVariants = shapeVariants;
+            ShapeTextures = shapeTextures;
+        }
+    }
+
+    public static PickupAssets Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 centerMeters, WorldConfig worldConfig, PickupConfig pickupConfig)
     {
         var random = new Random();
 
@@ -56,8 +69,7 @@ public static class OxygenPickupField
                 Microsoft.Xna.Framework.Color.CornflowerBlue, Microsoft.Xna.Framework.Color.CornflowerBlue, crystalXnaVertices, pickupConfig.GlowRadius / glowCanvasScale);
         }
 
-        var radiusMeters = PhysicsWorld.PixelsToMeters(pickupConfig.SpriteSizePixels / 2f);
-        var scale = pickupConfig.SpriteSizePixels * glowCanvasScale / TextureSize;
+        var assets = new PickupAssets(shapeVariants, shapeTextures);
 
         for (var i = 0; i < pickupConfig.PickupCount; i++)
         {
@@ -65,50 +77,66 @@ public static class OxygenPickupField
                 (float)(random.NextDouble() * 2 - 1) * worldConfig.FieldHalfExtentMeters,
                 (float)(random.NextDouble() * 2 - 1) * worldConfig.FieldHalfExtentMeters);
 
-            var rotationRadians = (float)(random.NextDouble() * Math.PI * 2);
-
-            var bodyDef = B2Api.b2DefaultBodyDef();
-            bodyDef.type = b2BodyType.b2_dynamicBody;
-            bodyDef.position = positionMeters;
-            bodyDef.rotation = b2Rot.FromAngle(rotationRadians);
-
-            var speed = pickupConfig.SpeedMetersPerSecondRange.Min +
-                        (float)random.NextDouble() * (pickupConfig.SpeedMetersPerSecondRange.Max - pickupConfig.SpeedMetersPerSecondRange.Min);
-            var velocityAngle = (float)(random.NextDouble() * Math.PI * 2);
-            bodyDef.linearVelocity = new Vector2(MathF.Cos(velocityAngle), MathF.Sin(velocityAngle)) * speed;
-
-            var angularSpeed = pickupConfig.AngularVelocityRadiansPerSecondRange.Min +
-                                (float)random.NextDouble() * (pickupConfig.AngularVelocityRadiansPerSecondRange.Max - pickupConfig.AngularVelocityRadiansPerSecondRange.Min);
-            bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
-
-            var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
-
-            // Matches the crystal's own true size exactly (unaffected by the glow — see the
-            // canvas-scale compensation above, which keeps the crystal's own footprint fixed
-            // regardless of GlowRadius).
-            var variantIndex = random.Next(ShapeVariantCount);
-            var unitVertices = shapeVariants[variantIndex];
-            var points = new Vector2[unitVertices.Length];
-            for (var p = 0; p < unitVertices.Length; p++) points[p] = unitVertices[p] * radiusMeters;
-
-            // Solid (so it still bounces off asteroids like one), but its collision mask
-            // excludes the ship specifically — the ship should fly straight through and get
-            // it collected via OxygenPickupSystem's distance check, not bounce off it.
-            var shapeDef = B2Api.b2DefaultShapeDef();
-            shapeDef.density = pickupConfig.MaterialDensity;
-            shapeDef.material.restitution = pickupConfig.Restitution;
-            shapeDef.filter.maskBits = ~CollisionCategories.Ship;
-            var hull = B2Api.b2ComputeHull(points, points.Length);
-            var polygon = B2Api.b2MakePolygon(hull, 0f);
-            B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);
-
-            world.Create(
-                new PhysicsBody { BodyId = bodyId },
-                new Transform { PositionMeters = positionMeters, RotationRadians = rotationRadians },
-                new Velocity(),
-                new Sprite { Texture = shapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.White, Size = TextureSize, Scale = scale, Parallax = 1f },
-                new OxygenPickup());
+            SpawnPickup(world, physicsWorld, positionMeters, assets, pickupConfig, random);
         }
+
+        return assets;
     }
 
+    /// <summary>
+    /// Spawns a single new O2 pickup crystal at the given position, reusing already-baked shape
+    /// assets (see Create/PickupAssets) rather than re-baking textures — used both by Create's
+    /// initial scatter and by OxygenCrystalReleaseSystem for crystals popped loose from an
+    /// oxygen-rich asteroid at runtime.
+    /// </summary>
+    public static void SpawnPickup(World world, PhysicsWorld physicsWorld, Vector2 positionMeters, PickupAssets assets, PickupConfig config, Random random)
+    {
+        var rotationRadians = (float)(random.NextDouble() * Math.PI * 2);
+
+        var bodyDef = B2Api.b2DefaultBodyDef();
+        bodyDef.type = b2BodyType.b2_dynamicBody;
+        bodyDef.position = positionMeters;
+        bodyDef.rotation = b2Rot.FromAngle(rotationRadians);
+
+        var speed = config.SpeedMetersPerSecondRange.Min +
+                    (float)random.NextDouble() * (config.SpeedMetersPerSecondRange.Max - config.SpeedMetersPerSecondRange.Min);
+        var velocityAngle = (float)(random.NextDouble() * Math.PI * 2);
+        bodyDef.linearVelocity = new Vector2(MathF.Cos(velocityAngle), MathF.Sin(velocityAngle)) * speed;
+
+        var angularSpeed = config.AngularVelocityRadiansPerSecondRange.Min +
+                            (float)random.NextDouble() * (config.AngularVelocityRadiansPerSecondRange.Max - config.AngularVelocityRadiansPerSecondRange.Min);
+        bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
+
+        var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
+
+        // Matches the crystal's own true size exactly (unaffected by the glow — see the
+        // canvas-scale compensation below, which keeps the crystal's own footprint fixed
+        // regardless of GlowRadius).
+        var glowCanvasScale = MathF.Max(1f, config.GlowRadius) * 1.05f;
+        var radiusMeters = PhysicsWorld.PixelsToMeters(config.SpriteSizePixels / 2f);
+        var scale = config.SpriteSizePixels * glowCanvasScale / TextureSize;
+
+        var variantIndex = random.Next(assets.ShapeVariants.Length);
+        var unitVertices = assets.ShapeVariants[variantIndex];
+        var points = new Vector2[unitVertices.Length];
+        for (var p = 0; p < unitVertices.Length; p++) points[p] = unitVertices[p] * radiusMeters;
+
+        // Solid (so it still bounces off asteroids like one), but its collision mask
+        // excludes the ship specifically — the ship should fly straight through and get
+        // it collected via OxygenPickupSystem's distance check, not bounce off it.
+        var shapeDef = B2Api.b2DefaultShapeDef();
+        shapeDef.density = config.MaterialDensity;
+        shapeDef.material.restitution = config.Restitution;
+        shapeDef.filter.maskBits = ~CollisionCategories.Ship;
+        var hull = B2Api.b2ComputeHull(points, points.Length);
+        var polygon = B2Api.b2MakePolygon(hull, 0f);
+        B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);
+
+        world.Create(
+            new PhysicsBody { BodyId = bodyId },
+            new Transform { PositionMeters = positionMeters, RotationRadians = rotationRadians },
+            new Velocity(),
+            new Sprite { Texture = assets.ShapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.White, Size = TextureSize, Scale = scale, Parallax = 1f },
+            new OxygenPickup());
+    }
 }

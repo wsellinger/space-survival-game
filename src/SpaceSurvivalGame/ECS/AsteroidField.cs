@@ -112,6 +112,7 @@ public static class AsteroidField
             var shapeDef = B2Api.b2DefaultShapeDef();
             shapeDef.density = config.Asteroid.MaterialDensity;
             shapeDef.material.restitution = config.Asteroid.Restitution;
+            shapeDef.enableHitEvents = true; // lets OxygenCrystalReleaseSystem see any collision this asteroid is part of, not just ones involving the ship
             var hull = B2Api.b2ComputeHull(points, points.Length);
             var polygon = B2Api.b2MakePolygon(hull, 0f);
             B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);

@@ -53,6 +53,8 @@ public class MainGame : Game
     private DeathSequenceConfig _deathSequenceConfig;
     private float _deathElapsedSeconds;
     private PickupConfig _pickupConfig;
+    private WorldConfig _worldConfig;
+    private OxygenPickupField.PickupAssets _pickupAssets;
     private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -108,7 +110,7 @@ public class MainGame : Game
         _cameraConfig = CameraConfig.Load(cameraConfigPath);
 
         var worldConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "world-config.json");
-        var worldConfig = WorldConfig.Load(worldConfigPath);
+        _worldConfig = WorldConfig.Load(worldConfigPath);
 
         var starfieldConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "starfield-config.json");
         var starfieldConfig = StarfieldConfig.Load(starfieldConfigPath);
@@ -186,8 +188,8 @@ public class MainGame : Game
                 starfieldConfig.TintStrengthRange.Min, starfieldConfig.TintStrengthRange.Max);
         }
 
-        AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig);
-        OxygenPickupField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, worldConfig, _pickupConfig);
+        AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig);
+        _pickupAssets = OxygenPickupField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig, _pickupConfig);
 
         const int buttonWidth = 220;
         const int buttonHeight = 60;
@@ -354,6 +356,7 @@ public class MainGame : Game
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds, _engineConfig);
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
+        OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _pickupConfig, _worldConfig.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
 
         var shipHealth = float.MaxValue;
         _world.Query(in HealthQuery, (ref Health health) => shipHealth = health.Current);

@@ -57,123 +57,155 @@ public static class ShipInputSystem
         {
             var bodyId = physicsBody.BodyId;
 
-            var direction = Vector2.Zero;
-            Vector2? facingDirection = null;
-            var strafeMode = false;
+            ReadInput(keyboard, gamePad, useController, mouseFacingDirection, out var direction, out var facingDirection, out var strafeMode);
+            movement.IsStrafing = strafeMode;
 
-            if (useController)
+            ResolveThrust(bodyId, movement, direction, strafeMode, out var thrustFiring, out var thrustDirection,
+                out var thrustMagnitude, out var facingVector, out var rightVector);
+
+            ResolveThrottle(ref movement, ref throttle, useController, deltaSeconds, engineConfig, thrustFiring,
+                thrustDirection, thrustMagnitude, facingVector, rightVector);
+
+            UpdateFacing(bodyId, facingDirection, movement.TurnSpeedRadiansPerSecond, deltaSeconds);
+        });
+    }
+
+    /// <summary>
+    /// Thumbstick Y is up-positive; our world/screen convention is down-positive, so it's
+    /// flipped below. See the class doc comment for how strafe mode/facing fall out of this.
+    /// </summary>
+    private static void ReadInput(KeyboardState keyboard, GamePadState gamePad, bool useController, Vector2? mouseFacingDirection,
+        out Vector2 direction, out Vector2? facingDirection, out bool strafeMode)
+    {
+        direction = Vector2.Zero;
+        facingDirection = null;
+
+        if (useController)
+        {
+            var leftStick = gamePad.ThumbSticks.Left;
+            direction = new Vector2(leftStick.X, -leftStick.Y);
+            if (direction.LengthSquared() > 1f) direction = Vector2.Normalize(direction);
+
+            var rightStick = gamePad.ThumbSticks.Right;
+            strafeMode = rightStick.LengthSquared() > 0f;
+            if (strafeMode)
+                facingDirection = new Vector2(rightStick.X, -rightStick.Y);
+            else if (direction != Vector2.Zero)
+                facingDirection = direction;
+        }
+        else
+        {
+            if (keyboard.IsKeyDown(Keys.W) || keyboard.IsKeyDown(Keys.Up)) direction += new Vector2(0, -1);
+            if (keyboard.IsKeyDown(Keys.S) || keyboard.IsKeyDown(Keys.Down)) direction += new Vector2(0, 1);
+            if (keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.Left)) direction += new Vector2(-1, 0);
+            if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right)) direction += new Vector2(1, 0);
+            if (direction != Vector2.Zero) direction = Vector2.Normalize(direction);
+
+            strafeMode = mouseFacingDirection.HasValue;
+            if (strafeMode)
+                facingDirection = mouseFacingDirection.Value;
+            else if (direction != Vector2.Zero)
+                facingDirection = direction;
+        }
+    }
+
+    /// <summary>
+    /// Strafe mode: thrust matches the raw input direction directly, no facing lock and no
+    /// angle gating — free twin-stick-style movement while aiming. Normal mode: thrust only
+    /// fires out of the ship's actual nose, and only within the angle cone around the
+    /// requested direction. Applies the resulting force to the body directly.
+    /// </summary>
+    private static void ResolveThrust(b2BodyId bodyId, ShipMovement movement, Vector2 direction, bool strafeMode,
+        out bool thrustFiring, out Vector2 thrustDirection, out float thrustMagnitude, out Vector2 facingVector, out Vector2 rightVector)
+    {
+        var currentAngle = B2Api.b2Body_GetRotation(bodyId).GetAngle();
+        facingVector = new Vector2(MathF.Cos(currentAngle), MathF.Sin(currentAngle));
+        rightVector = new Vector2(-facingVector.Y, facingVector.X);
+
+        thrustFiring = false;
+        thrustDirection = Vector2.Zero;
+        thrustMagnitude = 0f;
+
+        if (direction != Vector2.Zero)
+        {
+            if (strafeMode)
             {
-                // Thumbstick Y is up-positive; our world/screen convention is down-positive, so flip it.
-                var leftStick = gamePad.ThumbSticks.Left;
-                direction = new Vector2(leftStick.X, -leftStick.Y);
-                if (direction.LengthSquared() > 1f) direction = Vector2.Normalize(direction);
-
-                var rightStick = gamePad.ThumbSticks.Right;
-                strafeMode = rightStick.LengthSquared() > 0f;
-                if (strafeMode)
-                    facingDirection = new Vector2(rightStick.X, -rightStick.Y);
-                else if (direction != Vector2.Zero)
-                    facingDirection = direction;
+                thrustDirection = Vector2.Normalize(direction);
+                thrustMagnitude = direction.Length();
+                thrustFiring = true;
             }
             else
             {
-                if (keyboard.IsKeyDown(Keys.W) || keyboard.IsKeyDown(Keys.Up)) direction += new Vector2(0, -1);
-                if (keyboard.IsKeyDown(Keys.S) || keyboard.IsKeyDown(Keys.Down)) direction += new Vector2(0, 1);
-                if (keyboard.IsKeyDown(Keys.A) || keyboard.IsKeyDown(Keys.Left)) direction += new Vector2(-1, 0);
-                if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right)) direction += new Vector2(1, 0);
-                if (direction != Vector2.Zero) direction = Vector2.Normalize(direction);
-
-                strafeMode = mouseFacingDirection.HasValue;
-                if (strafeMode)
-                    facingDirection = mouseFacingDirection.Value;
-                else if (direction != Vector2.Zero)
-                    facingDirection = direction;
-            }
-
-            movement.IsStrafing = strafeMode;
-
-            var currentAngle = B2Api.b2Body_GetRotation(bodyId).GetAngle();
-            var facingVector = new Vector2(MathF.Cos(currentAngle), MathF.Sin(currentAngle));
-            var rightVector = new Vector2(-facingVector.Y, facingVector.X);
-
-            var thrustFiring = false;
-            var thrustDirection = Vector2.Zero;
-            var thrustMagnitude = 0f;
-
-            if (direction != Vector2.Zero)
-            {
-                if (strafeMode)
+                var inputDirection = Vector2.Normalize(direction);
+                var angleFromInput = MathF.Acos(Math.Clamp(Vector2.Dot(facingVector, inputDirection), -1f, 1f));
+                if (angleFromInput <= movement.ThrustAngleThresholdRadians)
                 {
-                    // Strafe mode: thrust matches the raw input direction directly, no facing
-                    // lock and no angle gating — free twin-stick-style movement while aiming.
-                    thrustDirection = Vector2.Normalize(direction);
+                    thrustDirection = facingVector;
                     thrustMagnitude = direction.Length();
                     thrustFiring = true;
                 }
-                else
-                {
-                    // Normal mode: thrust only fires out of the ship's actual nose, and only
-                    // within the angle cone around the requested direction.
-                    var inputDirection = Vector2.Normalize(direction);
-                    var angleFromInput = MathF.Acos(Math.Clamp(Vector2.Dot(facingVector, inputDirection), -1f, 1f));
-                    if (angleFromInput <= movement.ThrustAngleThresholdRadians)
-                    {
-                        thrustDirection = facingVector;
-                        thrustMagnitude = direction.Length();
-                        thrustFiring = true;
-                    }
-                }
             }
+        }
 
-            if (thrustFiring)
-            {
-                var mass = B2Api.b2Body_GetMass(bodyId);
-                B2Api.b2Body_ApplyForceToCenter(bodyId, thrustDirection * (mass * movement.ThrustAcceleration * thrustMagnitude), wake: true);
-            }
+        if (thrustFiring)
+        {
+            var mass = B2Api.b2Body_GetMass(bodyId);
+            B2Api.b2Body_ApplyForceToCenter(bodyId, thrustDirection * (mass * movement.ThrustAcceleration * thrustMagnitude), wake: true);
+        }
+    }
 
-            // Decompose the actual applied thrust onto the ship's own axes for the jet visuals.
-            // Forward-Backward and Left-Right are the (orthogonal, so their squares sum to 1
-            // when thrust is firing) components of thrustDirection along facing/right. There's
-            // no rear thruster modeled, so a backward component (BackwardComponent) instead
-            // lights up BOTH strafe jets equally, on top of whatever sideways lean they already
-            // have from LeftRightComponent — reversing still reads as the engines firing.
-            var forwardComponent = thrustFiring ? Vector2.Dot(thrustDirection, facingVector) : 0f;
-            var leftRightComponent = thrustFiring ? Vector2.Dot(thrustDirection, rightVector) : 0f;
-            var backwardComponent = MathF.Max(0f, -forwardComponent);
+    /// <summary>
+    /// Decomposes the actual applied thrust onto the ship's own axes for the jet visuals.
+    /// Forward-Backward and Left-Right are the (orthogonal, so their squares sum to 1 when
+    /// thrust is firing) components of thrustDirection along facing/right. There's no rear
+    /// thruster modeled, so a backward component (BackwardComponent) instead lights up BOTH
+    /// strafe jets equally, on top of whatever sideways lean they already have from
+    /// LeftRightComponent — reversing still reads as the engines firing. Also sets
+    /// movement.UseStrafeSpeedCap, and either snaps (controller) or eases (keyboard) the
+    /// throttle values toward their targets.
+    /// </summary>
+    private static void ResolveThrottle(ref ShipMovement movement, ref EngineThrottle throttle, bool useController, float deltaSeconds,
+        EngineConfig engineConfig, bool thrustFiring, Vector2 thrustDirection, float thrustMagnitude, Vector2 facingVector, Vector2 rightVector)
+    {
+        var forwardComponent = thrustFiring ? Vector2.Dot(thrustDirection, facingVector) : 0f;
+        var leftRightComponent = thrustFiring ? Vector2.Dot(thrustDirection, rightVector) : 0f;
+        var backwardComponent = MathF.Max(0f, -forwardComponent);
 
-            // The weaker strafe cap only kicks in once actual thrust is angled far enough off
-            // facing that it's meaningfully using the side/reverse jets rather than the main one.
-            var angleFromFacing = thrustFiring ? MathF.Acos(Math.Clamp(forwardComponent, -1f, 1f)) : 0f;
-            movement.UseStrafeSpeedCap = thrustFiring && angleFromFacing > movement.StrafeSpeedCapAngleThresholdRadians;
+        // The weaker strafe cap only kicks in once actual thrust is angled far enough off
+        // facing that it's meaningfully using the side/reverse jets rather than the main one.
+        var angleFromFacing = thrustFiring ? MathF.Acos(Math.Clamp(forwardComponent, -1f, 1f)) : 0f;
+        movement.UseStrafeSpeedCap = thrustFiring && angleFromFacing > movement.StrafeSpeedCapAngleThresholdRadians;
 
-            var targetForward = MathF.Max(0f, forwardComponent) * thrustMagnitude;
-            var targetLeftStrafe = MathF.Min(1f, MathF.Max(0f, leftRightComponent) + backwardComponent) * thrustMagnitude;
-            var targetRightStrafe = MathF.Min(1f, MathF.Max(0f, -leftRightComponent) + backwardComponent) * thrustMagnitude;
+        var targetForward = MathF.Max(0f, forwardComponent) * thrustMagnitude;
+        var targetLeftStrafe = MathF.Min(1f, MathF.Max(0f, leftRightComponent) + backwardComponent) * thrustMagnitude;
+        var targetRightStrafe = MathF.Min(1f, MathF.Max(0f, -leftRightComponent) + backwardComponent) * thrustMagnitude;
 
-            if (useController)
-            {
-                throttle.Current = targetForward;
-                throttle.LeftStrafe = targetLeftStrafe;
-                throttle.RightStrafe = targetRightStrafe;
-            }
-            else
-            {
-                var maxStep = engineConfig.KeyboardThrottleEaseSpeed * deltaSeconds;
-                throttle.Current += Math.Clamp(targetForward - throttle.Current, -maxStep, maxStep);
-                throttle.LeftStrafe += Math.Clamp(targetLeftStrafe - throttle.LeftStrafe, -maxStep, maxStep);
-                throttle.RightStrafe += Math.Clamp(targetRightStrafe - throttle.RightStrafe, -maxStep, maxStep);
-            }
+        if (useController)
+        {
+            throttle.Current = targetForward;
+            throttle.LeftStrafe = targetLeftStrafe;
+            throttle.RightStrafe = targetRightStrafe;
+        }
+        else
+        {
+            var maxStep = engineConfig.KeyboardThrottleEaseSpeed * deltaSeconds;
+            throttle.Current += Math.Clamp(targetForward - throttle.Current, -maxStep, maxStep);
+            throttle.LeftStrafe += Math.Clamp(targetLeftStrafe - throttle.LeftStrafe, -maxStep, maxStep);
+            throttle.RightStrafe += Math.Clamp(targetRightStrafe - throttle.RightStrafe, -maxStep, maxStep);
+        }
+    }
 
-            if (facingDirection.HasValue)
-            {
-                var targetAngle = MathF.Atan2(facingDirection.Value.Y, facingDirection.Value.X);
-                TurnTowards(bodyId, targetAngle, movement.TurnSpeedRadiansPerSecond, deltaSeconds);
-            }
-            else
-            {
-                B2Api.b2Body_SetAngularVelocity(bodyId, 0f);
-            }
-        });
+    private static void UpdateFacing(b2BodyId bodyId, Vector2? facingDirection, float turnSpeedRadiansPerSecond, float deltaSeconds)
+    {
+        if (facingDirection.HasValue)
+        {
+            var targetAngle = MathF.Atan2(facingDirection.Value.Y, facingDirection.Value.X);
+            TurnTowards(bodyId, targetAngle, turnSpeedRadiansPerSecond, deltaSeconds);
+        }
+        else
+        {
+            B2Api.b2Body_SetAngularVelocity(bodyId, 0f);
+        }
     }
 
     private static void TurnTowards(b2BodyId bodyId, float targetAngle, float turnSpeedRadiansPerSecond, float deltaSeconds)

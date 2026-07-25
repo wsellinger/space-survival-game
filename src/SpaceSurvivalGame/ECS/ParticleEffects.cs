@@ -11,7 +11,7 @@ namespace SpaceSurvivalGame.ECS;
 /// <summary>Spawns short-lived, physics-free spark particles at a world position, e.g. for collision impact, pickup-collection, or death-explosion feedback.</summary>
 public static class ParticleEffects
 {
-    public static void SpawnSparkBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, ParticleConfig config) =>
+    public static void SpawnSparkBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, SparkConfig config) =>
         SpawnBurst(world, sparkTexture, positionMeters, random,
             config.SparkCountRange.Min, config.SparkCountRange.Max,
             config.SparkSpeedMetersPerSecondRange.Min, config.SparkSpeedMetersPerSecondRange.Max,
@@ -19,7 +19,7 @@ public static class ParticleEffects
             new Microsoft.Xna.Framework.Color(255, 140, 0),   // orange
             new Microsoft.Xna.Framework.Color(255, 215, 60)); // yellow
 
-    /// <summary>Independently tunable from regular collision taps (DeathSequenceConfig rather than ParticleConfig) so the death explosion can be made bigger/longer-lived without affecting ordinary hit sparks.</summary>
+    /// <summary>Independently tunable from regular collision taps (DeathSequenceConfig rather than SparkConfig) so the death explosion can be made bigger/longer-lived without affecting ordinary hit sparks.</summary>
     public static void SpawnExplosionBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, DeathSequenceConfig config) =>
         SpawnBurst(world, sparkTexture, positionMeters, random,
             config.Explosion.SparkCountRange.Min, config.Explosion.SparkCountRange.Max,
@@ -33,7 +33,7 @@ public static class ParticleEffects
     /// timed so each one arrives (and fades out) right at the center — reads as being drawn
     /// in/absorbed rather than exploding outward like a collision impact.
     /// </summary>
-    public static void SpawnPickupBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, ParticleConfig config)
+    public static void SpawnPickupBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, SparkConfig config)
     {
         var count = random.Next(config.SparkCountRange.Min, config.SparkCountRange.Max + 1);
         for (var i = 0; i < count; i++)

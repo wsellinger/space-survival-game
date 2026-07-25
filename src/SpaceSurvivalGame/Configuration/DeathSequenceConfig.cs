@@ -1,6 +1,6 @@
 namespace SpaceSurvivalGame.Configuration;
 
-/// <summary>Independent from ParticleConfig's collision-tap sparks, so the death explosion can be made bigger/longer-lived without changing how ordinary hits look.</summary>
+/// <summary>Independent from SparkConfig's collision-tap sparks, so the death explosion can be made bigger/longer-lived without changing how ordinary hits look.</summary>
 public class ExplosionConfig
 {
     // How many times ParticleEffects.SpawnExplosionBurst fires at the ship's position (each

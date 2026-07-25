@@ -24,7 +24,7 @@ public static class OxygenPickupSystem
     private static readonly QueryDescription ShipOxygenQuery = new QueryDescription().WithAll<Oxygen, PlayerControlled>();
     private static readonly QueryDescription PickupQuery = new QueryDescription().WithAll<PhysicsBody, Transform, OxygenPickup>();
 
-    public static void Run(World world, ShipConfig shipConfig, PickupConfig pickupConfig, ParticleConfig particleConfig, Texture2D sparkTexture, Random random)
+    public static void Run(World world, ShipConfig shipConfig, PickupConfig pickupConfig, SparkConfig sparkConfig, Texture2D sparkTexture, Random random)
     {
         var shipPositionMeters = Vector2.Zero;
         var foundShip = false;
@@ -53,7 +53,7 @@ public static class OxygenPickupSystem
         if (collectedEntities.Count == 0) return;
 
         foreach (var entity in collectedEntities) world.Destroy(entity);
-        foreach (var position in collectedPositions) ParticleEffects.SpawnPickupBurst(world, sparkTexture, position, random, particleConfig);
+        foreach (var position in collectedPositions) ParticleEffects.SpawnPickupBurst(world, sparkTexture, position, random, sparkConfig);
 
         var totalOxygenGained = pickupConfig.OxygenAmount * collectedEntities.Count;
         world.Query(in ShipOxygenQuery, (ref Oxygen oxygen) => oxygen.Current = Math.Min(oxygen.Current + totalOxygenGained, oxygen.Max));

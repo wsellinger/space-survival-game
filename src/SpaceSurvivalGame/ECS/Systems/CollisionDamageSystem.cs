@@ -33,7 +33,7 @@ public static class CollisionDamageSystem
         new QueryDescription().WithAll<PhysicsBody, Damaging>();
 
     public static void Run(World world, PhysicsWorld physicsWorld, PlayerConfig config, Texture2D sparkTexture, Random random,
-        ParticleConfig particleConfig, Camera camera, ScreenShakeConfig screenShakeConfig, HitFlashConfig hitFlashConfig, HudFeedbackConfig hudFeedbackConfig)
+        SparkConfig sparkConfig, Camera camera, ScreenShakeConfig screenShakeConfig, HitFlashConfig hitFlashConfig, HudFeedbackConfig hudFeedbackConfig)
     {
         var shipBodyId = default(b2BodyId);
         var foundShip = false;
@@ -68,7 +68,7 @@ public static class CollisionDamageSystem
             speedFraction = System.Math.Clamp(speedFraction, 0f, 1f);
             totalDamage += config.Collision.DamageRange.Min + speedFraction * (config.Collision.DamageRange.Max - config.Collision.DamageRange.Min);
 
-            ParticleEffects.SpawnSparkBurst(world, sparkTexture, hitEvent.point, random, particleConfig);
+            ParticleEffects.SpawnSparkBurst(world, sparkTexture, hitEvent.point, random, sparkConfig);
         }
 
         if (totalDamage <= 0f) return;

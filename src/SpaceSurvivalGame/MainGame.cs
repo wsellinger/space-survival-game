@@ -43,7 +43,7 @@ public class MainGame : Game
     private CameraConfig _cameraConfig;
     private PlayerConfig _playerConfig;
     private HudConfig _hudConfig;
-    private ParticleConfig _particleConfig;
+    private SparkConfig _sparkConfig;
     private HitFlashConfig _hitFlashConfig;
     private ScreenShakeConfig _screenShakeConfig;
     private HudFeedbackConfig _hudFeedbackConfig;
@@ -125,9 +125,9 @@ public class MainGame : Game
         var barCornerRadius = _hudConfig.BarThicknessPixels / 2f;
         _hudBarFillTexture = ProceduralTextures.CreateRoundedRect(GraphicsDevice, _hudConfig.BarLengthPixels, _hudConfig.BarThicknessPixels, barCornerRadius, Microsoft.Xna.Framework.Color.White);
         _hudBarOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, _hudConfig.BarLengthPixels, _hudConfig.BarThicknessPixels, barCornerRadius, _hudConfig.BarOutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
-        var particleConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "particle-config.json");
-        _particleConfig = ParticleConfig.Load(particleConfigPath);
-        _sparkTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _particleConfig.SparkTextureSizePixels, Microsoft.Xna.Framework.Color.White);
+        var sparkConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "spark-config.json");
+        _sparkConfig = SparkConfig.Load(sparkConfigPath);
+        _sparkTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _sparkConfig.SparkTextureSizePixels, Microsoft.Xna.Framework.Color.White);
 
         var hitFlashConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hit-flash-config.json");
         _hitFlashConfig = HitFlashConfig.Load(hitFlashConfigPath);
@@ -360,7 +360,7 @@ public class MainGame : Game
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds, _engineConfig);
         RotationJetSystem.Run(_world, _rotationJetTexture, _engineConfig, _shipConfig.SpriteSize, _rotationJetColor, _random);
         _physicsWorld.Step(deltaSeconds);
-        CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _particleConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
+        CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _sparkConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
         OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _pickupConfig, _worldConfig.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
 
         var shipHealth = float.MaxValue;
@@ -384,7 +384,7 @@ public class MainGame : Game
         }
 
         VitalsSystem.Run(_world, deltaSeconds, _playerConfig, _suffocationConfig);
-        OxygenPickupSystem.Run(_world, _shipConfig, _pickupConfig, _particleConfig, _sparkTexture, _random);
+        OxygenPickupSystem.Run(_world, _shipConfig, _pickupConfig, _sparkConfig, _sparkTexture, _random);
 
         // Suffocation kills once its post-process effect has fully played out. No explosion
         // and no extra fade here — the screen's already fully black from the vignette by

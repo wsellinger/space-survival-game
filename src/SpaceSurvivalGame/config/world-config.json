@@ -8,6 +8,13 @@
     "SpeedMetersPerSecondRange": [0.1, 0.5],
     "AngularVelocityRadiansPerSecondRange": [0.1, 1],
     "Restitution": 0.6,
-    "MaterialDensity": 1.83
+    "MaterialDensity": 1.83,
+    "OxygenRich": {
+      "SpawnChanceFraction": 0.15,
+      "CrystalCountRange": [3, 6],
+      "CrystalSizeUnitRange": [0.10, 0.18],
+      "CrystalEdgeOffsetRange": [-0.20, 0.08],
+      "CrystalGlowRadiusMultiplier": 1.4
+    }
   }
 }

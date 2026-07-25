@@ -22,9 +22,13 @@ public static class OxygenPickupField
 {
     private const int TextureSize = 32;
     private const int ShapeVariantCount = 3;
-    private const int VerticesPerShape = 6;
-    private const float MinVertexRadiusFactor = 0.45f; // how jagged/asymmetric the facets look
-    private const float ElongationFactor = 1.4f; // stretches vertically for a gem-like silhouette rather than a round rock
+
+    // Exposed publicly so AsteroidField can generate crystal speckles that look exactly like
+    // these pickups (same shape parameters), not just coincidentally similar.
+    public const int CrystalVerticesPerShape = 6;
+    public const float CrystalMinVertexRadiusFactor = 0.45f; // how jagged/asymmetric the facets look
+    public const float CrystalAngleJitterFraction = 0.35f;
+    public const float CrystalElongationFactor = 1.4f; // stretches vertically for a gem-like silhouette rather than a round rock
 
     public static void Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 centerMeters, WorldConfig worldConfig, PickupConfig pickupConfig)
     {
@@ -41,7 +45,8 @@ public static class OxygenPickupField
         var shapeTextures = new Texture2D[ShapeVariantCount];
         for (var v = 0; v < ShapeVariantCount; v++)
         {
-            shapeVariants[v] = GenerateCrystalShape(random);
+            shapeVariants[v] = ProceduralShapeGenerator.GenerateJitteredPolygon(random, CrystalVerticesPerShape, CrystalMinVertexRadiusFactor,
+                CrystalAngleJitterFraction, CrystalElongationFactor, rescaleToUnitBounds: true);
 
             var crystalXnaVertices = new Microsoft.Xna.Framework.Vector2[shapeVariants[v].Length];
             for (var p = 0; p < crystalXnaVertices.Length; p++)
@@ -106,29 +111,4 @@ public static class OxygenPickupField
         }
     }
 
-    /// <summary>
-    /// An irregular, elongated polygon in unit (-1..1) space: vertices at evenly-spaced angles
-    /// with per-vertex radius and angle jitter (same technique as AsteroidField's rock shapes),
-    /// stretched vertically for a gem-like silhouette, then rescaled so nothing exceeds the
-    /// canvas after stretching.
-    /// </summary>
-    private static Vector2[] GenerateCrystalShape(Random random)
-    {
-        var angleStep = MathF.PI * 2f / VerticesPerShape;
-        var vertices = new Vector2[VerticesPerShape];
-        var maxExtent = 0f;
-
-        for (var i = 0; i < VerticesPerShape; i++)
-        {
-            var angleJitter = ((float)random.NextDouble() * 2f - 1f) * (angleStep * 0.35f);
-            var angle = i * angleStep + angleJitter;
-            var radius = MinVertexRadiusFactor + (float)random.NextDouble() * (1f - MinVertexRadiusFactor);
-            var vertex = new Vector2(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius * ElongationFactor);
-            vertices[i] = vertex;
-            maxExtent = MathF.Max(maxExtent, MathF.Max(MathF.Abs(vertex.X), MathF.Abs(vertex.Y)));
-        }
-
-        for (var i = 0; i < vertices.Length; i++) vertices[i] /= maxExtent;
-        return vertices;
-    }
 }

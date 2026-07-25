@@ -210,6 +210,110 @@ public static class ProceduralTextures
         return texture;
     }
 
+    public readonly struct PolygonSpeckle
+    {
+        public readonly Vector2 Center;         // canvas unit space, same space as the rock's own unitVertices
+        public readonly Vector2[] UnitVertices; // the speckle's own small polygon, in its own -1..1 local space
+        public readonly float Radius;           // the speckle's own radius, in canvas unit space
+
+        public PolygonSpeckle(Vector2 center, Vector2[] unitVertices, float radius)
+        {
+            Center = center;
+            UnitVertices = unitVertices;
+            Radius = radius;
+        }
+    }
+
+    /// <summary>
+    /// Like CreatePolygon, but also stamps small crystal-shaped "speckles" on top of the rock fill —
+    /// each with its own small solid polygon plus a radial glow — so they read as glowing crystals
+    /// embedded in (or, wherever a speckle's placement puts it near/past the rock's own edge,
+    /// sticking out of) the rock's surface.
+    ///
+    /// Three passes: (1) fill the rock polygon as CreatePolygon does, recording which pixels are
+    /// background (not rock); (2) stamp every speckle's own solid polygon on top, unconditionally —
+    /// this single overwrite regardless of what's underneath (rock fill or transparent background)
+    /// is what makes a speckle placed near/past the rock's edge visually poke out of the silhouette
+    /// — and clear those pixels from the background mask; (3) for every pixel still marked
+    /// background, blend toward speckleGlowColor with the same eased radial falloff as
+    /// CreateGlowingPolygon, for whichever nearby speckle's glow reaches furthest at that pixel.
+    /// Doing solid stamping as its own pass before any glow — rather than solid+glow per speckle in
+    /// one interleaved pass — is what keeps a later speckle's glow from overwriting an earlier
+    /// speckle's already-stamped solid fill where two speckles happen to sit close together.
+    /// </summary>
+    public static Texture2D CreateSpeckledPolygon(GraphicsDevice graphicsDevice, int size, Color rockColor, Vector2[] rockUnitVertices,
+        PolygonSpeckle[] speckles, Color speckleColor, Color speckleGlowColor, float speckleGlowRadiusMultiplier)
+    {
+        var data = new Color[size * size];
+        var isBackground = new bool[size * size];
+        var center = new Vector2(size / 2f, size / 2f);
+        var scale = size / 2f;
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var localPoint = (point - center) / scale;
+                var isRock = IsInsidePolygon(localPoint, rockUnitVertices);
+                var index = y * size + x;
+                data[index] = isRock ? rockColor : Color.Transparent;
+                isBackground[index] = !isRock;
+            }
+        }
+
+        foreach (var speckle in speckles)
+        {
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var point = new Vector2(x + 0.5f, y + 0.5f);
+                    var localPoint = (point - center) / scale;
+                    var offset = localPoint - speckle.Center;
+                    if (offset.Length() > speckle.Radius) continue;
+                    if (!IsInsidePolygon(offset / speckle.Radius, speckle.UnitVertices)) continue;
+
+                    var index = y * size + x;
+                    data[index] = speckleColor;
+                    isBackground[index] = false;
+                }
+            }
+        }
+
+        foreach (var speckle in speckles)
+        {
+            var glowRadius = speckle.Radius * speckleGlowRadiusMultiplier;
+
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var index = y * size + x;
+                    if (!isBackground[index]) continue;
+
+                    var point = new Vector2(x + 0.5f, y + 0.5f);
+                    var localPoint = (point - center) / scale;
+                    var distance = (localPoint - speckle.Center).Length();
+                    if (distance > glowRadius) continue;
+
+                    var falloff = 1f - distance / glowRadius;
+                    falloff *= falloff; // eases the fade, matching CreateGlowingPolygon
+                    var glow = speckleGlowColor * falloff;
+
+                    // Two nearby speckles' glow can overlap this same background pixel — keep
+                    // whichever is stronger (higher alpha) rather than letting iteration order
+                    // decide, so overlapping halos read as one smooth combined glow.
+                    if (glow.A > data[index].A) data[index] = glow;
+                }
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
     private static bool IsInsidePolygon(Vector2 point, Vector2[] vertices)
     {
         var inside = false;

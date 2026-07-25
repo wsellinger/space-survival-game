@@ -7,8 +7,9 @@ using SpaceSurvivalGame.ECS.Components;
 namespace SpaceSurvivalGame.Rendering;
 
 /// <summary>
-/// Draws a "STRAFE MODE" indicator while the ship's independent-aim input (right stick/RMB) is
-/// held (see ShipMovement.IsStrafing): corner brackets baked once at load time (see
+/// Draws a "STRAFE MODE" indicator while the ship is in strafe mode (right stick/RMB held for
+/// independent aim, or Space/right trigger held — see ShipMovement.IsStrafing, set by
+/// ShipInputSystem): corner brackets baked once at load time (see
 /// ProceduralTextures.CreateCornerBrackets), drawn solid the whole time, plus "STRAFE MODE"
 /// text near the top-left one, which hard-blinks on/off (no fade) BlinkFrequencyHz times per
 /// second.

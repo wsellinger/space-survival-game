@@ -12,18 +12,22 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// Reads keyboard/mouse or gamepad for the player-controlled entity's movement
 /// (mutually exclusive — <paramref name="useController"/>, tracked by MainGame
 /// based on whichever device was used most recently, picks one and the other
-/// is ignored). Facing: in controller mode the right stick aims independently
-/// whenever it's pushed past its deadzone, falling back to the left stick's
-/// direction otherwise; in keyboard/mouse mode, holding the right mouse button
-/// aims the same way (<paramref name="mouseFacingDirection"/>, precomputed by
-/// MainGame as the cursor's direction from the ship), falling back to WASD
-/// direction otherwise.
+/// is ignored).
 ///
-/// Whenever that independent aim input is actually held (right stick pushed, or
-/// RMB down) — "strafe mode" — WASD/left-stick pushes the ship directly in the
-/// input's own direction, same as a raw twin-stick shooter, letting you aim one
-/// way and fly another. The rest of the time, WASD/left-stick only triggers
-/// thrust and steers where the ship turns to face; the actual thrust force
+/// "Strafe mode" engages whenever independent aim input is actually held (right
+/// stick pushed, or RMB down), OR a dedicated hold — Space (keyboard) or the
+/// right trigger (controller) — is active, regardless of aim. Whenever it's
+/// engaged, WASD/left-stick pushes the ship directly in the input's own
+/// direction, same as a raw twin-stick shooter, instead of only steering where
+/// it turns to face — see ResolveThrust, which branches on strafe mode alone
+/// and doesn't care which of those triggered it. Facing while strafing: the
+/// right stick/mouse cursor aims independently whenever actually pushed/aimed
+/// at; the rest of the time (including the whole time when strafing was
+/// triggered by Space/the right trigger rather than aiming) facing is simply
+/// left alone — no target angle is set at all, so the ship just keeps
+/// whatever facing it had, until the player provides a real aim input. Outside
+/// strafe mode, WASD/left-stick both fires thrust and steers where the ship
+/// turns to face — the actual thrust force
 /// points along the ship's current facing (its real body rotation, not the aim
 /// target it's turning towards) and cuts out entirely once facing has drifted
 /// more than ThrustAngleThresholdRadians from the requested direction, instead
@@ -50,6 +54,8 @@ public static class ShipInputSystem
 {
     private static readonly QueryDescription Query =
         new QueryDescription().WithAll<PhysicsBody, ShipMovement, EngineThrottle, PlayerControlled>();
+
+    private const float RightTriggerStrafeHoldThreshold = 0.1f; // matches MainGame's own controller-active-input threshold
 
     public static void Run(World world, KeyboardState keyboard, GamePadState gamePad, bool useController, Vector2? mouseFacingDirection, float deltaSeconds, EngineConfig engineConfig)
     {
@@ -87,10 +93,11 @@ public static class ShipInputSystem
             if (direction.LengthSquared() > 1f) direction = Vector2.Normalize(direction);
 
             var rightStick = gamePad.ThumbSticks.Right;
-            strafeMode = rightStick.LengthSquared() > 0f;
-            if (strafeMode)
+            var aiming = rightStick.LengthSquared() > 0f;
+            strafeMode = aiming || gamePad.Triggers.Right > RightTriggerStrafeHoldThreshold;
+            if (aiming)
                 facingDirection = new Vector2(rightStick.X, -rightStick.Y);
-            else if (direction != Vector2.Zero)
+            else if (!strafeMode && direction != Vector2.Zero)
                 facingDirection = direction;
         }
         else
@@ -101,10 +108,10 @@ public static class ShipInputSystem
             if (keyboard.IsKeyDown(Keys.D) || keyboard.IsKeyDown(Keys.Right)) direction += new Vector2(1, 0);
             if (direction != Vector2.Zero) direction = Vector2.Normalize(direction);
 
-            strafeMode = mouseFacingDirection.HasValue;
-            if (strafeMode)
+            strafeMode = mouseFacingDirection.HasValue || keyboard.IsKeyDown(Keys.Space);
+            if (mouseFacingDirection.HasValue)
                 facingDirection = mouseFacingDirection.Value;
-            else if (direction != Vector2.Zero)
+            else if (!strafeMode && direction != Vector2.Zero)
                 facingDirection = direction;
         }
     }

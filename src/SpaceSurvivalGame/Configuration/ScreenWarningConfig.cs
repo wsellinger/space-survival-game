@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -24,18 +21,5 @@ public class ScreenWarningConfig
     // the screen.
     public float MaxIntensity { get; set; } = 0.6f;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static ScreenWarningConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<ScreenWarningConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new ScreenWarningConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static ScreenWarningConfig Load(string path) => ConfigLoader.Load<ScreenWarningConfig>(path);
 }

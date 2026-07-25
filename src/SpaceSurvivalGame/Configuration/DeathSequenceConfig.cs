@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>Independent from ParticleConfig's collision-tap sparks, so the death explosion can be made bigger/longer-lived without changing how ordinary hits look.</summary>
@@ -56,18 +53,5 @@ public class DeathSequenceConfig
     public FadeConfig Fade { get; set; } = new();
     public FragmentsConfig Fragments { get; set; } = new();
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static DeathSequenceConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<DeathSequenceConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new DeathSequenceConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static DeathSequenceConfig Load(string path) => ConfigLoader.Load<DeathSequenceConfig>(path);
 }

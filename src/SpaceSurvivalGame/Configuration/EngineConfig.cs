@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>A silhouette (outer) + core (inner) layer pair, sharing one size/color shape.</summary>
@@ -76,18 +73,5 @@ public class EngineConfig
     public MainJetConfig MainJet { get; set; } = new();
     public StrafeJetsConfig StrafeJets { get; set; } = new();
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static EngineConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<EngineConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new EngineConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static EngineConfig Load(string path) => ConfigLoader.Load<EngineConfig>(path);
 }

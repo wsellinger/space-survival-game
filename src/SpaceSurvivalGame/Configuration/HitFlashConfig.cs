@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -16,18 +13,5 @@ public class HitFlashConfig
     // linearly back to white over FlashDurationSeconds. Lower values blend less.
     public float FlashIntensity { get; set; } = 1f;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static HitFlashConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<HitFlashConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new HitFlashConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static HitFlashConfig Load(string path) => ConfigLoader.Load<HitFlashConfig>(path);
 }

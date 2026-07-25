@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -16,18 +13,5 @@ public class HealthWarningConfig
     // shared with the O2 bar so both blink in sync.
     public float LowHealthThresholdFraction { get; set; } = 0.3f;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static HealthWarningConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<HealthWarningConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new HealthWarningConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static HealthWarningConfig Load(string path) => ConfigLoader.Load<HealthWarningConfig>(path);
 }

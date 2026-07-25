@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>Pixelation block size in screen pixels at full intensity; 0 at the start. Left in but disabled by default in favor of the noise effect — flip Enabled back on to bring it back.</summary>
@@ -65,18 +62,5 @@ public class SuffocationEffectConfig
     public GrayscaleConfig Grayscale { get; set; } = new();
     public VignetteConfig Vignette { get; set; } = new();
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static SuffocationEffectConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<SuffocationEffectConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new SuffocationEffectConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static SuffocationEffectConfig Load(string path) => ConfigLoader.Load<SuffocationEffectConfig>(path);
 }

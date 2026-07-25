@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 public class ThrustConfig
@@ -46,18 +43,5 @@ public class ShipConfig
     public ThrustConfig Thrust { get; set; } = new();
     public StrafeConfig Strafe { get; set; } = new();
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static ShipConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<ShipConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new ShipConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static ShipConfig Load(string path) => ConfigLoader.Load<ShipConfig>(path);
 }

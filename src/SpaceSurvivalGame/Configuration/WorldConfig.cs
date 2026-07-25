@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 public class AsteroidConfig
@@ -43,18 +40,5 @@ public class WorldConfig
     public int WorldSeed { get; set; } = 12345;
     public AsteroidConfig Asteroid { get; set; } = new();
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static WorldConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<WorldConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new WorldConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static WorldConfig Load(string path) => ConfigLoader.Load<WorldConfig>(path);
 }

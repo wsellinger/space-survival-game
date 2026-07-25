@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
 
 namespace SpaceSurvivalGame.Configuration;
 
@@ -38,18 +36,5 @@ public class StarfieldConfig
     // it a slight red/yellow/blue cast instead of plain white. 0 = no tint at all.
     public FloatRange TintStrengthRange { get; set; } = new(0.05f, 0.15f);
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static StarfieldConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<StarfieldConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new StarfieldConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static StarfieldConfig Load(string path) => ConfigLoader.Load<StarfieldConfig>(path);
 }

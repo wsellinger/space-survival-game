@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -26,18 +23,5 @@ public class PickupConfig
     // Initial spin, magnitude only — sign (direction) is randomized separately at spawn time.
     public FloatRange AngularVelocityRadiansPerSecondRange { get; set; } = new(0.1f, 1f);
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static PickupConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<PickupConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new PickupConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static PickupConfig Load(string path) => ConfigLoader.Load<PickupConfig>(path);
 }

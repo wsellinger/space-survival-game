@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -28,18 +25,5 @@ public class StrafeModeIndicatorConfig
     // On/off toggles per second (a hard blink, not a fade).
     public float BlinkFrequencyHz { get; set; } = 1f;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static StrafeModeIndicatorConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<StrafeModeIndicatorConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new StrafeModeIndicatorConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static StrafeModeIndicatorConfig Load(string path) => ConfigLoader.Load<StrafeModeIndicatorConfig>(path);
 }

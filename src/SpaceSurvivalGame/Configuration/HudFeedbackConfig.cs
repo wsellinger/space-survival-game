@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -17,18 +14,5 @@ public class HudFeedbackConfig
     public FloatRange ShakeMagnitudePixelsRange { get; set; } = new(1f, 6f);
     public float ShakeDecaySpeed { get; set; } = 10f;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static HudFeedbackConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<HudFeedbackConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new HudFeedbackConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static HudFeedbackConfig Load(string path) => ConfigLoader.Load<HudFeedbackConfig>(path);
 }

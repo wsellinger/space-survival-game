@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -16,18 +13,5 @@ public class CrosshairConfig
     public float ThicknessPixels { get; set; } = 2f;
     public string ColorHex { get; set; } = "#FFFFFFCC";
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static CrosshairConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<CrosshairConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new CrosshairConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static CrosshairConfig Load(string path) => ConfigLoader.Load<CrosshairConfig>(path);
 }

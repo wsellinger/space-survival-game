@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -23,18 +20,5 @@ public class OxygenWarningConfig
     // its normal size (0.15 = up to 15% bigger).
     public float EmptyOxygenPulseScaleAmount { get; set; } = 0.15f;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static OxygenWarningConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<OxygenWarningConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new OxygenWarningConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static OxygenWarningConfig Load(string path) => ConfigLoader.Load<OxygenWarningConfig>(path);
 }

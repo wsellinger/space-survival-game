@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -23,18 +20,5 @@ public class CameraConfig
     // no effect), 1 = focus sits exactly at the cursor, 0.5 = halfway between.
     public float MouseFocusRatio { get; set; } = 0.5f;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static CameraConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<CameraConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new CameraConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static CameraConfig Load(string path) => ConfigLoader.Load<CameraConfig>(path);
 }

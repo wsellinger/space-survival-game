@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
@@ -18,18 +15,5 @@ public class ScreenShakeConfig
     // CameraConfig.TweenSpeed.
     public float ShakeDecaySpeed { get; set; } = 6f;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
-
-    public static ScreenShakeConfig Load(string path)
-    {
-        if (File.Exists(path))
-        {
-            var loaded = JsonSerializer.Deserialize<ScreenShakeConfig>(File.ReadAllText(path));
-            if (loaded != null) return loaded;
-        }
-
-        var defaultConfig = new ScreenShakeConfig();
-        File.WriteAllText(path, JsonSerializer.Serialize(defaultConfig, SerializerOptions));
-        return defaultConfig;
-    }
+    public static ScreenShakeConfig Load(string path) => ConfigLoader.Load<ScreenShakeConfig>(path);
 }

@@ -1,7 +1,7 @@
 {
   "MaxHealth": 100,
   "MaxOxygen": 100,
-  "OxygenDrainPerSecond": 0.5,
+  "OxygenDrainPerSecond": 2,
   "Collision": {
     "DamageRange": [0.1, 100],
     "SpeedMetersPerSecondRange": [0.1, 4.5]

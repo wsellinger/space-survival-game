@@ -1,5 +1,5 @@
 {
-  "MaxSpeedMetersPerSecond": 4,
+  "MaxSpeedMetersPerSecond": 3,
   "TurnSpeedRadiansPerSecond": 10,
   "SpriteSize": 24,
   "NotchDepthFraction": 0.15,
@@ -8,7 +8,7 @@
     "AngleThresholdDegrees": 45
   },
   "Strafe": {
-    "MaxSpeedMetersPerSecond": 3,
+    "MaxSpeedMetersPerSecond": 2,
     "SpeedCapAngleThresholdDegrees": 30
   }
 }

@@ -52,9 +52,11 @@ public class MainGame : Game
     private SuffocationEffectConfig _suffocationConfig;
     private DeathSequenceConfig _deathSequenceConfig;
     private float _deathElapsedSeconds;
-    private PickupConfig _pickupConfig;
+    private OxygenPickupConfig _oxygenPickupConfig;
     private WorldConfig _worldConfig;
     private OxygenPickupField.PickupAssets _pickupAssets;
+    private AnorthitePickupConfig _anorthitePickupConfig;
+    private AnorthiteField.AnorthiteAssets _anorthiteAssets;
     private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -152,8 +154,11 @@ public class MainGame : Game
         var deathSequenceConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "death-sequence-config.json");
         _deathSequenceConfig = DeathSequenceConfig.Load(deathSequenceConfigPath);
 
-        var pickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "pickup-config.json");
-        _pickupConfig = PickupConfig.Load(pickupConfigPath);
+        var oxygenPickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "oxygen-pickup-config.json");
+        _oxygenPickupConfig = OxygenPickupConfig.Load(oxygenPickupConfigPath);
+
+        var anorthitePickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "anorthite-pickup-config.json");
+        _anorthitePickupConfig = AnorthitePickupConfig.Load(anorthitePickupConfigPath);
 
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
@@ -193,7 +198,8 @@ public class MainGame : Game
         }
 
         AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig);
-        _pickupAssets = OxygenPickupField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig, _pickupConfig);
+        _pickupAssets = OxygenPickupField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig, _oxygenPickupConfig);
+        _anorthiteAssets = AnorthiteField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig, _anorthitePickupConfig);
 
         const int buttonWidth = 220;
         const int buttonHeight = 60;
@@ -361,7 +367,8 @@ public class MainGame : Game
         RotationJetSystem.Run(_world, _rotationJetTexture, _engineConfig, _shipConfig.SpriteSize, _rotationJetColor, _random);
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _sparkConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
-        OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _pickupConfig, _worldConfig.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
+        OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _oxygenPickupConfig, _worldConfig.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
+        AnorthiteCrystalReleaseSystem.Run(_world, _physicsWorld, _anorthiteAssets, _anorthitePickupConfig, _worldConfig.Asteroid.AnorthiteRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
 
         var shipHealth = float.MaxValue;
         _world.Query(in HealthQuery, (ref Health health) => shipHealth = health.Current);
@@ -384,7 +391,8 @@ public class MainGame : Game
         }
 
         VitalsSystem.Run(_world, deltaSeconds, _playerConfig, _suffocationConfig);
-        OxygenPickupSystem.Run(_world, _shipConfig, _pickupConfig, _sparkConfig, _sparkTexture, _random);
+        OxygenPickupSystem.Run(_world, _shipConfig, _oxygenPickupConfig, _sparkConfig, _sparkTexture, _random);
+        AnorthitePickupSystem.Run(_world, _shipConfig, _anorthitePickupConfig, _sparkConfig, _sparkTexture, _random);
 
         // Suffocation kills once its post-process effect has fully played out. No explosion
         // and no extra fade here — the screen's already fully black from the vignette by

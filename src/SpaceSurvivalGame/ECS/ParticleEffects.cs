@@ -31,9 +31,11 @@ public static class ParticleEffects
     /// <summary>
     /// Unlike SpawnSparkBurst, these start on a ring around positionMeters and move inward,
     /// timed so each one arrives (and fades out) right at the center — reads as being drawn
-    /// in/absorbed rather than exploding outward like a collision impact.
+    /// in/absorbed rather than exploding outward like a collision impact. colorA/colorB let
+    /// each pickup type (O2, anorthite, ...) use its own look rather than a fixed color.
     /// </summary>
-    public static void SpawnPickupBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, SparkConfig config)
+    public static void SpawnPickupBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, SparkConfig config,
+        Microsoft.Xna.Framework.Color colorA, Microsoft.Xna.Framework.Color colorB)
     {
         var count = random.Next(config.SparkCountRange.Min, config.SparkCountRange.Max + 1);
         for (var i = 0; i < count; i++)
@@ -41,7 +43,7 @@ public static class ParticleEffects
             var angle = (float)(random.NextDouble() * Math.PI * 2);
             var speed = config.SparkSpeedMetersPerSecondRange.Min + (float)random.NextDouble() * (config.SparkSpeedMetersPerSecondRange.Max - config.SparkSpeedMetersPerSecondRange.Min);
             var lifetime = config.SparkLifetimeSecondsRange.Min + (float)random.NextDouble() * (config.SparkLifetimeSecondsRange.Max - config.SparkLifetimeSecondsRange.Min);
-            var color = random.Next(2) == 0 ? Microsoft.Xna.Framework.Color.CornflowerBlue : Microsoft.Xna.Framework.Color.White;
+            var color = random.Next(2) == 0 ? colorA : colorB;
 
             var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
             var startRadius = speed * lifetime; // covers exactly this distance over its lifetime, so it arrives right as it fades out

@@ -65,7 +65,10 @@
     <None Include="config/death-sequence-config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="config/pickup-config.json">
+    <None Include="config/anorthite-pickup-config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="config/oxygen-pickup-config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="config/screen-warning-config.json">

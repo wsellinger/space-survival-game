@@ -12,40 +12,44 @@ using SpaceSurvivalGame.Configuration;
 namespace SpaceSurvivalGame.ECS;
 
 /// <summary>
-/// Scatters a handful of collectible O2 pickups — small cornflower-blue crystals — at random
-/// positions within the asteroid field's extent. Each is a solid dynamic Box2D body like an
-/// asteroid (so it can be physically bumped around), but its shape never opts into hit events,
+/// Scatters a handful of collectible red anorthite pickups — small glowing orange, bumpy-round
+/// crystal clusters (distinct from the angular O2 pickup crystals) — at random positions within
+/// the asteroid field's extent. Each is a solid dynamic Box2D body like an asteroid or O2 pickup
+/// (so it can be physically bumped around by either), but its shape never opts into hit events,
 /// so it's invisible to CollisionDamageSystem — collection is a simple distance check in
-/// OxygenPickupSystem instead, not a damage-style hit event.
+/// AnorthitePickupSystem instead, not a damage-style hit event.
 /// </summary>
-public static class OxygenPickupField
+public static class AnorthiteField
 {
     private const int TextureSize = 32;
     private const int ShapeVariantCount = 3;
 
-    // Exposed publicly so AsteroidField can generate crystal speckles that look exactly like
-    // these pickups (same shape parameters), not just coincidentally similar.
-    public const int CrystalVerticesPerShape = 6;
-    public const float CrystalMinVertexRadiusFactor = 0.45f; // how jagged/asymmetric the facets look
-    public const float CrystalAngleJitterFraction = 0.35f;
-    public const float CrystalElongationFactor = 1.4f; // stretches vertically for a gem-like silhouette rather than a round rock
+    // Exposed publicly so AsteroidField's color can match exactly (its embedded speckles use
+    // their own, more square/blocky shape instead of this one — see AsteroidField's own
+    // AnorthiteSpeckle* constants). More vertices, a higher min radius factor, and no
+    // elongation than OxygenPickupField's crystals give a rounder, bumpier silhouette instead
+    // of an angular gem.
+    public const int CrystalVerticesPerShape = 10;
+    public const float CrystalMinVertexRadiusFactor = 0.78f;
+    public const float CrystalAngleJitterFraction = 0.3f;
+    public const float CrystalElongationFactor = 1f;
 
-    public static readonly Microsoft.Xna.Framework.Color CrystalColor = Microsoft.Xna.Framework.Color.CornflowerBlue;
+    public static readonly Microsoft.Xna.Framework.Color CrystalColor = new(200, 90, 55); // warm burnt-orange, like red anorthite
 
     /// <summary>Already-baked shape data shared by every pickup crystal, so a new one can be spawned at runtime (see SpawnPickup) without re-baking textures.</summary>
-    public readonly struct PickupAssets
+    public readonly struct AnorthiteAssets
     {
         public readonly Vector2[][] ShapeVariants;
         public readonly Texture2D[] ShapeTextures;
 
-        public PickupAssets(Vector2[][] shapeVariants, Texture2D[] shapeTextures)
+        public AnorthiteAssets(Vector2[][] shapeVariants, Texture2D[] shapeTextures)
         {
             ShapeVariants = shapeVariants;
             ShapeTextures = shapeTextures;
         }
     }
 
-    public static PickupAssets Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 centerMeters, WorldConfig worldConfig, OxygenPickupConfig pickupConfig)
+    public static AnorthiteAssets Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 centerMeters, WorldConfig worldConfig, AnorthitePickupConfig anorthiteConfig)
     {
         var random = new Random();
 
@@ -54,7 +58,7 @@ public static class OxygenPickupField
         // padding so the glow's feathered edge isn't clipped right at the canvas boundary.
         // Sprite.Scale below is inflated by the same factor so the crystal's own on-screen/
         // physics size stays exactly SpriteSizePixels regardless of GlowRadius.
-        var glowCanvasScale = MathF.Max(1f, pickupConfig.GlowRadius) * 1.05f;
+        var glowCanvasScale = MathF.Max(1f, anorthiteConfig.GlowRadius) * 1.05f;
 
         var shapeVariants = new Vector2[ShapeVariantCount][];
         var shapeTextures = new Texture2D[ShapeVariantCount];
@@ -68,30 +72,30 @@ public static class OxygenPickupField
                 crystalXnaVertices[p] = (shapeVariants[v][p] / glowCanvasScale).ToXna();
 
             shapeTextures[v] = ProceduralTextures.CreateGlowingPolygon(graphicsDevice, TextureSize,
-                CrystalColor, CrystalColor, crystalXnaVertices, pickupConfig.GlowRadius / glowCanvasScale);
+                CrystalColor, CrystalColor, crystalXnaVertices, anorthiteConfig.GlowRadius / glowCanvasScale);
         }
 
-        var assets = new PickupAssets(shapeVariants, shapeTextures);
+        var assets = new AnorthiteAssets(shapeVariants, shapeTextures);
 
-        for (var i = 0; i < pickupConfig.PickupCount; i++)
+        for (var i = 0; i < anorthiteConfig.PickupCount; i++)
         {
             var positionMeters = centerMeters + new Vector2(
                 (float)(random.NextDouble() * 2 - 1) * worldConfig.FieldHalfExtentMeters,
                 (float)(random.NextDouble() * 2 - 1) * worldConfig.FieldHalfExtentMeters);
 
-            SpawnPickup(world, physicsWorld, positionMeters, assets, pickupConfig, random);
+            SpawnPickup(world, physicsWorld, positionMeters, assets, anorthiteConfig, random);
         }
 
         return assets;
     }
 
     /// <summary>
-    /// Spawns a single new O2 pickup crystal at the given position, reusing already-baked shape
-    /// assets (see Create/PickupAssets) rather than re-baking textures — used both by Create's
-    /// initial scatter and by OxygenCrystalReleaseSystem for crystals popped loose from an
-    /// oxygen-rich asteroid at runtime.
+    /// Spawns a single new anorthite pickup at the given position, reusing already-baked shape
+    /// assets (see Create/AnorthiteAssets) rather than re-baking textures — used both by Create's
+    /// initial scatter and by AnorthiteCrystalReleaseSystem for crystals popped loose from an
+    /// anorthite-rich asteroid at runtime.
     /// </summary>
-    public static void SpawnPickup(World world, PhysicsWorld physicsWorld, Vector2 positionMeters, PickupAssets assets, OxygenPickupConfig config, Random random)
+    public static void SpawnPickup(World world, PhysicsWorld physicsWorld, Vector2 positionMeters, AnorthiteAssets assets, AnorthitePickupConfig config, Random random)
     {
         var rotationRadians = (float)(random.NextDouble() * Math.PI * 2);
 
@@ -123,9 +127,9 @@ public static class OxygenPickupField
         var points = new Vector2[unitVertices.Length];
         for (var p = 0; p < unitVertices.Length; p++) points[p] = unitVertices[p] * radiusMeters;
 
-        // Solid (so it still bounces off asteroids like one), but its collision mask
-        // excludes the ship specifically — the ship should fly straight through and get
-        // it collected via OxygenPickupSystem's distance check, not bounce off it.
+        // Solid (so it still bounces off asteroids and other pickups like one), but its
+        // collision mask excludes the ship specifically — the ship should fly straight through
+        // and get it collected via AnorthitePickupSystem's distance check, not bounce off it.
         var shapeDef = B2Api.b2DefaultShapeDef();
         shapeDef.density = config.MaterialDensity;
         shapeDef.material.restitution = config.Restitution;
@@ -139,6 +143,6 @@ public static class OxygenPickupField
             new Transform { PositionMeters = positionMeters, RotationRadians = rotationRadians },
             new Velocity(),
             new Sprite { Texture = assets.ShapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.White, Size = TextureSize, Scale = scale, Parallax = 1f },
-            new OxygenPickup());
+            new AnorthitePickup());
     }
 }

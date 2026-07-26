@@ -30,6 +30,7 @@ public static class AsteroidField
 {
     private const int BaseShapeTextureSize = 64;
     private const int OxygenRichShapeTextureSize = 128; // bigger canvas than BaseShapeTextureSize: the margined-down rock silhouette plus small crystal speckles need finer detail than a plain rock does
+    private const int AnorthiteRichShapeTextureSize = 128;
     private const int MaxPlacementAttempts = 30;
     private const int ShapeVariantCount = 6;
     private const int MinVerticesPerShape = 6;
@@ -37,30 +38,37 @@ public static class AsteroidField
     private const float MinVertexRadiusFactor = 0.65f; // how "jagged" the rocks look; 1 = perfect circle
     private const float RockAngleJitterFraction = 0.4f;
 
+    // Anorthite speckles embedded in an asteroid deliberately look more blocky/square than
+    // AnorthiteField's own standalone pickup crystals (which stay round/bumpy) — few vertices, a
+    // high min radius factor, and low jitter for crisp, mostly-straight edges instead of an
+    // organic bump. Color still matches AnorthiteField.CrystalColor exactly.
+    private const int AnorthiteSpeckleVerticesPerShape = 4;
+    private const float AnorthiteSpeckleMinVertexRadiusFactor = 0.85f;
+    private const float AnorthiteSpeckleAngleJitterFraction = 0.15f;
+    private const float AnorthiteSpeckleElongationFactor = 1f;
+
     private static readonly Microsoft.Xna.Framework.Color RockColor = new(107, 91, 78);
-    private static readonly Microsoft.Xna.Framework.Color CrystalColor = Microsoft.Xna.Framework.Color.CornflowerBlue;
 
     public static void Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 centerMeters, WorldConfig config)
     {
         var random = new Random(config.WorldSeed);
         var oxygenRichConfig = config.Asteroid.OxygenRich;
+        var anorthiteRichConfig = config.Asteroid.AnorthiteRich;
 
-        // Canvas margin for the oxygen-rich textures only: embedded/protruding crystal speckles
-        // can extend past the rock's own unit-magnitude-1 edge, but (unlike the plain rock
-        // texture, which fills its canvas exactly to that edge with zero spare room) their
-        // canvas needs padding for that — same trick OxygenPickupField uses for its own glow.
-        // Sprite.Scale for oxygen-rich asteroids below is inflated by this same factor so the
-        // rock's own true on-screen/physics size stays exactly 2*radiusMeters regardless.
-        // Worst case: a speckle's center sits at the rock's own max possible edge distance (1,
-        // since every point on the rock polygon is within radius 1 of center) plus the max
-        // outward offset, and its own solid radius plus glow reach further still.
-        var maxSpeckleCenterDistance = 1f + oxygenRichConfig.CrystalEdgeOffsetRange.Max;
-        var maxSpeckleReach = oxygenRichConfig.CrystalSizeUnitRange.Max * (1f + oxygenRichConfig.CrystalGlowRadiusMultiplier);
-        var canvasMarginScale = MathF.Max(1f, maxSpeckleCenterDistance + maxSpeckleReach) * 1.05f;
+        // Canvas margin for the rich-asteroid textures only: embedded/protruding crystal
+        // speckles can extend past the rock's own unit-magnitude-1 edge, but (unlike the plain
+        // rock texture, which fills its canvas exactly to that edge with zero spare room) their
+        // canvas needs padding for that — same trick OxygenPickupField/AnorthiteField use for
+        // their own glow. Sprite.Scale for rich asteroids below is inflated by the matching
+        // factor so the rock's own true on-screen/physics size stays exactly 2*radiusMeters
+        // regardless. Each variant gets its own scale since the two configs can differ.
+        var oxygenCanvasMarginScale = ComputeCanvasMarginScale(oxygenRichConfig);
+        var anorthiteCanvasMarginScale = ComputeCanvasMarginScale(anorthiteRichConfig);
 
         var shapeVariants = new Vector2[ShapeVariantCount][];
         var shapeTextures = new Texture2D[ShapeVariantCount];
         var oxygenRichShapeTextures = new Texture2D[ShapeVariantCount];
+        var anorthiteRichShapeTextures = new Texture2D[ShapeVariantCount];
         for (var v = 0; v < ShapeVariantCount; v++)
         {
             var vertexCount = random.Next(MinVerticesPerShape, MaxVerticesPerShape + 1);
@@ -70,7 +78,13 @@ public static class AsteroidField
             for (var p = 0; p < xnaVertices.Length; p++) xnaVertices[p] = shapeVariants[v][p].ToXna();
             shapeTextures[v] = ProceduralTextures.CreatePolygon(graphicsDevice, BaseShapeTextureSize, RockColor, xnaVertices);
 
-            oxygenRichShapeTextures[v] = CreateOxygenRichTexture(random, graphicsDevice, shapeVariants[v], oxygenRichConfig, canvasMarginScale);
+            oxygenRichShapeTextures[v] = CreateSpeckledRockTexture(random, graphicsDevice, shapeVariants[v], oxygenRichConfig, oxygenCanvasMarginScale,
+                OxygenRichShapeTextureSize, OxygenPickupField.CrystalVerticesPerShape, OxygenPickupField.CrystalMinVertexRadiusFactor,
+                OxygenPickupField.CrystalAngleJitterFraction, OxygenPickupField.CrystalElongationFactor, OxygenPickupField.CrystalColor);
+
+            anorthiteRichShapeTextures[v] = CreateSpeckledRockTexture(random, graphicsDevice, shapeVariants[v], anorthiteRichConfig, anorthiteCanvasMarginScale,
+                AnorthiteRichShapeTextureSize, AnorthiteSpeckleVerticesPerShape, AnorthiteSpeckleMinVertexRadiusFactor,
+                AnorthiteSpeckleAngleJitterFraction, AnorthiteSpeckleElongationFactor, AnorthiteField.CrystalColor);
         }
 
         // Cell size = the largest possible sum-of-radii between any two asteroids,
@@ -112,32 +126,45 @@ public static class AsteroidField
             var shapeDef = B2Api.b2DefaultShapeDef();
             shapeDef.density = config.Asteroid.MaterialDensity;
             shapeDef.material.restitution = config.Asteroid.Restitution;
-            shapeDef.enableHitEvents = true; // lets OxygenCrystalReleaseSystem see any collision this asteroid is part of, not just ones involving the ship
+            shapeDef.enableHitEvents = true; // lets OxygenCrystalReleaseSystem/AnorthiteCrystalReleaseSystem see any collision this asteroid is part of, not just ones involving the ship
             var hull = B2Api.b2ComputeHull(points, points.Length);
             var polygon = B2Api.b2MakePolygon(hull, 0f);
             B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);
 
-            var isOxygenRich = random.NextDouble() < oxygenRichConfig.SpawnChanceFraction;
+            // Mutually exclusive: one additive roll across both rich-asteroid chances, so they
+            // never overlap and their fractions add up intuitively (e.g. 15%+15% = 30% chance of
+            // some special type) rather than each rolling independently.
+            var typeRoll = random.NextDouble();
+            AsteroidType type;
+            if (typeRoll < oxygenRichConfig.SpawnChanceFraction) type = AsteroidType.OxygenRich;
+            else if (typeRoll < oxygenRichConfig.SpawnChanceFraction + anorthiteRichConfig.SpawnChanceFraction) type = AsteroidType.AnorthiteRich;
+            else type = AsteroidType.Ordinary;
 
             // BaseShapeTextureSize pixels at scale 1 would be BaseShapeTextureSize px across;
-            // we want it to actually measure 2*radiusMeters in world space. Oxygen-rich
-            // asteroids use a different (padded) canvas, so their size/scale differ.
+            // we want it to actually measure 2*radiusMeters in world space. Rich-asteroid
+            // variants use a different (padded) canvas each, so their size/scale differ.
             var desiredDiameterPixels = PhysicsWorld.MetersToPixels(radiusMeters * 2f);
 
             Texture2D texture;
             int textureSize;
             float scale;
-            if (isOxygenRich)
+            switch (type)
             {
-                texture = oxygenRichShapeTextures[variantIndex];
-                textureSize = OxygenRichShapeTextureSize;
-                scale = desiredDiameterPixels * canvasMarginScale / OxygenRichShapeTextureSize;
-            }
-            else
-            {
-                texture = shapeTextures[variantIndex];
-                textureSize = BaseShapeTextureSize;
-                scale = desiredDiameterPixels / BaseShapeTextureSize;
+                case AsteroidType.OxygenRich:
+                    texture = oxygenRichShapeTextures[variantIndex];
+                    textureSize = OxygenRichShapeTextureSize;
+                    scale = desiredDiameterPixels * oxygenCanvasMarginScale / OxygenRichShapeTextureSize;
+                    break;
+                case AsteroidType.AnorthiteRich:
+                    texture = anorthiteRichShapeTextures[variantIndex];
+                    textureSize = AnorthiteRichShapeTextureSize;
+                    scale = desiredDiameterPixels * anorthiteCanvasMarginScale / AnorthiteRichShapeTextureSize;
+                    break;
+                default:
+                    texture = shapeTextures[variantIndex];
+                    textureSize = BaseShapeTextureSize;
+                    scale = desiredDiameterPixels / BaseShapeTextureSize;
+                    break;
             }
 
             world.Create(
@@ -145,22 +172,37 @@ public static class AsteroidField
                 new Transform { PositionMeters = positionMeters, RotationRadians = 0f },
                 new Velocity(),
                 new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = textureSize, Scale = scale, Parallax = 1f },
-                new Asteroid { RadiusMeters = radiusMeters, Type = isOxygenRich ? AsteroidType.OxygenRich : AsteroidType.Ordinary },
+                new Asteroid { RadiusMeters = radiusMeters, Type = type },
                 new Damaging());
         }
     }
 
     /// <summary>
-    /// Bakes one oxygen-rich texture variant: the same rock silhouette as the plain version
-    /// (rockUnitVertices, so the Box2D collision hull stays identical between an ordinary and
-    /// oxygen-rich asteroid of this variant), but with a handful of glowing crystal speckles
-    /// (same shape as OxygenPickupField's own crystals) stamped on top via
-    /// ProceduralTextures.CreateSpeckledPolygon. Everything is baked into canvasMarginScale-
-    /// deflated canvas space so speckles have room to extend past the rock's own edge without
-    /// being clipped by the texture bounds.
+    /// Worst-case canvas padding a rich-asteroid texture needs: a speckle's center can sit as far
+    /// out as the rock's own max possible edge distance (1, since every point on the rock
+    /// polygon is within radius 1 of center) plus the max outward offset, and its own solid
+    /// radius plus glow reach further still.
     /// </summary>
-    private static Texture2D CreateOxygenRichTexture(Random random, GraphicsDevice graphicsDevice, Vector2[] rockUnitVertices,
-        OxygenRichAsteroidConfig config, float canvasMarginScale)
+    private static float ComputeCanvasMarginScale(RichAsteroidConfig config)
+    {
+        var maxSpeckleCenterDistance = 1f + config.CrystalEdgeOffsetRange.Max;
+        var maxSpeckleReach = config.CrystalSizeUnitRange.Max * (1f + config.CrystalGlowRadiusMultiplier);
+        return MathF.Max(1f, maxSpeckleCenterDistance + maxSpeckleReach) * 1.05f;
+    }
+
+    /// <summary>
+    /// Bakes one rich-asteroid texture variant: the same rock silhouette as the plain version
+    /// (rockUnitVertices, so the Box2D collision hull stays identical between an ordinary and
+    /// rich asteroid of this variant), but with a handful of glowing crystal speckles stamped on
+    /// top via ProceduralTextures.CreateSpeckledPolygon, shaped via the given crystal*
+    /// parameters — pass the matching *PickupField/AnorthiteField constants so the speckles look
+    /// exactly like that resource's own standalone pickups. Everything is baked into
+    /// canvasMarginScale-deflated canvas space so speckles have room to extend past the rock's
+    /// own edge without being clipped by the texture bounds.
+    /// </summary>
+    private static Texture2D CreateSpeckledRockTexture(Random random, GraphicsDevice graphicsDevice, Vector2[] rockUnitVertices,
+        RichAsteroidConfig config, float canvasMarginScale, int textureSize, int crystalVerticesPerShape, float crystalMinVertexRadiusFactor,
+        float crystalAngleJitterFraction, float crystalElongationFactor, Microsoft.Xna.Framework.Color crystalColor)
     {
         var marginedXnaVertices = new Microsoft.Xna.Framework.Vector2[rockUnitVertices.Length];
         for (var p = 0; p < marginedXnaVertices.Length; p++) marginedXnaVertices[p] = (rockUnitVertices[p] / canvasMarginScale).ToXna();
@@ -185,11 +227,8 @@ public static class AsteroidField
             var speckleSize = config.CrystalSizeUnitRange.Min +
                 (float)random.NextDouble() * (config.CrystalSizeUnitRange.Max - config.CrystalSizeUnitRange.Min);
 
-            // Same generator, same parameters OxygenPickupField uses for its own crystals — the
-            // speckles are meant to look exactly like the pickups' glowing O2 crystals.
-            var crystalUnitVertices = ProceduralShapeGenerator.GenerateJitteredPolygon(random, OxygenPickupField.CrystalVerticesPerShape,
-                OxygenPickupField.CrystalMinVertexRadiusFactor, OxygenPickupField.CrystalAngleJitterFraction, OxygenPickupField.CrystalElongationFactor,
-                rescaleToUnitBounds: true);
+            var crystalUnitVertices = ProceduralShapeGenerator.GenerateJitteredPolygon(random, crystalVerticesPerShape,
+                crystalMinVertexRadiusFactor, crystalAngleJitterFraction, crystalElongationFactor, rescaleToUnitBounds: true);
             var crystalXnaVertices = new Microsoft.Xna.Framework.Vector2[crystalUnitVertices.Length];
             for (var p = 0; p < crystalXnaVertices.Length; p++) crystalXnaVertices[p] = crystalUnitVertices[p].ToXna();
 
@@ -199,8 +238,8 @@ public static class AsteroidField
                 speckleSize / canvasMarginScale);
         }
 
-        return ProceduralTextures.CreateSpeckledPolygon(graphicsDevice, OxygenRichShapeTextureSize, RockColor, marginedXnaVertices,
-            speckles, CrystalColor, CrystalColor, config.CrystalGlowRadiusMultiplier);
+        return ProceduralTextures.CreateSpeckledPolygon(graphicsDevice, textureSize, RockColor, marginedXnaVertices,
+            speckles, crystalColor, crystalColor, config.CrystalGlowRadiusMultiplier);
     }
 
     /// <summary>

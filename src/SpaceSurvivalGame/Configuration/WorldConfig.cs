@@ -1,6 +1,12 @@
 namespace SpaceSurvivalGame.Configuration;
 
-public class OxygenRichAsteroidConfig
+/// <summary>
+/// Shared shape of every "rich asteroid" variant's config (oxygen, anorthite, whichever comes
+/// next) — same speckle-placement/glow/collision-release knobs regardless of which crystal type
+/// they end up governing. Concrete subclasses exist purely so WorldConfig.AsteroidConfig can
+/// hold one independently-tunable instance per variant in the JSON.
+/// </summary>
+public abstract class RichAsteroidConfig
 {
     // Fraction of generated asteroids that roll this type instead of an ordinary rock.
     public float SpawnChanceFraction { get; set; } = 0.15f;
@@ -21,14 +27,14 @@ public class OxygenRichAsteroidConfig
     public FloatRange CrystalEdgeOffsetRange { get; set; } = new(-0.20f, 0.08f);
 
     // How far each speckle's glow extends beyond its own edge, as a multiple of that speckle's
-    // own radius — same convention as PickupConfig.GlowRadius.
+    // own radius — same convention as OxygenPickupConfig.GlowRadius.
     public float CrystalGlowRadiusMultiplier { get; set; } = 1.4f;
 
     // Chance, per qualifying Box2D hit event (any physics collision this asteroid is part of —
-    // another asteroid bumping it, the ship ramming it, etc., not just ship impacts), that
-    // OxygenCrystalReleaseSystem pops loose a fresh O2 pickup crystal at the impact point. Kept
-    // low by default since a dense field means an oxygen-rich asteroid can rack up many
-    // qualifying hits per second just from other asteroids drifting into it.
+    // another asteroid bumping it, the ship ramming it, etc., not just ship impacts), that the
+    // matching *CrystalReleaseSystem pops loose a fresh pickup crystal at the impact point. Kept
+    // low by default since a dense field means a rich asteroid can rack up many qualifying hits
+    // per second just from other asteroids drifting into it.
     public float CrystalReleaseChanceOnCollision { get; set; } = 0.05f;
 
     // After successfully popping loose a crystal, this asteroid won't roll for another one for
@@ -37,6 +43,14 @@ public class OxygenRichAsteroidConfig
     // them), which would otherwise read as one collision but could pop loose a dozen-plus
     // crystals in the same instant.
     public float CrystalReleaseCooldownSeconds { get; set; } = 1f;
+}
+
+public class OxygenRichAsteroidConfig : RichAsteroidConfig
+{
+}
+
+public class AnorthiteRichAsteroidConfig : RichAsteroidConfig
+{
 }
 
 public class AsteroidConfig
@@ -63,6 +77,7 @@ public class AsteroidConfig
     public float MaterialDensity { get; set; } = 0.073f;
 
     public OxygenRichAsteroidConfig OxygenRich { get; set; } = new();
+    public AnorthiteRichAsteroidConfig AnorthiteRich { get; set; } = new();
 }
 
 /// <summary>

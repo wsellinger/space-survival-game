@@ -24,7 +24,7 @@ public static class OxygenCrystalReleaseSystem
     private static readonly QueryDescription OxygenRichAsteroidQuery = new QueryDescription().WithAll<PhysicsBody, Asteroid>();
 
     public static void Run(World world, PhysicsWorld physicsWorld, OxygenPickupField.PickupAssets pickupAssets,
-        PickupConfig pickupConfig, OxygenRichAsteroidConfig oxygenRichConfig, Random random, float deltaSeconds)
+        OxygenPickupConfig pickupConfig, OxygenRichAsteroidConfig oxygenRichConfig, Random random, float deltaSeconds)
     {
         var oxygenRichEntities = new Dictionary<(int, ushort, ushort), Entity>();
         world.Query(in OxygenRichAsteroidQuery, (Entity entity, ref PhysicsBody physicsBody, ref Asteroid asteroid) =>

@@ -440,7 +440,8 @@ public class MainGame : Game
         // RMB is held (or the right stick is pushed), an instant snap read as an abrupt jump
         // right at the moment of pressing/releasing; easing that transition in and out feels
         // smoother without lagging behind the cursor's own live position while held.
-        CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, _cameraConfig.TweenSpeed);
+        CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, _cameraConfig.TweenSpeed,
+            _cameraConfig.StrafeZoomMultiplier, _cameraConfig.ZoomTweenSpeed);
 
         _previousKeyboardState = keyboard;
         _previousMousePosition = mousePosition;

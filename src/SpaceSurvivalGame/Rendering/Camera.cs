@@ -14,6 +14,8 @@ public class Camera
 {
     public Vector2 PositionMeters;
     public Vector2 TargetPositionMeters;
+    public float Zoom = 1f;
+    public float TargetZoom = 1f;
     public int ViewportWidth;
     public int ViewportHeight;
 
@@ -36,6 +38,19 @@ public class Camera
 
         var t = 1f - MathF.Exp(-smoothingSpeed * deltaSeconds);
         PositionMeters = Vector2.Lerp(PositionMeters, TargetPositionMeters, t);
+    }
+
+    /// <summary>Eases Zoom toward TargetZoom the same way MoveTowardTarget eases position — framerate-independent, smoothingSpeed &lt;= 0 snaps instantly.</summary>
+    public void ZoomTowardTarget(float deltaSeconds, float smoothingSpeed)
+    {
+        if (smoothingSpeed <= 0f)
+        {
+            Zoom = TargetZoom;
+            return;
+        }
+
+        var t = 1f - MathF.Exp(-smoothingSpeed * deltaSeconds);
+        Zoom = float.Lerp(Zoom, TargetZoom, t);
     }
 
     /// <summary>Bumps the current shake magnitude up to at least magnitudePixels — repeated hits refresh rather than stack, so rapid impacts don't compound into an absurd shake.</summary>
@@ -66,7 +81,7 @@ public class Camera
     /// </summary>
     public Microsoft.Xna.Framework.Vector2 WorldToScreen(Vector2 positionMeters, float parallax = 1f)
     {
-        var offsetPixels = PhysicsWorld.MetersToPixels((positionMeters - PositionMeters) * parallax).ToXna();
+        var offsetPixels = PhysicsWorld.MetersToPixels((positionMeters - PositionMeters) * parallax).ToXna() * Zoom;
         return new Microsoft.Xna.Framework.Vector2(ViewportWidth / 2f, ViewportHeight / 2f) + offsetPixels + _shakeOffsetPixels;
     }
 }

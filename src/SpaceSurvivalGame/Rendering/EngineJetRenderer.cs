@@ -75,11 +75,11 @@ public static class EngineJetRenderer
 
                 DrawLayer(spriteBatch, flameTexture, screenPosition, rotation, origin, config.FlameTextureSizePixels,
                     config.MainJet.Outer.LengthPixelsRange, config.MainJet.Outer.WidthPixelsRange,
-                    throttle.Current, flicker, outerColor * alpha, layerDepth: 0.11f);
+                    throttle.Current, flicker, outerColor * alpha, camera.Zoom, layerDepth: 0.11f);
 
                 DrawLayer(spriteBatch, flameTexture, screenPosition, rotation, origin, config.FlameTextureSizePixels,
                     config.MainJet.Inner.LengthPixelsRange, config.MainJet.Inner.WidthPixelsRange,
-                    throttle.Current, flicker, innerColor * alpha, layerDepth: 0.1f); // smaller layerDepth so it draws on top of the outer layer, both still behind the ship's own sprite (layerDepth 0)
+                    throttle.Current, flicker, innerColor * alpha, camera.Zoom, layerDepth: 0.1f); // smaller layerDepth so it draws on top of the outer layer, both still behind the ship's own sprite (layerDepth 0)
             }
 
             DrawStrafeJet(spriteBatch, flameTexture, camera, config, flicker, outerColor, innerColor,
@@ -102,20 +102,20 @@ public static class EngineJetRenderer
 
         DrawLayer(spriteBatch, flameTexture, screenPosition, rotation, origin, config.FlameTextureSizePixels,
             config.StrafeJets.Outer.LengthPixelsRange, config.StrafeJets.Outer.WidthPixelsRange,
-            magnitude, flicker, outerColor * alpha, layerDepth: 0.11f);
+            magnitude, flicker, outerColor * alpha, camera.Zoom, layerDepth: 0.11f);
 
         DrawLayer(spriteBatch, flameTexture, screenPosition, rotation, origin, config.FlameTextureSizePixels,
             config.StrafeJets.Inner.LengthPixelsRange, config.StrafeJets.Inner.WidthPixelsRange,
-            magnitude, flicker, innerColor * alpha, layerDepth: 0.1f);
+            magnitude, flicker, innerColor * alpha, camera.Zoom, layerDepth: 0.1f);
     }
 
     private static void DrawLayer(SpriteBatch spriteBatch, Texture2D flameTexture, Vector2 screenPosition, float rotation, Vector2 origin,
         int flameTextureSizePixels, FloatRange lengthPixelsRange, FloatRange widthPixelsRange,
-        float throttle, float flicker, Color color, float layerDepth)
+        float throttle, float flicker, Color color, float zoom, float layerDepth)
     {
         var lengthPixels = MathHelper.Lerp(lengthPixelsRange.Min, lengthPixelsRange.Max, throttle) * flicker;
         var widthPixels = MathHelper.Lerp(widthPixelsRange.Min, widthPixelsRange.Max, throttle) * flicker;
-        var scale = new Vector2(lengthPixels, widthPixels) / flameTextureSizePixels; // X = length (tip direction), Y = width
+        var scale = new Vector2(lengthPixels, widthPixels) / flameTextureSizePixels * zoom; // X = length (tip direction), Y = width
 
         spriteBatch.Draw(flameTexture, screenPosition, null, color, rotation, origin, scale, SpriteEffects.None, layerDepth);
     }

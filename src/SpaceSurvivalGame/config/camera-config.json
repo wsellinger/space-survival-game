@@ -1,5 +1,7 @@
 {
-  "MaxDistanceMeters": 2,
+  "MaxDistanceMeters": 1,
   "TweenSpeed": 5,
-  "MouseFocusRatio": 0.2
+  "MouseFocusRatio": 0.2,
+  "StrafeZoomMultiplier": 1.3,
+  "ZoomTweenSpeed": 6
 }

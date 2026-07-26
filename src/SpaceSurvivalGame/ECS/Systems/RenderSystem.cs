@@ -23,7 +23,7 @@ public static class RenderSystem
                 color: sprite.Color,
                 rotation: transform.RotationRadians,
                 origin: origin,
-                scale: sprite.Scale,
+                scale: sprite.Scale * camera.Zoom,
                 effects: SpriteEffects.None,
                 layerDepth: sprite.LayerDepth);
         });

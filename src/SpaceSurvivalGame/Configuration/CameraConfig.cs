@@ -20,5 +20,12 @@ public class CameraConfig
     // no effect), 1 = focus sits exactly at the cursor, 0.5 = halfway between.
     public float MouseFocusRatio { get; set; } = 0.5f;
 
+    // How far the camera zooms in while the ship is in strafe mode (see ShipMovement.IsStrafing) —
+    // 1 = no zoom, 1.5 = everything drawn 50% bigger/farther from screen center. Eases back to 1
+    // once strafe mode ends, same TweenSpeed-style exponential decay as position, just at its own
+    // rate (ZoomTweenSpeed) so the two can be tuned independently.
+    public float StrafeZoomMultiplier { get; set; } = 1.3f;
+    public float ZoomTweenSpeed { get; set; } = 6f;
+
     public static CameraConfig Load(string path) => ConfigLoader.Load<CameraConfig>(path);
 }

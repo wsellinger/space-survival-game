@@ -30,8 +30,6 @@ public static class OxygenPickupField
     public const float CrystalAngleJitterFraction = 0.35f;
     public const float CrystalElongationFactor = 1.4f; // stretches vertically for a gem-like silhouette rather than a round rock
 
-    public static readonly Microsoft.Xna.Framework.Color CrystalColor = Microsoft.Xna.Framework.Color.CornflowerBlue;
-
     /// <summary>Already-baked shape data shared by every pickup crystal, so a new one can be spawned at runtime (see SpawnPickup) without re-baking textures.</summary>
     public readonly struct PickupAssets
     {
@@ -55,6 +53,7 @@ public static class OxygenPickupField
         // Sprite.Scale below is inflated by the same factor so the crystal's own on-screen/
         // physics size stays exactly SpriteSizePixels regardless of GlowRadius.
         var glowCanvasScale = MathF.Max(1f, pickupConfig.GlowRadius) * 1.05f;
+        var crystalColor = ColorHex.Parse(pickupConfig.ColorHex);
 
         var shapeVariants = new Vector2[ShapeVariantCount][];
         var shapeTextures = new Texture2D[ShapeVariantCount];
@@ -68,7 +67,7 @@ public static class OxygenPickupField
                 crystalXnaVertices[p] = (shapeVariants[v][p] / glowCanvasScale).ToXna();
 
             shapeTextures[v] = ProceduralTextures.CreateGlowingPolygon(graphicsDevice, TextureSize,
-                CrystalColor, CrystalColor, crystalXnaVertices, pickupConfig.GlowRadius / glowCanvasScale);
+                crystalColor, crystalColor, crystalXnaVertices, pickupConfig.GlowRadius / glowCanvasScale);
         }
 
         var assets = new PickupAssets(shapeVariants, shapeTextures);

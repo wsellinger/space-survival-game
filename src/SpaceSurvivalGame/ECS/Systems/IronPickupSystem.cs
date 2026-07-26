@@ -6,28 +6,29 @@ using Box2dNet.Interop;
 using Microsoft.Xna.Framework.Graphics;
 using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.Physics;
+using SpaceSurvivalGame.Rendering;
 
 using SpaceSurvivalGame.Configuration;
 
 namespace SpaceSurvivalGame.ECS.Systems;
 
 /// <summary>
-/// Collects anorthite pickups the ship has touched: a plain distance check against the ship's
+/// Collects iron ore pickups the ship has touched: a plain distance check against the ship's
 /// Transform each frame (pickups don't opt into Box2D hit events, so CollisionDamageSystem
 /// never sees them — this is the only place that detects contact with one). On collection,
 /// the pickup's body and entity are destroyed, a small particle burst plays at its position (in
-/// the crystal's own color rather than the O2 pickups' blue), and Anorthite.Current gains
-/// AnorthitePickupConfig.AnorthiteAmount — no cap, nothing consumes it yet.
+/// the ore's own color rather than the O2 pickups' blue), and Iron.Current gains
+/// IronPickupConfig.IronAmount — no cap, nothing consumes it yet.
 /// </summary>
-public static class AnorthitePickupSystem
+public static class IronPickupSystem
 {
     private static readonly QueryDescription ShipTransformQuery = new QueryDescription().WithAll<Transform, PlayerControlled>();
-    private static readonly QueryDescription ShipAnorthiteQuery = new QueryDescription().WithAll<Anorthite, PlayerControlled>();
-    private static readonly QueryDescription PickupQuery = new QueryDescription().WithAll<PhysicsBody, Transform, AnorthitePickup>();
+    private static readonly QueryDescription ShipIronQuery = new QueryDescription().WithAll<Iron, PlayerControlled>();
+    private static readonly QueryDescription PickupQuery = new QueryDescription().WithAll<PhysicsBody, Transform, IronPickup>();
 
-    private static readonly Microsoft.Xna.Framework.Color BurstAccentColor = new(255, 200, 150); // pale peach, paired with AnorthiteField.CrystalColor
+    private static readonly Microsoft.Xna.Framework.Color BurstAccentColor = new(230, 232, 235); // pale metallic glint, paired with the ore's own configured color
 
-    public static void Run(World world, ShipConfig shipConfig, AnorthitePickupConfig anorthiteConfig, SparkConfig sparkConfig, Texture2D sparkTexture, Random random)
+    public static void Run(World world, ShipConfig shipConfig, IronPickupConfig ironConfig, SparkConfig sparkConfig, Texture2D sparkTexture, Random random)
     {
         var shipPositionMeters = Vector2.Zero;
         var foundShip = false;
@@ -38,7 +39,7 @@ public static class AnorthitePickupSystem
         });
         if (!foundShip) return;
 
-        var collectDistanceMeters = PhysicsWorld.PixelsToMeters(shipConfig.SpriteSize / 2f) + PhysicsWorld.PixelsToMeters(anorthiteConfig.SpriteSizePixels / 2f);
+        var collectDistanceMeters = PhysicsWorld.PixelsToMeters(shipConfig.SpriteSize / 2f) + PhysicsWorld.PixelsToMeters(ironConfig.SpriteSizePixels / 2f);
         var collectDistanceSquared = collectDistanceMeters * collectDistanceMeters;
 
         var collectedEntities = new List<Entity>();
@@ -56,10 +57,11 @@ public static class AnorthitePickupSystem
         if (collectedEntities.Count == 0) return;
 
         foreach (var entity in collectedEntities) world.Destroy(entity);
+        var oreColor = ColorHex.Parse(ironConfig.ColorHex);
         foreach (var position in collectedPositions)
-            ParticleEffects.SpawnPickupBurst(world, sparkTexture, position, random, sparkConfig, AnorthiteField.CrystalColor, BurstAccentColor);
+            ParticleEffects.SpawnPickupBurst(world, sparkTexture, position, random, sparkConfig, oreColor, BurstAccentColor);
 
-        var totalAnorthiteGained = anorthiteConfig.AnorthiteAmount * collectedEntities.Count;
-        world.Query(in ShipAnorthiteQuery, (ref Anorthite anorthite) => anorthite.Current += totalAnorthiteGained);
+        var totalIronGained = ironConfig.IronAmount * collectedEntities.Count;
+        world.Query(in ShipIronQuery, (ref Iron iron) => iron.Current += totalIronGained);
     }
 }

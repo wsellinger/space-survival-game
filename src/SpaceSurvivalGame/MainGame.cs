@@ -55,8 +55,8 @@ public class MainGame : Game
     private OxygenPickupConfig _oxygenPickupConfig;
     private WorldConfig _worldConfig;
     private OxygenPickupField.PickupAssets _pickupAssets;
-    private AnorthitePickupConfig _anorthitePickupConfig;
-    private AnorthiteField.AnorthiteAssets _anorthiteAssets;
+    private IronPickupConfig _ironPickupConfig;
+    private IronPickupField.PickupAssets _ironAssets;
     private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -157,8 +157,8 @@ public class MainGame : Game
         var oxygenPickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "oxygen-pickup-config.json");
         _oxygenPickupConfig = OxygenPickupConfig.Load(oxygenPickupConfigPath);
 
-        var anorthitePickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "anorthite-pickup-config.json");
-        _anorthitePickupConfig = AnorthitePickupConfig.Load(anorthitePickupConfigPath);
+        var ironPickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "iron-pickup-config.json");
+        _ironPickupConfig = IronPickupConfig.Load(ironPickupConfigPath);
 
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
@@ -197,9 +197,9 @@ public class MainGame : Game
                 starfieldConfig.TintStrengthRange.Min, starfieldConfig.TintStrengthRange.Max);
         }
 
-        AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig);
+        AsteroidField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig, _oxygenPickupConfig, _ironPickupConfig);
         _pickupAssets = OxygenPickupField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig, _oxygenPickupConfig);
-        _anorthiteAssets = AnorthiteField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig, _anorthitePickupConfig);
+        _ironAssets = IronPickupField.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _worldConfig, _ironPickupConfig);
 
         const int buttonWidth = 220;
         const int buttonHeight = 60;
@@ -368,7 +368,7 @@ public class MainGame : Game
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _sparkConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
         OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _oxygenPickupConfig, _worldConfig.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
-        AnorthiteCrystalReleaseSystem.Run(_world, _physicsWorld, _anorthiteAssets, _anorthitePickupConfig, _worldConfig.Asteroid.AnorthiteRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
+        IronOreReleaseSystem.Run(_world, _physicsWorld, _ironAssets, _ironPickupConfig, _worldConfig.Asteroid.IronRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
 
         var shipHealth = float.MaxValue;
         _world.Query(in HealthQuery, (ref Health health) => shipHealth = health.Current);
@@ -392,7 +392,7 @@ public class MainGame : Game
 
         VitalsSystem.Run(_world, deltaSeconds, _playerConfig, _suffocationConfig);
         OxygenPickupSystem.Run(_world, _shipConfig, _oxygenPickupConfig, _sparkConfig, _sparkTexture, _random);
-        AnorthitePickupSystem.Run(_world, _shipConfig, _anorthitePickupConfig, _sparkConfig, _sparkTexture, _random);
+        IronPickupSystem.Run(_world, _shipConfig, _ironPickupConfig, _sparkConfig, _sparkTexture, _random);
 
         // Suffocation kills once its post-process effect has fully played out. No explosion
         // and no extra fade here — the screen's already fully black from the vignette by

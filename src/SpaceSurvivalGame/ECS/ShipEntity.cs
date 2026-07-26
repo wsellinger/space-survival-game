@@ -62,7 +62,7 @@ public static class ShipEntity
             },
             new Health { Current = playerConfig.MaxHealth, Max = playerConfig.MaxHealth },
             new Oxygen { Current = playerConfig.MaxOxygen, Max = playerConfig.MaxOxygen },
-            new Anorthite { Current = 0f },
+            new Iron { Current = 0f },
             new HitFlash { RemainingSeconds = 0f },
             new HealthBarFeedback(),
             new Suffocation { ElapsedSeconds = 0f },
@@ -72,11 +72,11 @@ public static class ShipEntity
     }
 
     private static readonly QueryDescription RespawnQuery =
-        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, Anorthite, HitFlash, HealthBarFeedback, Suffocation, Sprite, EngineThrottle, ShipMovement>();
+        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, Iron, HitFlash, HealthBarFeedback, Suffocation, Sprite, EngineThrottle, ShipMovement>();
 
     public static void Respawn(World world, Vector2 positionMeters)
     {
-        world.Query(in RespawnQuery, (ref PhysicsBody physicsBody, ref Health health, ref Oxygen oxygen, ref Anorthite anorthite, ref HitFlash hitFlash,
+        world.Query(in RespawnQuery, (ref PhysicsBody physicsBody, ref Health health, ref Oxygen oxygen, ref Iron iron, ref HitFlash hitFlash,
             ref HealthBarFeedback healthBarFeedback, ref Suffocation suffocation, ref Sprite sprite, ref EngineThrottle throttle, ref ShipMovement movement) =>
         {
             var bodyId = physicsBody.BodyId;
@@ -85,7 +85,7 @@ public static class ShipEntity
             B2Api.b2Body_SetAngularVelocity(bodyId, 0f);
             health.Current = health.Max;
             oxygen.Current = oxygen.Max;
-            anorthite.Current = 0f; // cargo resets with the rest of the ship's state on death, like Health/Oxygen
+            iron.Current = 0f; // cargo resets with the rest of the ship's state on death, like Health/Oxygen
             hitFlash.RemainingSeconds = 0f;
             healthBarFeedback = new HealthBarFeedback();
             suffocation.ElapsedSeconds = 0f;

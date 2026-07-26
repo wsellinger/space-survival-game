@@ -1,9 +1,8 @@
 {
-  "PickupCount": 100,
-  "OxygenAmount": 20,
+  "PickupCount": 20,
+  "IronAmount": 20,
   "SpriteSizePixels": 16,
-  "ColorHex": "#bed1f4",
-  "GlowRadius": 2.5,
+  "ColorHex": "#7d422d",
   "MaterialDensity": 0.3,
   "Restitution": 0.6,
   "SpeedMetersPerSecondRange": [ 0.1, 0.5 ],

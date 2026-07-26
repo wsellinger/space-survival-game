@@ -11,6 +11,9 @@ public class OxygenPickupConfig
     public float OxygenAmount { get; set; } = 20f;
     public int SpriteSizePixels { get; set; } = 16;
 
+    // Parsed via SpaceSurvivalGame.Rendering.ColorHex — "#RRGGBB" or "#RRGGBBAA".
+    public string ColorHex { get; set; } = "#6495ED"; // CornflowerBlue's own hex value
+
     // How far the glow halo extends beyond the crystal's own edge, as a multiple of the
     // crystal's size — 1 = no glow, 1.5 = reaches half again as far out. Purely cosmetic:
     // never affects the crystal's actual on-screen size or its physics/collision shape.

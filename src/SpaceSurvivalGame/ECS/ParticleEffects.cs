@@ -32,7 +32,7 @@ public static class ParticleEffects
     /// Unlike SpawnSparkBurst, these start on a ring around positionMeters and move inward,
     /// timed so each one arrives (and fades out) right at the center — reads as being drawn
     /// in/absorbed rather than exploding outward like a collision impact. colorA/colorB let
-    /// each pickup type (O2, anorthite, ...) use its own look rather than a fixed color.
+    /// each pickup type (O2, iron, ...) use its own look rather than a fixed color.
     /// </summary>
     public static void SpawnPickupBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, SparkConfig config,
         Microsoft.Xna.Framework.Color colorA, Microsoft.Xna.Framework.Color colorB)

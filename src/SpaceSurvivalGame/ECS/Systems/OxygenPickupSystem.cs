@@ -6,6 +6,7 @@ using Box2dNet.Interop;
 using Microsoft.Xna.Framework.Graphics;
 using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.Physics;
+using SpaceSurvivalGame.Rendering;
 
 using SpaceSurvivalGame.Configuration;
 
@@ -53,8 +54,9 @@ public static class OxygenPickupSystem
         if (collectedEntities.Count == 0) return;
 
         foreach (var entity in collectedEntities) world.Destroy(entity);
+        var crystalColor = ColorHex.Parse(pickupConfig.ColorHex);
         foreach (var position in collectedPositions)
-            ParticleEffects.SpawnPickupBurst(world, sparkTexture, position, random, sparkConfig, Microsoft.Xna.Framework.Color.CornflowerBlue, Microsoft.Xna.Framework.Color.White);
+            ParticleEffects.SpawnPickupBurst(world, sparkTexture, position, random, sparkConfig, crystalColor, Microsoft.Xna.Framework.Color.White);
 
         var totalOxygenGained = pickupConfig.OxygenAmount * collectedEntities.Count;
         world.Query(in ShipOxygenQuery, (ref Oxygen oxygen) => oxygen.Current = Math.Min(oxygen.Current + totalOxygenGained, oxygen.Max));

@@ -1,10 +1,11 @@
 namespace SpaceSurvivalGame.Configuration;
 
 /// <summary>
-/// Shared shape of every "rich asteroid" variant's config (oxygen, anorthite, whichever comes
-/// next) — same speckle-placement/glow/collision-release knobs regardless of which crystal type
-/// they end up governing. Concrete subclasses exist purely so WorldConfig.AsteroidConfig can
-/// hold one independently-tunable instance per variant in the JSON.
+/// Shared shape of every "rich asteroid" variant's config (oxygen, iron, whichever comes next)
+/// — same speckle-placement/glow/collision-release knobs regardless of which resource they end
+/// up governing (CrystalGlowRadiusMultiplier is simply set to 0 for variants like iron that
+/// don't glow). Concrete subclasses exist purely so WorldConfig.AsteroidConfig can hold one
+/// independently-tunable instance per variant in the JSON.
 /// </summary>
 public abstract class RichAsteroidConfig
 {
@@ -49,7 +50,7 @@ public class OxygenRichAsteroidConfig : RichAsteroidConfig
 {
 }
 
-public class AnorthiteRichAsteroidConfig : RichAsteroidConfig
+public class IronRichAsteroidConfig : RichAsteroidConfig
 {
 }
 
@@ -76,8 +77,12 @@ public class AsteroidConfig
     // how many asteroids to generate, not any single asteroid's mass.)
     public float MaterialDensity { get; set; } = 0.073f;
 
+    // Base rock color for an ordinary asteroid (and the rock backdrop behind rich-asteroid
+    // speckles). Parsed via SpaceSurvivalGame.Rendering.ColorHex — "#RRGGBB" or "#RRGGBBAA".
+    public string RockColorHex { get; set; } = "#473D34";
+
     public OxygenRichAsteroidConfig OxygenRich { get; set; } = new();
-    public AnorthiteRichAsteroidConfig AnorthiteRich { get; set; } = new();
+    public IronRichAsteroidConfig IronRich { get; set; } = new();
 }
 
 /// <summary>

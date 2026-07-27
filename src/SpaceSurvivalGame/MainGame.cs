@@ -429,6 +429,7 @@ public class MainGame : Game
 
         ParticleSystem.Run(_world, deltaSeconds);
         HitFlashSystem.Run(_world, deltaSeconds, _hitFlashConfig);
+        InvulnerabilitySystem.Run(_world, deltaSeconds);
         HudFeedbackSystem.Run(_world, deltaSeconds, _hudFeedbackConfig, _random);
         SpeedCapSystem.Run(_world, deltaSeconds, _shipConfig.SpeedCapEaseSpeed);
         PhysicsSyncSystem.Run(_world);

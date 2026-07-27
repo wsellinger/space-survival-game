@@ -22,12 +22,14 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// also spawns a spark burst at the impact point; total damage this frame also triggers the
 /// ship's hit-flash and a screen shake scaled by how much of DamageRange.Max it represents.
 /// Must run after PhysicsWorld.Step (hit events are only populated post-step) and before the
-/// next Step call overwrites them.
+/// next Step call overwrites them. Skips everything (damage, sparks, shake, flash) entirely
+/// while the ship's own Invulnerability.RemainingSeconds is still positive — see
+/// InvulnerabilitySystem and whatever set it (e.g. StationCoreSystem's arrival shockwave).
 /// </summary>
 public static class CollisionDamageSystem
 {
     private static readonly QueryDescription ShipQuery =
-        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, HitFlash, HealthBarFeedback>();
+        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, HitFlash, Invulnerability, HealthBarFeedback>();
 
     private static readonly QueryDescription DamagingBodyQuery =
         new QueryDescription().WithAll<PhysicsBody, Damaging>();
@@ -37,12 +39,14 @@ public static class CollisionDamageSystem
     {
         var shipBodyId = default(b2BodyId);
         var foundShip = false;
-        world.Query(in ShipQuery, (ref PhysicsBody physicsBody) =>
+        var isInvulnerable = false;
+        world.Query(in ShipQuery, (ref PhysicsBody physicsBody, ref Invulnerability invulnerability) =>
         {
             shipBodyId = physicsBody.BodyId;
+            isInvulnerable = invulnerability.RemainingSeconds > 0f;
             foundShip = true;
         });
-        if (!foundShip) return;
+        if (!foundShip || isInvulnerable) return;
 
         var damagingBodyIds = new HashSet<(int, ushort, ushort)>();
         world.Query(in DamagingBodyQuery, (ref PhysicsBody physicsBody) =>

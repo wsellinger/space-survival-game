@@ -68,6 +68,7 @@ public static class ShipEntity
             new Oxygen { Current = playerConfig.MaxOxygen, Max = playerConfig.MaxOxygen },
             new Iron { Current = 0f },
             new HitFlash { RemainingSeconds = 0f },
+            new Invulnerability { RemainingSeconds = 0f },
             new HealthBarFeedback(),
             new Suffocation { ElapsedSeconds = 0f },
             new Damaging(),
@@ -76,12 +77,12 @@ public static class ShipEntity
     }
 
     private static readonly QueryDescription RespawnQuery =
-        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, Iron, HitFlash, HealthBarFeedback, Suffocation, Sprite, EngineThrottle, ShipMovement>();
+        new QueryDescription().WithAll<PhysicsBody, PlayerControlled, Health, Oxygen, Iron, HitFlash, Invulnerability, HealthBarFeedback, Suffocation, Sprite, EngineThrottle, ShipMovement>();
 
     public static void Respawn(World world, Vector2 positionMeters)
     {
         world.Query(in RespawnQuery, (ref PhysicsBody physicsBody, ref Health health, ref Oxygen oxygen, ref Iron iron, ref HitFlash hitFlash,
-            ref HealthBarFeedback healthBarFeedback, ref Suffocation suffocation, ref Sprite sprite, ref EngineThrottle throttle, ref ShipMovement movement) =>
+            ref Invulnerability invulnerability, ref HealthBarFeedback healthBarFeedback, ref Suffocation suffocation, ref Sprite sprite, ref EngineThrottle throttle, ref ShipMovement movement) =>
         {
             var bodyId = physicsBody.BodyId;
             B2Api.b2Body_SetTransform(bodyId, positionMeters, b2Rot.FromAngle(0f));
@@ -91,6 +92,7 @@ public static class ShipEntity
             oxygen.Current = oxygen.Max;
             iron.Current = 0f; // cargo resets with the rest of the ship's state on death, like Health/Oxygen
             hitFlash.RemainingSeconds = 0f;
+            invulnerability.RemainingSeconds = 0f;
             healthBarFeedback = new HealthBarFeedback();
             suffocation.ElapsedSeconds = 0f;
             sprite.Color = Microsoft.Xna.Framework.Color.White; // undo the hide-on-death from the collision death sequence

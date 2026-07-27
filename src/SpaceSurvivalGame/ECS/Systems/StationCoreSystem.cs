@@ -22,7 +22,8 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// shaped by FlightEaseExponent for a slow start/finish), stopping exactly on arrival and
 /// becoming an independent, stationary object. A one-time shockwave fires once flight progress
 /// first reaches ShockwaveTriggerProgress — not necessarily full arrival, so it can go off
-/// slightly before the core actually stops: an outward impulse on every nearby PhysicsBody and a
+/// slightly before the core actually stops: an outward impulse on every nearby PhysicsBody (see
+/// ApplyShockwave, which also grants the ship a brief Invulnerability window as a failsafe) and a
 /// starting timer for the matching expanding-ring visual (see StationCoreShockwaveRenderSystem).
 /// </summary>
 public static class StationCoreSystem
@@ -111,6 +112,8 @@ public static class StationCoreSystem
     /// the same blast, matching what a real shockwave would do. The player's own ship is a
     /// deliberate exception on top of that: ShockwaveShipImpulseMultiplier scales its impulse down
     /// separately so the player barely feels it while everything else nearby gets the full push.
+    /// Also grants the ship a failsafe window of Invulnerability lasting ShockwaveDurationSeconds,
+    /// since the shockwave can fling an asteroid straight into it right as it's still settling.
     /// </summary>
     private static void ApplyShockwave(World world, Vector2 originMeters, StationCoreConfig config, Entity shipEntity)
     {
@@ -127,6 +130,8 @@ public static class StationCoreSystem
             var impulse = offset / distance * strength;
             B2Api.b2Body_ApplyLinearImpulseToCenter(physicsBody.BodyId, impulse, wake: true);
         });
+
+        world.Get<Invulnerability>(shipEntity).RemainingSeconds = config.ShockwaveDurationSeconds;
     }
 
     /// <summary>

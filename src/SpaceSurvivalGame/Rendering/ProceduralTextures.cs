@@ -237,9 +237,14 @@ public static class ProceduralTextures
     /// background (not rock); (2) stamp every speckle's own solid polygon on top, unconditionally —
     /// this single overwrite regardless of what's underneath (rock fill or transparent background)
     /// is what makes a speckle placed near/past the rock's edge visually poke out of the silhouette
-    /// — and clear those pixels from the background mask; (3) for every pixel still marked
-    /// background, blend toward speckleGlowColor with the same eased radial falloff as
-    /// CreateGlowingPolygon, for whichever nearby speckle's glow reaches furthest at that pixel.
+    /// — and clear those pixels from the background mask; (3) for every pixel within glow range of
+    /// a speckle, blend toward speckleGlowColor with the same eased radial falloff as
+    /// CreateGlowingPolygon — background pixels fade toward transparent (a halo bleeding into open
+    /// space), while rock pixels blend it into the existing rock color instead (a halo bleeding
+    /// into the surrounding surface), since CrystalEdgeOffsetRange typically embeds a speckle well
+    /// inside the rock with no adjacent background pixel at all — skipping rock pixels here (an
+    /// earlier version of this did) left the glow invisible for every embedded speckle, which in
+    /// practice is most of them.
     /// Doing solid stamping as its own pass before any glow — rather than solid+glow per speckle in
     /// one interleaved pass — is what keeps a later speckle's glow from overwriting an earlier
     /// speckle's already-stamped solid fill where two speckles happen to sit close together.
@@ -309,7 +314,6 @@ public static class ProceduralTextures
                 for (var x = 0; x < size; x++)
                 {
                     var index = y * size + x;
-                    if (!isBackground[index]) continue;
 
                     var point = new Vector2(x + 0.5f, y + 0.5f);
                     var localPoint = (point - center) / scale;
@@ -318,12 +322,24 @@ public static class ProceduralTextures
 
                     var falloff = 1f - distance / glowRadius;
                     falloff *= falloff; // eases the fade, matching CreateGlowingPolygon
-                    var glow = speckleGlowColor * falloff;
 
-                    // Two nearby speckles' glow can overlap this same background pixel — keep
-                    // whichever is stronger (higher alpha) rather than letting iteration order
-                    // decide, so overlapping halos read as one smooth combined glow.
-                    if (glow.A > data[index].A) data[index] = glow;
+                    if (isBackground[index])
+                    {
+                        var glow = speckleGlowColor * falloff;
+
+                        // Two nearby speckles' glow can overlap this same background pixel — keep
+                        // whichever is stronger (higher alpha) rather than letting iteration order
+                        // decide, so overlapping halos read as one smooth combined glow.
+                        if (glow.A > data[index].A) data[index] = glow;
+                    }
+                    else
+                    {
+                        // No adjacent background pixel to fade into (the common case — an
+                        // embedded speckle sits entirely inside the opaque rock) — blend the glow
+                        // into the rock's own color instead, so it still reads as a soft halo
+                        // lighting up the surface around the crystal rather than not appearing.
+                        data[index] = BlendRgb(data[index], speckleGlowColor, falloff);
+                    }
                 }
             }
         }

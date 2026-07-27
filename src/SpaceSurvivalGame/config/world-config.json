@@ -15,7 +15,7 @@
       "CrystalCountRange": [3, 6],
       "CrystalSizeUnitRange": [0.10, 0.18],
       "CrystalEdgeOffsetRange": [-0.20, 0.08],
-      "CrystalGlowRadiusMultiplier": 1.4,
+      "CrystalGlowRadiusMultiplier": 2.5,
       "CrystalReleaseChanceOnCollision": 0.3,
       "CrystalReleaseCooldownSeconds": 1.0
     },

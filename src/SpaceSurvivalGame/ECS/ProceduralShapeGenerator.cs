@@ -107,4 +107,31 @@ public static class ProceduralShapeGenerator
 
         return spots;
     }
+
+    /// <summary>
+    /// A handful of points scattered across a shape's own face for MetallicSparkle — anchored to
+    /// shapeUnitVertices' ACTUAL (non-circular) local edge distance at each point's own angle
+    /// (via GetPolygonRadiusAtAngle) so a point never lands outside the silhouette, and sampled
+    /// via sqrt(random) rather than random directly for uniform coverage across the whole face
+    /// instead of clustering out toward the edge. shapeRadiusPixels converts from this unit space
+    /// into the actual on-screen pixel offsets MetallicSparkle stores. Shared by IronPickupField's
+    /// standalone chunks and AsteroidField's embedded ore speckles so both get the same sparkle
+    /// density per chunk/speckle.
+    /// </summary>
+    public static (Microsoft.Xna.Framework.Vector2[] OffsetsPixels, float[] PhasesRadians) GenerateSparklePoints(Random random, Vector2[] shapeUnitVertices, int count, float shapeRadiusPixels)
+    {
+        var offsetsPixels = new Microsoft.Xna.Framework.Vector2[count];
+        var phasesRadians = new float[count];
+        for (var i = 0; i < count; i++)
+        {
+            var angle = (float)(random.NextDouble() * Math.PI * 2);
+            var edgeRadius = GetPolygonRadiusAtAngle(shapeUnitVertices, angle);
+            var radiusFraction = MathF.Sqrt((float)random.NextDouble()) * 0.85f;
+            var magnitude = shapeRadiusPixels * edgeRadius * radiusFraction;
+            offsetsPixels[i] = new Microsoft.Xna.Framework.Vector2(MathF.Cos(angle), MathF.Sin(angle)) * magnitude;
+            phasesRadians[i] = (float)(random.NextDouble() * Math.PI * 2);
+        }
+
+        return (offsetsPixels, phasesRadians);
+    }
 }

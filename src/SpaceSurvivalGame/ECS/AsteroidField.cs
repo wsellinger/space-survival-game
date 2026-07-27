@@ -71,7 +71,7 @@ public static class AsteroidField
         var shapeTextures = new Texture2D[ShapeVariantCount];
         var oxygenRichShapeTextures = new Texture2D[ShapeVariantCount];
         var ironRichShapeTextures = new Texture2D[ShapeVariantCount];
-        var ironSpeckleCentersPerVariant = new Microsoft.Xna.Framework.Vector2[ShapeVariantCount][];
+        var ironSpecklesPerVariant = new ProceduralTextures.PolygonSpeckle[ShapeVariantCount][];
         for (var v = 0; v < ShapeVariantCount; v++)
         {
             var vertexCount = random.Next(MinVerticesPerShape, MaxVerticesPerShape + 1);
@@ -89,7 +89,7 @@ public static class AsteroidField
             // embedded speckles intentionally differ from its own pickup crystals) — including
             // the same rust spots, so an iron-rich asteroid's embedded ore matches the loose
             // chunks scattered around it.
-            (ironRichShapeTextures[v], ironSpeckleCentersPerVariant[v]) = CreateSpeckledRockTexture(random, graphicsDevice, shapeVariants[v], ironRichConfig, ironCanvasMarginScale,
+            (ironRichShapeTextures[v], ironSpecklesPerVariant[v]) = CreateSpeckledRockTexture(random, graphicsDevice, shapeVariants[v], ironRichConfig, ironCanvasMarginScale,
                 IronRichShapeTextureSize, IronPickupField.OreMinVerticesPerShape, IronPickupField.OreMaxVerticesPerShape, IronPickupField.OreMinVertexRadiusFactor,
                 IronPickupField.OreAngleJitterFraction, IronPickupField.OreElongationFactor, rockColor, oreColor,
                 rustSpotColor, ironPickupConfig.RustSpotCountRange, ironPickupConfig.RustSpotSizeUnitRange);
@@ -189,20 +189,36 @@ public static class AsteroidField
                 new Asteroid { RadiusMeters = radiusMeters, Type = type },
                 new Damaging());
 
-            // Same animated glint as the standalone ore chunks (see MetallicSparkleRenderSystem),
-            // one per embedded speckle rather than a fixed count — reusing each speckle's own
-            // baked canvas position (converted from margined canvas unit space into this
-            // instance's actual on-screen pixel size via textureSize/scale) so a glint lines up
-            // with the ore speckle it's supposed to belong to instead of floating independently.
+            // Same animated glints as the standalone ore chunks (see MetallicSparkleRenderSystem)
+            // — IronPickupConfig.SparkleCount of them PER embedded speckle (not one total), so an
+            // asteroid's ore reads with the same sparkle density as a loose chunk rather than
+            // just a single glint per speckle. Each speckle's own points are generated in that
+            // speckle's own local face (GenerateSparklePoints, same technique as the standalone
+            // chunks), then offset by the speckle's own baked canvas position — converted from
+            // margined canvas unit space into this asteroid instance's actual on-screen pixel
+            // size via textureSize/scale — so they land on the correct facet instead of floating
+            // independently.
             if (type == AsteroidType.IronRich)
             {
-                var centers = ironSpeckleCentersPerVariant[variantIndex];
-                var sparkleOffsetsPixels = new Microsoft.Xna.Framework.Vector2[centers.Length];
-                var sparklePhasesRadians = new float[centers.Length];
-                for (var s = 0; s < centers.Length; s++)
+                var speckles = ironSpecklesPerVariant[variantIndex];
+                var sparkleOffsetsPixels = new Microsoft.Xna.Framework.Vector2[speckles.Length * ironPickupConfig.SparkleCount];
+                var sparklePhasesRadians = new float[speckles.Length * ironPickupConfig.SparkleCount];
+                var sparkleIndex = 0;
+                foreach (var speckle in speckles)
                 {
-                    sparkleOffsetsPixels[s] = centers[s] * (textureSize / 2f) * scale;
-                    sparklePhasesRadians[s] = (float)(random.NextDouble() * Math.PI * 2);
+                    var speckleUnitVertices = new Vector2[speckle.UnitVertices.Length];
+                    for (var p = 0; p < speckleUnitVertices.Length; p++) speckleUnitVertices[p] = speckle.UnitVertices[p].ToNumerics();
+
+                    var speckleCenterPixels = speckle.Center * (textureSize / 2f) * scale;
+                    var speckleRadiusPixels = speckle.Radius * (textureSize / 2f) * scale;
+                    var (localOffsetsPixels, localPhasesRadians) = ProceduralShapeGenerator.GenerateSparklePoints(random, speckleUnitVertices, ironPickupConfig.SparkleCount, speckleRadiusPixels);
+
+                    for (var s = 0; s < localOffsetsPixels.Length; s++)
+                    {
+                        sparkleOffsetsPixels[sparkleIndex] = speckleCenterPixels + localOffsetsPixels[s];
+                        sparklePhasesRadians[sparkleIndex] = localPhasesRadians[s];
+                        sparkleIndex++;
+                    }
                 }
 
                 world.Add(entity, new MetallicSparkle { OffsetsPixels = sparkleOffsetsPixels, PhasesRadians = sparklePhasesRadians, Texture = sparkleTexture });
@@ -242,11 +258,12 @@ public static class AsteroidField
     /// iron-rich asteroid's embedded speckles match the look of the loose ore chunks scattered
     /// around it.
     ///
-    /// Also returns every speckle's own center, in the same margined canvas unit space baked into
-    /// the texture — callers that want to attach an animated MetallicSparkle to each embedded
-    /// speckle (currently just iron) need these positions; oxygen's caller simply ignores them.
+    /// Also returns the baked PolygonSpeckle data itself (center/radius/shape, in the same
+    /// margined canvas unit space baked into the texture) — callers that want to attach an
+    /// animated MetallicSparkle to each embedded speckle (currently just iron) need these;
+    /// oxygen's caller simply ignores them.
     /// </summary>
-    private static (Texture2D Texture, Microsoft.Xna.Framework.Vector2[] SpeckleCenters) CreateSpeckledRockTexture(Random random, GraphicsDevice graphicsDevice, Vector2[] rockUnitVertices,
+    private static (Texture2D Texture, ProceduralTextures.PolygonSpeckle[] Speckles) CreateSpeckledRockTexture(Random random, GraphicsDevice graphicsDevice, Vector2[] rockUnitVertices,
         RichAsteroidConfig config, float canvasMarginScale, int textureSize, int crystalMinVerticesPerShape, int crystalMaxVerticesPerShape,
         float crystalMinVertexRadiusFactor, float crystalAngleJitterFraction, float crystalElongationFactor,
         Microsoft.Xna.Framework.Color rockColor, Microsoft.Xna.Framework.Color crystalColor,
@@ -295,10 +312,7 @@ public static class AsteroidField
         var texture = ProceduralTextures.CreateSpeckledPolygon(graphicsDevice, textureSize, rockColor, marginedXnaVertices,
             speckles, crystalColor, crystalColor, config.CrystalGlowRadiusMultiplier, rustSpotColor ?? Microsoft.Xna.Framework.Color.Transparent);
 
-        var speckleCenters = new Microsoft.Xna.Framework.Vector2[speckles.Length];
-        for (var s = 0; s < speckles.Length; s++) speckleCenters[s] = speckles[s].Center;
-
-        return (texture, speckleCenters);
+        return (texture, speckles);
     }
 
     private static bool TryFindPosition(Random random, SpatialGrid grid, Vector2 centerMeters, WorldConfig config, out Vector2 positionMeters, out float radiusMeters)

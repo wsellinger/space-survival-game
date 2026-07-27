@@ -149,23 +149,8 @@ public static class IronPickupField
         // as its own facet catching the light rather than one glowing bullseye), rolled once here
         // in the chunk's own unrotated local space — MetallicSparkleRenderSystem rotates each by
         // the entity's current facing every frame so they stay fixed to their facets as the chunk
-        // spins, and each flares on its own independent phase. The shape is an irregular jittered
-        // polygon (not a circle), so a placement radius is anchored to the ACTUAL local edge
-        // distance at that angle (same technique AsteroidField uses for its own speckles) —
-        // otherwise a chunk with a deep concave dent could get a sparkle placed outside its
-        // visible silhouette. Sampling radius via sqrt(random) rather than random directly gives
-        // uniform coverage over the whole face's area instead of clustering out toward the edge.
-        var sparkleOffsetsPixels = new Microsoft.Xna.Framework.Vector2[config.SparkleCount];
-        var sparklePhasesRadians = new float[config.SparkleCount];
-        for (var s = 0; s < config.SparkleCount; s++)
-        {
-            var sparkleOffsetAngle = (float)(random.NextDouble() * Math.PI * 2);
-            var edgeRadius = ProceduralShapeGenerator.GetPolygonRadiusAtAngle(unitVertices, sparkleOffsetAngle);
-            var radiusFraction = MathF.Sqrt((float)random.NextDouble()) * 0.85f;
-            var sparkleOffsetMagnitude = (config.SpriteSizePixels / 2f) * edgeRadius * radiusFraction;
-            sparkleOffsetsPixels[s] = new Microsoft.Xna.Framework.Vector2(MathF.Cos(sparkleOffsetAngle), MathF.Sin(sparkleOffsetAngle)) * sparkleOffsetMagnitude;
-            sparklePhasesRadians[s] = (float)(random.NextDouble() * Math.PI * 2);
-        }
+        // spins, and each flares on its own independent phase.
+        var (sparkleOffsetsPixels, sparklePhasesRadians) = ProceduralShapeGenerator.GenerateSparklePoints(random, unitVertices, config.SparkleCount, config.SpriteSizePixels / 2f);
 
         world.Create(
             new PhysicsBody { BodyId = bodyId },

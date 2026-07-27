@@ -10,8 +10,9 @@ namespace SpaceSurvivalGame.Rendering;
 /// already-drawn Sprite (see RenderSystem, which must run first in the same
 /// SpriteBatch.Begin/End so this layers above it). Each glint's brightness follows its own
 /// sharpened sine wave of elapsed time plus that glint's own phase, so it reads as a brief
-/// flare rather than a smooth pulse, and neither different glints on the same chunk nor
-/// different chunks in the field flare in unison. Currently only iron ore pickups carry this
+/// flare rather than a smooth pulse, and neither different glints on the same entity nor
+/// different entities in the field flare in unison. Both standalone iron ore pickups
+/// (IronPickupField) and iron-rich asteroids' embedded ore speckles (AsteroidField) carry this
 /// component, so its tunables (color/size/timing) are read straight from IronPickupConfig
 /// rather than a separate config of their own.
 /// </summary>

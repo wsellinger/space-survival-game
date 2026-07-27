@@ -35,6 +35,11 @@ public class StationCoreConfig
     // invalid, not just deprioritized, so if none qualify the core simply stays put.
     public float MaxSearchRangeMeters { get; set; } = 15f;
 
+    // Candidates closer than this to the ship's own position at the moment of detaching are
+    // excluded too — a failsafe so the core (and its arrival shockwave) never ends up parked
+    // right on top of the ship, however good that spot's asteroid clearance looks otherwise.
+    public float MinDistanceFromShipMeters { get; set; } = 2f;
+
     // Independently shape the first and second half of the flight's speed curve over its
     // (fixed, distance/FlightSpeedMetersPerSecond) duration: 1 = constant speed for that half (no
     // easing), higher = a more pronounced ease. FlightEaseInExponent governs the slow-start half,

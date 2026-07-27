@@ -161,10 +161,13 @@ public static class StationCoreSystem
 
     /// <summary>
     /// Samples a resolution x resolution grid across the current viewport (world-space, centered
-    /// on the camera) and returns whichever candidate within MaxSearchRangeMeters of originMeters
-    /// maximizes its distance to the nearest asteroid's own edge (distance to center minus that
-    /// asteroid's RadiusMeters) — the biggest gap currently visible, not just the biggest gap
-    /// between centers. Falls back to originMeters itself if no candidate qualifies within range.
+    /// on the camera) and returns whichever candidate — within MaxSearchRangeMeters of
+    /// originMeters (the ship's own position at the moment of detaching) but no closer than
+    /// MinDistanceFromShipMeters to it — maximizes its distance to the nearest asteroid's own
+    /// edge (distance to center minus that asteroid's RadiusMeters): the biggest gap currently
+    /// visible, not just the biggest gap between centers. Falls back to a point exactly
+    /// MinDistanceFromShipMeters from originMeters (an arbitrary fixed direction) if no candidate
+    /// qualifies at all, so the fallback itself never violates the minimum-distance failsafe.
     /// </summary>
     private static Vector2 FindOpenSpotOnScreen(World world, Camera camera, StationCoreConfig config, Vector2 originMeters)
     {
@@ -180,7 +183,7 @@ public static class StationCoreSystem
         var halfHeightMeters = PhysicsWorld.PixelsToMeters(camera.ViewportHeight / 2f);
 
         var resolution = Math.Max(1, config.OpenSpotSearchResolution);
-        var bestPositionMeters = originMeters;
+        var bestPositionMeters = originMeters + new Vector2(config.MinDistanceFromShipMeters, 0f);
         var bestClearanceMeters = float.NegativeInfinity;
 
         for (var gx = 0; gx < resolution; gx++)
@@ -193,7 +196,8 @@ public static class StationCoreSystem
                     (fractionX * 2f - 1f) * halfWidthMeters,
                     (fractionY * 2f - 1f) * halfHeightMeters);
 
-                if (Vector2.Distance(candidateMeters, originMeters) > config.MaxSearchRangeMeters) continue;
+                var distanceFromShip = Vector2.Distance(candidateMeters, originMeters);
+                if (distanceFromShip > config.MaxSearchRangeMeters || distanceFromShip < config.MinDistanceFromShipMeters) continue;
 
                 var clearanceMeters = float.PositiveInfinity;
                 for (var i = 0; i < asteroidPositions.Count; i++)

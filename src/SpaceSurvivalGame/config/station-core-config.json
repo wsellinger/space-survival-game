@@ -3,5 +3,10 @@
   "SpriteSizePixels": 8,
   "CoreColorHex": "#FF1A1A",
   "RingColorHex": "#999999",
-  "InnerRadiusFraction": 0.65
+  "InnerRadiusFraction": 0.65,
+  "FlightSpeedMetersPerSecond": 6,
+  "OpenSpotSearchResolution": 24,
+  "MaxSearchRangeMeters": 10,
+  "FlightEaseInExponent": 3,
+  "FlightEaseOutExponent": 2
 }

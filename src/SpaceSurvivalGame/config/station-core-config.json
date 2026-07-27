@@ -21,5 +21,6 @@
   "ShockwaveRadiusMeters": 8,
   "ShockwaveRingInnerRadiusFraction": 0.98,
   "ShockwaveImpulseStrength": 1,
-  "ShockwaveShipImpulseMultiplier": 0.15
+  "ShockwaveShipImpulseMultiplier": 0.15,
+  "ShockwavePickupImpulseMultiplier": 0.05
 }

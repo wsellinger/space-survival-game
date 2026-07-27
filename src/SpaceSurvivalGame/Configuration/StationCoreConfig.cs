@@ -76,5 +76,10 @@ public class StationCoreConfig
     // else, lower = the ship barely feels it while asteroids/pickups still get the full push.
     public float ShockwaveShipImpulseMultiplier { get; set; } = 0.15f;
 
+    // Same idea for O2/iron pickups (OxygenPickup/IronPickup) — they're light enough that the
+    // full impulse sends them flying far more violently than asteroids do; tuned down separately
+    // from the ship's own multiplier.
+    public float ShockwavePickupImpulseMultiplier { get; set; } = 0.25f;
+
     public static StationCoreConfig Load(string path) => ConfigLoader.Load<StationCoreConfig>(path);
 }

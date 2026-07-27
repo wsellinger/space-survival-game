@@ -108,12 +108,13 @@ public static class StationCoreSystem
     /// A one-time outward push on every nearby PhysicsBody, scaling from ShockwaveImpulseStrength
     /// at zero distance down to 0 at ShockwaveRadiusMeters. Applying the same base impulse
     /// regardless of an entity's own mass is deliberate — Box2D's own impulse/mass=deltaV means
-    /// heavier bodies (a big asteroid) still end up pushed less far than light ones (a pickup) for
-    /// the same blast, matching what a real shockwave would do. The player's own ship is a
-    /// deliberate exception on top of that: ShockwaveShipImpulseMultiplier scales its impulse down
-    /// separately so the player barely feels it while everything else nearby gets the full push.
-    /// Also grants the ship a failsafe window of Invulnerability lasting ShockwaveDurationSeconds,
-    /// since the shockwave can fling an asteroid straight into it right as it's still settling.
+    /// heavier bodies (a big asteroid) still end up pushed less far than light ones for the same
+    /// blast, matching what a real shockwave would do — but O2/iron pickups are light enough that
+    /// this alone still sends them flying far more violently than asteroids do, so
+    /// ShockwavePickupImpulseMultiplier tunes them down separately, same idea as the ship's own
+    /// ShockwaveShipImpulseMultiplier. Also grants the ship a failsafe window of Invulnerability
+    /// lasting ShockwaveDurationSeconds, since the shockwave can fling an asteroid straight into it
+    /// right as it's still settling.
     /// </summary>
     private static void ApplyShockwave(World world, Vector2 originMeters, StationCoreConfig config, Entity shipEntity)
     {
@@ -126,6 +127,7 @@ public static class StationCoreSystem
             var falloff = 1f - distance / config.ShockwaveRadiusMeters;
             var strength = config.ShockwaveImpulseStrength * falloff;
             if (entity == shipEntity) strength *= config.ShockwaveShipImpulseMultiplier;
+            else if (world.Has<OxygenPickup>(entity) || world.Has<IronPickup>(entity)) strength *= config.ShockwavePickupImpulseMultiplier;
 
             var impulse = offset / distance * strength;
             B2Api.b2Body_ApplyLinearImpulseToCenter(physicsBody.BodyId, impulse, wake: true);

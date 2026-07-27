@@ -219,7 +219,7 @@ public static class AsteroidField
             // the offset to the ACTUAL local edge (rather than a flat placement radius) is what
             // keeps a speckle from ever landing entirely outside the silhouette as a detached
             // floating blob.
-            var edgeRadius = GetPolygonRadiusAtAngle(rockUnitVertices, placementAngle);
+            var edgeRadius = ProceduralShapeGenerator.GetPolygonRadiusAtAngle(rockUnitVertices, placementAngle);
             var edgeOffset = config.CrystalEdgeOffsetRange.Min +
                 (float)random.NextDouble() * (config.CrystalEdgeOffsetRange.Max - config.CrystalEdgeOffsetRange.Min);
             var placementRadius = edgeRadius + edgeOffset;
@@ -242,37 +242,6 @@ public static class AsteroidField
 
         return ProceduralTextures.CreateSpeckledPolygon(graphicsDevice, textureSize, rockColor, marginedXnaVertices,
             speckles, crystalColor, crystalColor, config.CrystalGlowRadiusMultiplier);
-    }
-
-    /// <summary>
-    /// Distance from the origin to the star-shaped polygon's own boundary in the given
-    /// direction — i.e. where a ray from the center at this angle exits the polygon. Vertices
-    /// must be in angular order around the origin (guaranteed by
-    /// ProceduralShapeGenerator.GenerateJitteredPolygon's jitter-below-half-angle-step rule),
-    /// so exactly one edge brackets any given angle.
-    /// </summary>
-    private static float GetPolygonRadiusAtAngle(Vector2[] vertices, float angle)
-    {
-        var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-
-        for (var i = 0; i < vertices.Length; i++)
-        {
-            var a = vertices[i];
-            var edge = vertices[(i + 1) % vertices.Length] - a;
-
-            // Solve a + s*edge == t*direction for s in [0,1], t >= 0 (a ray-vs-segment
-            // intersection, via Cramer's rule on the 2x2 system).
-            var denom = edge.X * direction.Y - edge.Y * direction.X;
-            if (MathF.Abs(denom) < 1e-6f) continue; // edge parallel to the ray
-
-            var s = (direction.X * a.Y - direction.Y * a.X) / denom;
-            if (s < 0f || s > 1f) continue;
-
-            var t = (edge.X * a.Y - edge.Y * a.X) / denom;
-            if (t >= 0f) return t;
-        }
-
-        return 0.8f; // shouldn't happen for a valid simple star-shaped polygon; a safe fallback
     }
 
     private static bool TryFindPosition(Random random, SpatialGrid grid, Vector2 centerMeters, WorldConfig config, out Vector2 positionMeters, out float radiusMeters)

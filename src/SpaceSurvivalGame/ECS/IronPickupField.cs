@@ -36,16 +36,24 @@ public static class IronPickupField
     public const float OreAngleJitterFraction = 0.2f;
     public const float OreElongationFactor = 1.35f;
 
+    // Nudged slightly behind the documented frontmost value (0, every other gameplay sprite's
+    // own default) so MetallicSparkleRenderSystem's glints — drawn at the default 0 — always
+    // win the SpriteSortMode.BackToFront tie against their own parent's sprite instead of it
+    // being an undefined coin flip.
+    private const float OreLayerDepth = 0.01f;
+
     /// <summary>Already-baked shape data shared by every pickup chunk, so a new one can be spawned at runtime (see SpawnPickup) without re-baking textures.</summary>
     public readonly struct PickupAssets
     {
         public readonly Vector2[][] ShapeVariants;
         public readonly Texture2D[] ShapeTextures;
+        public readonly Texture2D SparkleTexture;
 
-        public PickupAssets(Vector2[][] shapeVariants, Texture2D[] shapeTextures)
+        public PickupAssets(Vector2[][] shapeVariants, Texture2D[] shapeTextures, Texture2D sparkleTexture)
         {
             ShapeVariants = shapeVariants;
             ShapeTextures = shapeTextures;
+            SparkleTexture = sparkleTexture;
         }
     }
 
@@ -68,7 +76,11 @@ public static class IronPickupField
             shapeTextures[v] = ProceduralTextures.CreatePolygon(graphicsDevice, TextureSize, oreColor, oreXnaVertices);
         }
 
-        var assets = new PickupAssets(shapeVariants, shapeTextures);
+        // Baked white (like ParticleEffects' own spark texture) and tinted at draw time via
+        // MetallicSparkleRenderSystem, so SparkleColorHex can be re-tuned without re-baking.
+        var sparkleTexture = ProceduralTextures.CreateCircle(graphicsDevice, ironConfig.SparkleSizePixels, Microsoft.Xna.Framework.Color.White);
+
+        var assets = new PickupAssets(shapeVariants, shapeTextures, sparkleTexture);
 
         for (var i = 0; i < ironConfig.PickupCount; i++)
         {
@@ -127,11 +139,34 @@ public static class IronPickupField
         var polygon = B2Api.b2MakePolygon(hull, 0f);
         B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);
 
+        // A handful of fixed points scattered across the chunk's own visible face (so each reads
+        // as its own facet catching the light rather than one glowing bullseye), rolled once here
+        // in the chunk's own unrotated local space — MetallicSparkleRenderSystem rotates each by
+        // the entity's current facing every frame so they stay fixed to their facets as the chunk
+        // spins, and each flares on its own independent phase. The shape is an irregular jittered
+        // polygon (not a circle), so a placement radius is anchored to the ACTUAL local edge
+        // distance at that angle (same technique AsteroidField uses for its own speckles) —
+        // otherwise a chunk with a deep concave dent could get a sparkle placed outside its
+        // visible silhouette. Sampling radius via sqrt(random) rather than random directly gives
+        // uniform coverage over the whole face's area instead of clustering out toward the edge.
+        var sparkleOffsetsPixels = new Microsoft.Xna.Framework.Vector2[config.SparkleCount];
+        var sparklePhasesRadians = new float[config.SparkleCount];
+        for (var s = 0; s < config.SparkleCount; s++)
+        {
+            var sparkleOffsetAngle = (float)(random.NextDouble() * Math.PI * 2);
+            var edgeRadius = ProceduralShapeGenerator.GetPolygonRadiusAtAngle(unitVertices, sparkleOffsetAngle);
+            var radiusFraction = MathF.Sqrt((float)random.NextDouble()) * 0.85f;
+            var sparkleOffsetMagnitude = (config.SpriteSizePixels / 2f) * edgeRadius * radiusFraction;
+            sparkleOffsetsPixels[s] = new Microsoft.Xna.Framework.Vector2(MathF.Cos(sparkleOffsetAngle), MathF.Sin(sparkleOffsetAngle)) * sparkleOffsetMagnitude;
+            sparklePhasesRadians[s] = (float)(random.NextDouble() * Math.PI * 2);
+        }
+
         world.Create(
             new PhysicsBody { BodyId = bodyId },
             new Transform { PositionMeters = positionMeters, RotationRadians = rotationRadians },
             new Velocity(),
-            new Sprite { Texture = assets.ShapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.White, Size = TextureSize, Scale = scale, Parallax = 1f },
-            new IronPickup());
+            new Sprite { Texture = assets.ShapeTextures[variantIndex], Color = Microsoft.Xna.Framework.Color.White, Size = TextureSize, Scale = scale, LayerDepth = OreLayerDepth, Parallax = 1f },
+            new IronPickup(),
+            new MetallicSparkle { OffsetsPixels = sparkleOffsetsPixels, PhasesRadians = sparklePhasesRadians, Texture = assets.SparkleTexture });
     }
 }

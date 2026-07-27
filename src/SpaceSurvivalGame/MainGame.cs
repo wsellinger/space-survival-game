@@ -496,6 +496,7 @@ public class MainGame : Game
         _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
         EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _shipConfig.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds);
+        MetallicSparkleRenderSystem.Run(_world, _spriteBatch, _camera, _ironPickupConfig, (float)gameTime.TotalGameTime.TotalSeconds);
         _spriteBatch.End();
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.

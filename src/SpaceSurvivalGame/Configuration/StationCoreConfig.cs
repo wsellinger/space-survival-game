@@ -43,5 +43,18 @@ public class StationCoreConfig
     public float FlightEaseInExponent { get; set; } = 2f;
     public float FlightEaseOutExponent { get; set; } = 2f;
 
+    // A grey square that grows from nothing to full size and spins to a stop behind the core's
+    // own dot (see StationCoreBuildEffectRenderSystem) — starts the instant the core detaches and
+    // finishes exactly when it arrives, sharing the same eased flight progress so the reveal is
+    // tied directly to the core's own movement. Stays fully grown afterward.
+    public string BuildEffectColorHex { get; set; } = "#666666";
+    public int BuildEffectMaxSizePixels { get; set; } = 48;
+    public float BuildEffectSpinRevolutions { get; set; } = 2f; // full turns completed over the course of growing — an integer lands the final rotation back at 0, reading as "settled" rather than stopped mid-spin
+
+    // Circuit-board-style trace lines baked into the square, symmetric across both axes (see
+    // ProceduralTextures.CreateCircuitSquare).
+    public string CircuitLineColorHex { get; set; } = "#222222";
+    public float CircuitLineThicknessFraction { get; set; } = 0.08f; // fraction of the square's own half-size
+
     public static StationCoreConfig Load(string path) => ConfigLoader.Load<StationCoreConfig>(path);
 }

@@ -6,7 +6,12 @@
   "InnerRadiusFraction": 0.65,
   "FlightSpeedMetersPerSecond": 6,
   "OpenSpotSearchResolution": 24,
-  "MaxSearchRangeMeters": 10,
-  "FlightEaseInExponent": 3,
-  "FlightEaseOutExponent": 2
+  "MaxSearchRangeMeters": 5,
+  "FlightEaseInExponent": 2,
+  "FlightEaseOutExponent": 3,
+  "BuildEffectColorHex": "#444444",
+  "BuildEffectMaxSizePixels": 38,
+  "BuildEffectSpinRevolutions": 2,
+  "CircuitLineColorHex": "#222222",
+  "CircuitLineThicknessFraction": 0.08
 }

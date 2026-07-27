@@ -119,6 +119,62 @@ public static class ProceduralTextures
         return texture;
     }
 
+    /// <summary>
+    /// A solid size x size square (like CreateSolidSquare) overlaid with a handful of
+    /// axis-aligned "trace" lines — a circuit-board look. The traces are authored once in a
+    /// single quadrant (0..1, 0..1 in unit space, where 1 is the square's own outer edge);
+    /// several deliberately run out to that edge so the pattern reads as traces reaching the
+    /// border rather than floating in the middle. Every pixel is folded into that same quadrant
+    /// via Abs() before testing distance to them, so the result is mirror-symmetric across both
+    /// axes for free rather than needing 4 copies of each segment.
+    /// </summary>
+    public static Texture2D CreateCircuitSquare(GraphicsDevice graphicsDevice, int size, Color baseColor, Color lineColor, float lineThicknessFraction)
+    {
+        var segments = new (Vector2 Start, Vector2 End)[]
+        {
+            (new Vector2(0.10f, 0.10f), new Vector2(0.10f, 1.00f)),
+            (new Vector2(0.10f, 0.35f), new Vector2(0.40f, 0.35f)),
+            (new Vector2(0.40f, 0.10f), new Vector2(0.40f, 0.35f)),
+            (new Vector2(0.40f, 0.10f), new Vector2(1.00f, 0.10f)),
+            (new Vector2(0.65f, 0.10f), new Vector2(0.65f, 0.55f)),
+            (new Vector2(0.65f, 0.55f), new Vector2(1.00f, 0.55f)),
+            (new Vector2(0.25f, 0.55f), new Vector2(0.25f, 1.00f)),
+            (new Vector2(0.25f, 0.55f), new Vector2(0.55f, 0.55f)),
+            (new Vector2(0.80f, 0.20f), new Vector2(0.80f, 0.40f))
+        };
+
+        var data = new Color[size * size];
+        var center = new Vector2(size / 2f, size / 2f);
+        var scale = size / 2f;
+        var halfThickness = lineThicknessFraction / 2f;
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var localPoint = (point - center) / scale;
+                var quadrantPoint = new Vector2(MathF.Abs(localPoint.X), MathF.Abs(localPoint.Y));
+
+                var onLine = false;
+                foreach (var segment in segments)
+                {
+                    if (DistanceToSegment(quadrantPoint, segment.Start, segment.End) <= halfThickness)
+                    {
+                        onLine = true;
+                        break;
+                    }
+                }
+
+                data[y * size + x] = onLine ? lineColor : baseColor;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
     /// <summary>A solid filled circle inscribed in a size x size square, transparent elsewhere. Meant to be shared across many entities of varying size via Sprite.Scale rather than regenerated per size.</summary>
     public static Texture2D CreateCircle(GraphicsDevice graphicsDevice, int size, Color color)
     {

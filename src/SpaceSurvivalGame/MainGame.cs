@@ -59,6 +59,7 @@ public class MainGame : Game
     private IronPickupField.PickupAssets _ironAssets;
     private StationCoreConfig _stationCoreConfig;
     private Texture2D _stationCoreTexture;
+    private Texture2D _stationCoreBuildEffectTexture;
     private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -166,6 +167,8 @@ public class MainGame : Game
         _stationCoreConfig = StationCoreConfig.Load(stationCoreConfigPath);
         _stationCoreTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, _stationCoreConfig.SpriteSizePixels,
             ColorHex.Parse(_stationCoreConfig.CoreColorHex), ColorHex.Parse(_stationCoreConfig.RingColorHex), _stationCoreConfig.InnerRadiusFraction);
+        _stationCoreBuildEffectTexture = ProceduralTextures.CreateCircuitSquare(GraphicsDevice, _stationCoreConfig.BuildEffectMaxSizePixels,
+            ColorHex.Parse(_stationCoreConfig.BuildEffectColorHex), ColorHex.Parse(_stationCoreConfig.CircuitLineColorHex), _stationCoreConfig.CircuitLineThicknessFraction);
 
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
@@ -507,6 +510,7 @@ public class MainGame : Game
         // crisp edges instead of blurring when magnified/minified.
         _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
+        StationCoreBuildEffectRenderSystem.Run(_world, _spriteBatch, _camera, _stationCoreConfig, _stationCoreBuildEffectTexture);
         EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _shipConfig.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds);
         MetallicSparkleRenderSystem.Run(_world, _spriteBatch, _camera, _ironPickupConfig, (float)gameTime.TotalGameTime.TotalSeconds);
         _spriteBatch.End();
@@ -607,6 +611,7 @@ public class MainGame : Game
         _crosshairTexture.Dispose();
         _strafeModeIndicatorTexture.Dispose();
         _sparkTexture.Dispose();
+        _stationCoreBuildEffectTexture.Dispose();
         _buttonFillTexture.Dispose();
         _buttonOutlineTexture.Dispose();
         _solidPixelTexture.Dispose();

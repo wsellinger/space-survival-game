@@ -77,12 +77,22 @@ public static class StationCoreSystem
     }
 
     /// <summary>
+    /// Raw (un-eased) 0-1 flight progress for a detached core — 1 once FlightDurationSeconds has
+    /// been zeroed out to mark arrival, since the original duration isn't kept around past that
+    /// point. Shared with StationCoreBuildEffectRenderSystem so its grow/spin reveal tracks the
+    /// exact same progress (and, via EaseInOut below, the exact same easing) as the core's own
+    /// movement.
+    /// </summary>
+    public static float GetFlightProgress(in StationCore core) =>
+        core.FlightDurationSeconds <= 0f ? 1f : MathF.Min(1f, core.FlightElapsedSeconds / core.FlightDurationSeconds);
+
+    /// <summary>
     /// Ease-in-ease-out power curve with independent exponents either side of the midpoint —
     /// 1 = linear (no easing) for that half, higher = a more pronounced ease. Both halves meet
     /// at (0.5, 0.5) regardless of how different easeInExponent/easeOutExponent are, so there's
     /// no visible seam even with very different values.
     /// </summary>
-    private static float EaseInOut(float t, float easeInExponent, float easeOutExponent)
+    public static float EaseInOut(float t, float easeInExponent, float easeOutExponent)
     {
         return t < 0.5f
             ? 0.5f * MathF.Pow(2f * t, easeInExponent)

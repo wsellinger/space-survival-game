@@ -4,7 +4,7 @@
   "WorldSeed": 12345,
   "Asteroid": {
     "SpawnDensityPerSquareMeter": 0.2,
-    "RadiusMetersRange": [0.1, 0.5],
+    "RadiusMetersRange": [0.2, 0.6],
     "SpeedMetersPerSecondRange": [0.1, 0.5],
     "AngularVelocityRadiansPerSecondRange": [0.1, 1],
     "Restitution": 0.8,

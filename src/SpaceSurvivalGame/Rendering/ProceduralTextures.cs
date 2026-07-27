@@ -314,6 +314,78 @@ public static class ProceduralTextures
         return texture;
     }
 
+    public readonly struct PolygonSpot
+    {
+        public readonly Vector2 Center;         // canvas unit space, same space as the base polygon's own unitVertices
+        public readonly Vector2[] UnitVertices; // the spot's own small jagged polygon, in its own -1..1 local space
+        public readonly float Radius;           // the spot's own radius, in canvas unit space
+
+        public PolygonSpot(Vector2 center, Vector2[] unitVertices, float radius)
+        {
+            Center = center;
+            UnitVertices = unitVertices;
+            Radius = radius;
+        }
+    }
+
+    /// <summary>
+    /// Like CreatePolygon, but blends small translucent jagged patches ("rust spots" on iron ore)
+    /// into the fill wherever they land — CPU-side straight compositing using spotColor's own
+    /// alpha as the blend fraction, keeping the output pixel fully opaque (unlike
+    /// CreateGlowingPolygon/CreateSpeckledPolygon's glow, which actually fades to transparent
+    /// background). A spot only ever blends where the base polygon itself is already filled —
+    /// rust forms on the ore's own surface, unlike the crystal speckles elsewhere which
+    /// intentionally poke past the rock's edge — so a spot placed near the boundary is simply
+    /// clipped there, no special edge-anchoring needed.
+    /// </summary>
+    public static Texture2D CreateSpottedPolygon(GraphicsDevice graphicsDevice, int size, Color baseColor, Vector2[] unitVertices, PolygonSpot[] spots, Color spotColor)
+    {
+        var data = new Color[size * size];
+        var center = new Vector2(size / 2f, size / 2f);
+        var scale = size / 2f;
+        var spotAlphaFraction = spotColor.A / 255f;
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var localPoint = (point - center) / scale;
+                var index = y * size + x;
+
+                if (!IsInsidePolygon(localPoint, unitVertices))
+                {
+                    data[index] = Color.Transparent;
+                    continue;
+                }
+
+                var pixelColor = baseColor;
+
+                foreach (var spot in spots)
+                {
+                    var offset = localPoint - spot.Center;
+                    if (offset.Length() > spot.Radius) continue;
+                    if (!IsInsidePolygon(offset / spot.Radius, spot.UnitVertices)) continue;
+
+                    // Blend RGB only, keeping alpha at the base's own (fully opaque) value —
+                    // spotColor's alpha is purely the blend fraction here, not baked into the
+                    // output pixel's own transparency.
+                    pixelColor = new Color(
+                        (byte)(pixelColor.R * (1f - spotAlphaFraction) + spotColor.R * spotAlphaFraction),
+                        (byte)(pixelColor.G * (1f - spotAlphaFraction) + spotColor.G * spotAlphaFraction),
+                        (byte)(pixelColor.B * (1f - spotAlphaFraction) + spotColor.B * spotAlphaFraction),
+                        pixelColor.A);
+                }
+
+                data[index] = pixelColor;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
     private static bool IsInsidePolygon(Vector2 point, Vector2[] vertices)
     {
         var inside = false;

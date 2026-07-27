@@ -25,5 +25,14 @@
   "ShockwaveShipImpulseMultiplier": 0.15,
   "ShockwavePickupImpulseMultiplier": 0.05,
   "PhysicsMaterialDensity": 1,
-  "PhysicsRestitution": 0.2
+  "PhysicsRestitution": 0.2,
+  "PhysicsLinearDamping": 0.6,
+  "PhysicsAngularDamping": 0.6,
+  "DriftImpulseIntervalSecondsRange": [1, 3],
+  "DriftLinearImpulseStrengthRange": [0.01, 0.03],
+  "DriftReturnStrength": 0.05,
+  "DriftAngularImpulseStrengthRange": [0.0002, 0.0006],
+  "DriftAngularReturnStrength": 0.0005,
+  "InitialLinearSpeedMetersPerSecondRange": [0.05, 0.15],
+  "InitialAngularSpeedRadiansPerSecondRange": [0.03, 0.1]
 }

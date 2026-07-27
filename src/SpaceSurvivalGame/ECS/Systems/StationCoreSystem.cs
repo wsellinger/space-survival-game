@@ -28,6 +28,7 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// slightly before the core actually stops: an outward impulse on every nearby PhysicsBody (see
 /// ApplyShockwave, which also grants the ship a brief Invulnerability window as a failsafe) and a
 /// starting timer for the matching expanding-ring visual (see StationCoreShockwaveRenderSystem).
+/// Once landed it also starts drifting very gently in place (see ApplyDriftImpulse).
 /// </summary>
 public static class StationCoreSystem
 {
@@ -36,7 +37,7 @@ public static class StationCoreSystem
     private static readonly QueryDescription AsteroidQuery = new QueryDescription().WithAll<Transform, Asteroid>();
     private static readonly QueryDescription PhysicsBodyQuery = new QueryDescription().WithAll<PhysicsBody, Transform>();
 
-    public static void Run(World world, Camera camera, PhysicsWorld physicsWorld, StationCoreConfig config, float deltaSeconds)
+    public static void Run(World world, Camera camera, PhysicsWorld physicsWorld, StationCoreConfig config, float deltaSeconds, Random random)
     {
         var shipEntity = Entity.Null;
         var shipPositionMeters = Vector2.Zero;
@@ -72,8 +73,8 @@ public static class StationCoreSystem
                     if (core.FlightDurationSeconds <= 0f)
                     {
                         core.ShockwaveElapsedSeconds = 0f;
-                        ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity);
-                        CreatePhysicsBody(world, physicsWorld, coreEntity, coreTransform.PositionMeters, config);
+                        ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity, coreEntity);
+                        CreatePhysicsBody(world, physicsWorld, coreEntity, ref core, coreTransform.PositionMeters, config, random);
                     }
                 }
                 else
@@ -97,18 +98,30 @@ public static class StationCoreSystem
                 if (core.ShockwaveElapsedSeconds < 0f && progress >= config.ShockwaveTriggerProgress)
                 {
                     core.ShockwaveElapsedSeconds = 0f;
-                    ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity);
+                    ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity, coreEntity);
                 }
 
                 if (progress >= 1f)
                 {
                     core.FlightDurationSeconds = 0f; // marks arrival so this branch is skipped from here on
-                    CreatePhysicsBody(world, physicsWorld, coreEntity, coreTransform.PositionMeters, config);
+                    CreatePhysicsBody(world, physicsWorld, coreEntity, ref core, coreTransform.PositionMeters, config, random);
                 }
             }
 
             if (core.ShockwaveElapsedSeconds >= 0f && core.ShockwaveElapsedSeconds < config.ShockwaveDurationSeconds)
                 core.ShockwaveElapsedSeconds += deltaSeconds; // stops advancing once past the duration — GetFlightProgress-style done flag, not an unbounded timer
+
+            // Landed (Attached is already false by this point, or this frame's earlier branch
+            // would have returned) — gently drift in place forever after.
+            if (core.FlightDurationSeconds <= 0f)
+            {
+                core.DriftTimerSeconds -= deltaSeconds;
+                if (core.DriftTimerSeconds <= 0f)
+                {
+                    ApplyDriftImpulse(world, coreEntity, core.HomePositionMeters, core.HomeRotationRadians, config, random);
+                    core.DriftTimerSeconds = NextInRange(random, config.DriftImpulseIntervalSecondsRange);
+                }
+            }
         });
     }
 
@@ -122,12 +135,17 @@ public static class StationCoreSystem
     /// ShockwavePickupImpulseMultiplier tunes them down separately, same idea as the ship's own
     /// ShockwaveShipImpulseMultiplier. Also grants the ship a failsafe window of Invulnerability
     /// lasting ShockwaveDurationSeconds, since the shockwave can fling an asteroid straight into it
-    /// right as it's still settling.
+    /// right as it's still settling. coreEntity itself is always excluded — currently it never has
+    /// a PhysicsBody yet at the moment its own shockwave fires anyway (CreatePhysicsBody runs
+    /// after), but skipping it explicitly means it stays immune to its own blast even if a future
+    /// change (e.g. multiple station cores) ends up calling this after the body already exists.
     /// </summary>
-    private static void ApplyShockwave(World world, Vector2 originMeters, StationCoreConfig config, Entity shipEntity)
+    private static void ApplyShockwave(World world, Vector2 originMeters, StationCoreConfig config, Entity shipEntity, Entity coreEntity)
     {
         world.Query(in PhysicsBodyQuery, (Entity entity, ref PhysicsBody physicsBody, ref Transform transform) =>
         {
+            if (entity == coreEntity) return;
+
             var offset = transform.PositionMeters - originMeters;
             var distance = offset.Length();
             if (distance < 0.0001f || distance > config.ShockwaveRadiusMeters) return;
@@ -150,18 +168,32 @@ public static class StationCoreSystem
     /// StationCoreBuildEffectRenderSystem), not just the small core dot on top of it, since that
     /// square is what's actually left permanently visible on the ground once construction
     /// finishes — so it solidly blocks the ship/asteroids/pickups from here on instead of just
-    /// being a visual. Dynamic (not static/kinematic) so later collisions can actually knock it
-    /// around like any other body, mass driven by PhysicsMaterialDensity; also adds a Velocity
-    /// component so PhysicsSyncSystem picks it up and keeps its Transform following the body from
-    /// here on, the same way every other physics-driven entity works. No Damaging tag, so
-    /// CollisionDamageSystem still leaves the ship alone on contact, same as bumping an O2/iron
-    /// pickup.
+    /// being a visual. Dynamic (not static/kinematic) so later collisions (and its own drift
+    /// impulses — see ApplyDriftImpulse) can actually move it like any other body, mass driven by
+    /// PhysicsMaterialDensity; also adds a Velocity component so PhysicsSyncSystem picks it up and
+    /// keeps its Transform following the body from here on, the same way every other
+    /// physics-driven entity works. No Damaging tag, so CollisionDamageSystem still leaves the
+    /// ship alone on contact, same as bumping an O2/iron pickup.
+    ///
+    /// Also records HomePositionMeters/HomeRotationRadians (where it landed — the body always
+    /// starts at rotation 0, since bodyDef never sets one) and rolls the first DriftTimerSeconds,
+    /// so drifting can start from here. Starts with a small random linear + angular velocity
+    /// (InitialLinearSpeedMetersPerSecondRange/InitialAngularSpeedRadiansPerSecondRange) baked
+    /// straight into bodyDef, so it's already gently moving the instant it lands rather than
+    /// sitting frozen until the first drift impulse fires.
     /// </summary>
-    private static void CreatePhysicsBody(World world, PhysicsWorld physicsWorld, Entity coreEntity, Vector2 positionMeters, StationCoreConfig config)
+    private static void CreatePhysicsBody(World world, PhysicsWorld physicsWorld, Entity coreEntity, ref StationCore core, Vector2 positionMeters, StationCoreConfig config, Random random)
     {
+        var initialSpeedAngle = (float)(random.NextDouble() * Math.PI * 2);
+        var initialSpeed = NextInRange(random, config.InitialLinearSpeedMetersPerSecondRange);
+
         var bodyDef = B2Api.b2DefaultBodyDef();
         bodyDef.type = b2BodyType.b2_dynamicBody;
         bodyDef.position = positionMeters;
+        bodyDef.linearDamping = config.PhysicsLinearDamping;
+        bodyDef.angularDamping = config.PhysicsAngularDamping;
+        bodyDef.linearVelocity = new Vector2(MathF.Cos(initialSpeedAngle), MathF.Sin(initialSpeedAngle)) * initialSpeed;
+        bodyDef.angularVelocity = NextInRange(random, config.InitialAngularSpeedRadiansPerSecondRange) * (random.Next(2) == 0 ? -1f : 1f);
         var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
 
         var shapeDef = B2Api.b2DefaultShapeDef();
@@ -171,7 +203,54 @@ public static class StationCoreSystem
         var square = B2Api.b2MakeSquare(halfWidthMeters);
         B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in square);
 
+        // Every StationCore field must be written BEFORE world.Add below — adding components
+        // moves the entity to a new archetype, which invalidates this `ref core` (a reference into
+        // the query's current archetype storage). Writes made through it after the move are
+        // silently lost; the entity's real data keeps its previous (default/zeroed) values. This
+        // bit us directly: HomePositionMeters/DriftTimerSeconds used to be set after Add and never
+        // actually stuck, so the very next frame's drift check read a zeroed timer and a (0,0)
+        // home, firing almost instantly with a "return to the world origin" impulse big enough to
+        // look exactly like getting hit by a shockwave.
+        core.HomePositionMeters = positionMeters;
+        core.HomeRotationRadians = 0f;
+        core.DriftTimerSeconds = NextInRange(random, config.DriftImpulseIntervalSecondsRange);
+
         world.Add(coreEntity, new PhysicsBody { BodyId = bodyId }, new Velocity());
+    }
+
+    /// <summary>
+    /// Fires once every DriftTimerSeconds for a landed core: a small random linear impulse (random
+    /// direction, magnitude from DriftLinearImpulseStrengthRange) plus a correction proportional
+    /// to how far the core has drifted from homePositionMeters, and separately a small random
+    /// angular impulse (random sign, magnitude from DriftAngularImpulseStrengthRange) plus a
+    /// correction proportional to how far its rotation has drifted from homeRotationRadians. The
+    /// correction terms are what keep it wandering in place rather than walking away or spinning
+    /// up over many impulses — each one is nudged back toward home, not just random.
+    /// </summary>
+    private static void ApplyDriftImpulse(World world, Entity coreEntity, Vector2 homePositionMeters, float homeRotationRadians, StationCoreConfig config, Random random)
+    {
+        var bodyId = world.Get<PhysicsBody>(coreEntity).BodyId;
+
+        var randomAngle = (float)(random.NextDouble() * Math.PI * 2);
+        var randomImpulse = new Vector2(MathF.Cos(randomAngle), MathF.Sin(randomAngle)) * NextInRange(random, config.DriftLinearImpulseStrengthRange);
+        var displacementMeters = homePositionMeters - B2Api.b2Body_GetPosition(bodyId);
+        var returnImpulse = displacementMeters * config.DriftReturnStrength;
+        B2Api.b2Body_ApplyLinearImpulseToCenter(bodyId, randomImpulse + returnImpulse, wake: true);
+
+        var randomAngularImpulse = NextInRange(random, config.DriftAngularImpulseStrengthRange) * (random.Next(2) == 0 ? -1f : 1f);
+        var angleErrorRadians = WrapAngle(homeRotationRadians - B2Api.b2Body_GetRotation(bodyId).GetAngle());
+        var returnAngularImpulse = angleErrorRadians * config.DriftAngularReturnStrength;
+        B2Api.b2Body_ApplyAngularImpulse(bodyId, randomAngularImpulse + returnAngularImpulse, wake: true);
+    }
+
+    private static float NextInRange(Random random, FloatRange range) =>
+        range.Min + (float)random.NextDouble() * (range.Max - range.Min);
+
+    private static float WrapAngle(float angle)
+    {
+        while (angle > MathF.PI) angle -= 2f * MathF.PI;
+        while (angle < -MathF.PI) angle += 2f * MathF.PI;
+        return angle;
     }
 
     /// <summary>

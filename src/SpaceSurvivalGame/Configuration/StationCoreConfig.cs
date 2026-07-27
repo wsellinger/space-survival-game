@@ -94,5 +94,34 @@ public class StationCoreConfig
     public float PhysicsMaterialDensity { get; set; } = 1f;
     public float PhysicsRestitution { get; set; } = 0.2f;
 
+    // Damps out drift velocity between impulses (see below) so each nudge glides to a stop within
+    // a couple seconds instead of coasting freely forever (Box2D bodies have zero damping by
+    // default, same as the ship) — without this the core would just keep drifting in whatever
+    // direction its last impulse pointed.
+    public float PhysicsLinearDamping { get; set; } = 0.6f;
+    public float PhysicsAngularDamping { get; set; } = 0.6f;
+
+    // Once landed, StationCoreSystem gives the core a small random linear + angular impulse every
+    // DriftImpulseIntervalSecondsRange seconds (re-rolled after each one fires) so it wanders very
+    // gently in place instead of sitting frozen. Each impulse is the random component below plus a
+    // correction nudging it back toward HomePositionMeters/HomeRotationRadians (where it landed),
+    // scaled by DriftReturnStrength/DriftAngularReturnStrength — so it never drifts or spins up
+    // indefinitely, just wanders and settles back. The angular values are tiny compared to the
+    // linear ones because the core's own rotational inertia (a small ~0.35m square) is tiny too —
+    // don't scale these up without checking the resulting rad/s, it gets fast very quickly.
+    public FloatRange DriftImpulseIntervalSecondsRange { get; set; } = new(4f, 9f);
+    public FloatRange DriftLinearImpulseStrengthRange { get; set; } = new(0.01f, 0.03f); // Ns, random direction each time
+    public float DriftReturnStrength { get; set; } = 0.05f; // extra impulse (Ns) per meter of drift from HomePositionMeters
+    public FloatRange DriftAngularImpulseStrengthRange { get; set; } = new(0.0002f, 0.0006f); // random sign each time
+    public float DriftAngularReturnStrength { get; set; } = 0.0005f; // extra angular impulse per radian of drift from HomeRotationRadians
+
+    // Given directly to the body at creation (bodyDef.linearVelocity/angularVelocity) so the core
+    // is already gently moving the instant it lands, instead of sitting dead still until the first
+    // drift impulse fires. Roughly the same speeds a single drift impulse would itself produce
+    // (mass ~0.14kg, inertia ~0.0035 for the default BuildEffectMaxSizePixels square), just given
+    // as a starting velocity instead of an impulse.
+    public FloatRange InitialLinearSpeedMetersPerSecondRange { get; set; } = new(0.05f, 0.15f); // random direction
+    public FloatRange InitialAngularSpeedRadiansPerSecondRange { get; set; } = new(0.03f, 0.1f); // random sign
+
     public static StationCoreConfig Load(string path) => ConfigLoader.Load<StationCoreConfig>(path);
 }

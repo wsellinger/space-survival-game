@@ -15,10 +15,11 @@ namespace SpaceSurvivalGame.Rendering;
 /// default-frontmost sprite) — starts the instant the core detaches from the ship and finishes
 /// exactly when it arrives at its target, sharing StationCoreSystem's own flight progress and
 /// easing so the reveal is tied directly to the core's movement rather than running on its own
-/// timer. Stays fully grown (a settled, non-spinning square — BuildEffectSpinRevolutions is
-/// normally an integer, so the eased progress reaching 1 also lands the rotation back at a
-/// multiple of a full turn) forever after arrival, as a permanent part of the built station's
-/// look.
+/// timer. Reaches a settled, non-spinning square once eased progress hits 1 (BuildEffectSpinRevolutions
+/// is normally an integer, so that also lands the reveal's own rotation back at a multiple of a
+/// full turn) — from then on transform.RotationRadians (0 during the reveal itself, since the
+/// core has no physics body yet — see StationCoreSystem.CreatePhysicsBody) takes over, so the
+/// square keeps turning in place afterward as the landed core's own drift rotates its body.
 /// </summary>
 public static class StationCoreBuildEffectRenderSystem
 {
@@ -38,7 +39,7 @@ public static class StationCoreBuildEffectRenderSystem
             var eased = StationCoreSystem.EaseInOut(progress, config.FlightEaseInExponent, config.FlightEaseOutExponent);
             if (eased <= 0f) return; // not worth a draw call at zero size
 
-            var rotation = eased * config.BuildEffectSpinRevolutions * MathHelper.TwoPi;
+            var rotation = eased * config.BuildEffectSpinRevolutions * MathHelper.TwoPi + transform.RotationRadians;
             var positionPixels = camera.WorldToScreen(transform.PositionMeters);
 
             spriteBatch.Draw(squareTexture, positionPixels, sourceRectangle: null, color: Color.White,

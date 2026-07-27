@@ -436,7 +436,7 @@ public class MainGame : Game
         // Must run after PhysicsSyncSystem so it copies the ship's just-synced position for
         // this frame, not last frame's stale value (a one-frame lag reads as constant drift
         // while riding along).
-        StationCoreSystem.Run(_world, _camera, _physicsWorld, _stationCoreConfig, deltaSeconds);
+        StationCoreSystem.Run(_world, _camera, _physicsWorld, _stationCoreConfig, deltaSeconds, _random);
 
         // Camera casts out toward wherever the aim input points, not the ship's facing
         // (which lags behind at a capped turn rate): the right stick's own direction in

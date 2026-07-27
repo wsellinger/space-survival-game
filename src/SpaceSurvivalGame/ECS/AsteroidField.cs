@@ -48,6 +48,7 @@ public static class AsteroidField
         var rockColor = ColorHex.Parse(config.Asteroid.RockColorHex);
         var crystalColor = ColorHex.Parse(oxygenPickupConfig.ColorHex);
         var oreColor = ColorHex.Parse(ironPickupConfig.ColorHex);
+        var rustSpotColor = ColorHex.Parse(ironPickupConfig.RustSpotColorHex);
 
         // Canvas margin for the rich-asteroid textures only: embedded/protruding speckles can
         // extend past the rock's own unit-magnitude-1 edge, but (unlike the plain rock texture,
@@ -78,10 +79,13 @@ public static class AsteroidField
                 OxygenPickupField.CrystalAngleJitterFraction, OxygenPickupField.CrystalElongationFactor, rockColor, crystalColor);
 
             // Same shape as IronPickupField's own standalone pickup chunks (unlike oxygen, whose
-            // embedded speckles intentionally differ from its own pickup crystals).
+            // embedded speckles intentionally differ from its own pickup crystals) — including
+            // the same rust spots, so an iron-rich asteroid's embedded ore matches the loose
+            // chunks scattered around it.
             ironRichShapeTextures[v] = CreateSpeckledRockTexture(random, graphicsDevice, shapeVariants[v], ironRichConfig, ironCanvasMarginScale,
                 IronRichShapeTextureSize, IronPickupField.OreMinVerticesPerShape, IronPickupField.OreMaxVerticesPerShape, IronPickupField.OreMinVertexRadiusFactor,
-                IronPickupField.OreAngleJitterFraction, IronPickupField.OreElongationFactor, rockColor, oreColor);
+                IronPickupField.OreAngleJitterFraction, IronPickupField.OreElongationFactor, rockColor, oreColor,
+                rustSpotColor, ironPickupConfig.RustSpotCountRange, ironPickupConfig.RustSpotSizeUnitRange);
         }
 
         // Cell size = the largest possible sum-of-radii between any two asteroids,
@@ -199,11 +203,18 @@ public static class AsteroidField
     /// requires that. Everything is baked into canvasMarginScale-deflated canvas space so
     /// speckles have room to extend past the rock's own edge without being clipped by the
     /// texture bounds.
+    ///
+    /// rustSpotColor is optional (null for oxygen, which has no rust) — when given, each speckle
+    /// also gets a couple of small jagged translucent patches blended into its own fill, same
+    /// technique and shape parameters as IronPickupField.Create's standalone pickup chunks, so an
+    /// iron-rich asteroid's embedded speckles match the look of the loose ore chunks scattered
+    /// around it.
     /// </summary>
     private static Texture2D CreateSpeckledRockTexture(Random random, GraphicsDevice graphicsDevice, Vector2[] rockUnitVertices,
         RichAsteroidConfig config, float canvasMarginScale, int textureSize, int crystalMinVerticesPerShape, int crystalMaxVerticesPerShape,
         float crystalMinVertexRadiusFactor, float crystalAngleJitterFraction, float crystalElongationFactor,
-        Microsoft.Xna.Framework.Color rockColor, Microsoft.Xna.Framework.Color crystalColor)
+        Microsoft.Xna.Framework.Color rockColor, Microsoft.Xna.Framework.Color crystalColor,
+        Microsoft.Xna.Framework.Color? rustSpotColor = null, IntRange rustSpotCountRange = default, FloatRange rustSpotSizeUnitRange = default)
     {
         var marginedXnaVertices = new Microsoft.Xna.Framework.Vector2[rockUnitVertices.Length];
         for (var p = 0; p < marginedXnaVertices.Length; p++) marginedXnaVertices[p] = (rockUnitVertices[p] / canvasMarginScale).ToXna();
@@ -234,14 +245,19 @@ public static class AsteroidField
             var crystalXnaVertices = new Microsoft.Xna.Framework.Vector2[crystalUnitVertices.Length];
             for (var p = 0; p < crystalXnaVertices.Length; p++) crystalXnaVertices[p] = crystalUnitVertices[p].ToXna();
 
+            var rustSpots = rustSpotColor.HasValue
+                ? ProceduralShapeGenerator.GenerateJaggedSpots(random, crystalUnitVertices, rustSpotCountRange, rustSpotSizeUnitRange)
+                : null;
+
             speckles[s] = new ProceduralTextures.PolygonSpeckle(
                 (speckleCenter / canvasMarginScale).ToXna(),
                 crystalXnaVertices,
-                speckleSize / canvasMarginScale);
+                speckleSize / canvasMarginScale,
+                rustSpots);
         }
 
         return ProceduralTextures.CreateSpeckledPolygon(graphicsDevice, textureSize, rockColor, marginedXnaVertices,
-            speckles, crystalColor, crystalColor, config.CrystalGlowRadiusMultiplier);
+            speckles, crystalColor, crystalColor, config.CrystalGlowRadiusMultiplier, rustSpotColor ?? Microsoft.Xna.Framework.Color.Transparent);
     }
 
     private static bool TryFindPosition(Random random, SpatialGrid grid, Vector2 centerMeters, WorldConfig config, out Vector2 positionMeters, out float radiusMeters)

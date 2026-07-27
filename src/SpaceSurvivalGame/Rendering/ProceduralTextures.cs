@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -215,12 +216,14 @@ public static class ProceduralTextures
         public readonly Vector2 Center;         // canvas unit space, same space as the rock's own unitVertices
         public readonly Vector2[] UnitVertices; // the speckle's own small polygon, in its own -1..1 local space
         public readonly float Radius;           // the speckle's own radius, in canvas unit space
+        public readonly PolygonSpot[] Spots;    // small translucent patches (e.g. rust) blended into this speckle's own fill, in ITS OWN -1..1 local space; empty if none
 
-        public PolygonSpeckle(Vector2 center, Vector2[] unitVertices, float radius)
+        public PolygonSpeckle(Vector2 center, Vector2[] unitVertices, float radius, PolygonSpot[] spots = null)
         {
             Center = center;
             UnitVertices = unitVertices;
             Radius = radius;
+            Spots = spots ?? Array.Empty<PolygonSpot>();
         }
     }
 
@@ -240,9 +243,14 @@ public static class ProceduralTextures
     /// Doing solid stamping as its own pass before any glow — rather than solid+glow per speckle in
     /// one interleaved pass — is what keeps a later speckle's glow from overwriting an earlier
     /// speckle's already-stamped solid fill where two speckles happen to sit close together.
+    ///
+    /// Each speckle can also carry its own PolygonSpeckle.Spots (e.g. rust patches on iron ore) —
+    /// blended into that speckle's own solid fill during the stamping pass, using spotBlendColor's
+    /// alpha as the blend fraction (same technique as CreateSpottedPolygon), so a rich-asteroid's
+    /// embedded speckles can match the look of that resource's own standalone pickup chunks.
     /// </summary>
     public static Texture2D CreateSpeckledPolygon(GraphicsDevice graphicsDevice, int size, Color rockColor, Vector2[] rockUnitVertices,
-        PolygonSpeckle[] speckles, Color speckleColor, Color speckleGlowColor, float speckleGlowRadiusMultiplier)
+        PolygonSpeckle[] speckles, Color speckleColor, Color speckleGlowColor, float speckleGlowRadiusMultiplier, Color spotBlendColor)
     {
         var data = new Color[size * size];
         var isBackground = new bool[size * size];
@@ -272,10 +280,21 @@ public static class ProceduralTextures
                     var localPoint = (point - center) / scale;
                     var offset = localPoint - speckle.Center;
                     if (offset.Length() > speckle.Radius) continue;
-                    if (!IsInsidePolygon(offset / speckle.Radius, speckle.UnitVertices)) continue;
+                    var speckleLocalPoint = offset / speckle.Radius;
+                    if (!IsInsidePolygon(speckleLocalPoint, speckle.UnitVertices)) continue;
+
+                    var pixelColor = speckleColor;
+                    foreach (var spot in speckle.Spots)
+                    {
+                        var spotOffset = speckleLocalPoint - spot.Center;
+                        if (spotOffset.Length() > spot.Radius) continue;
+                        if (!IsInsidePolygon(spotOffset / spot.Radius, spot.UnitVertices)) continue;
+
+                        pixelColor = BlendRgb(pixelColor, spotBlendColor, spotBlendColor.A / 255f);
+                    }
 
                     var index = y * size + x;
-                    data[index] = speckleColor;
+                    data[index] = pixelColor;
                     isBackground[index] = false;
                 }
             }
@@ -367,14 +386,7 @@ public static class ProceduralTextures
                     if (offset.Length() > spot.Radius) continue;
                     if (!IsInsidePolygon(offset / spot.Radius, spot.UnitVertices)) continue;
 
-                    // Blend RGB only, keeping alpha at the base's own (fully opaque) value —
-                    // spotColor's alpha is purely the blend fraction here, not baked into the
-                    // output pixel's own transparency.
-                    pixelColor = new Color(
-                        (byte)(pixelColor.R * (1f - spotAlphaFraction) + spotColor.R * spotAlphaFraction),
-                        (byte)(pixelColor.G * (1f - spotAlphaFraction) + spotColor.G * spotAlphaFraction),
-                        (byte)(pixelColor.B * (1f - spotAlphaFraction) + spotColor.B * spotAlphaFraction),
-                        pixelColor.A);
+                    pixelColor = BlendRgb(pixelColor, spotColor, spotAlphaFraction);
                 }
 
                 data[index] = pixelColor;
@@ -385,6 +397,19 @@ public static class ProceduralTextures
         texture.SetData(data);
         return texture;
     }
+
+    /// <summary>
+    /// Blends baseColor's RGB toward blendColor's RGB by blendFraction, keeping baseColor's own
+    /// alpha untouched — used wherever a translucent patch (rust spots) is composited CPU-side
+    /// onto an already-opaque fill, where blendColor's own alpha channel is repurposed as the
+    /// blend strength rather than baked into the output pixel's transparency.
+    /// </summary>
+    private static Color BlendRgb(Color baseColor, Color blendColor, float blendFraction) =>
+        new(
+            (byte)(baseColor.R * (1f - blendFraction) + blendColor.R * blendFraction),
+            (byte)(baseColor.G * (1f - blendFraction) + blendColor.G * blendFraction),
+            (byte)(baseColor.B * (1f - blendFraction) + blendColor.B * blendFraction),
+            baseColor.A);
 
     private static bool IsInsidePolygon(Vector2 point, Vector2[] vertices)
     {

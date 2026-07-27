@@ -1,5 +1,8 @@
 using System;
 using System.Numerics;
+using SpaceSurvivalGame.Configuration;
+using SpaceSurvivalGame.Physics;
+using SpaceSurvivalGame.Rendering;
 
 namespace SpaceSurvivalGame.ECS;
 
@@ -73,5 +76,35 @@ public static class ProceduralShapeGenerator
         }
 
         return 0.8f; // shouldn't happen for a valid simple star-shaped polygon; a safe fallback
+    }
+
+    /// <summary>
+    /// A handful of small jagged patches ("rust spots" on iron ore), area-uniformly placed and
+    /// anchored to shapeUnitVertices' ACTUAL (non-circular) local edge distance at each patch's
+    /// own angle (via GetPolygonRadiusAtAngle) so a patch never lands outside the shape it's
+    /// stamped onto. Shared by IronPickupField's own standalone chunks and AsteroidField's
+    /// embedded iron speckles so both read as the same material.
+    /// </summary>
+    public static ProceduralTextures.PolygonSpot[] GenerateJaggedSpots(Random random, Vector2[] shapeUnitVertices, IntRange countRange, FloatRange sizeUnitRange)
+    {
+        var spotCount = random.Next(countRange.Min, countRange.Max + 1);
+        var spots = new ProceduralTextures.PolygonSpot[spotCount];
+        for (var s = 0; s < spotCount; s++)
+        {
+            var spotAngle = (float)(random.NextDouble() * Math.PI * 2);
+            var edgeRadius = GetPolygonRadiusAtAngle(shapeUnitVertices, spotAngle);
+            var placementRadius = edgeRadius * MathF.Sqrt((float)random.NextDouble()) * 0.7f;
+            var spotCenter = new Microsoft.Xna.Framework.Vector2(MathF.Cos(spotAngle), MathF.Sin(spotAngle)) * placementRadius;
+
+            var spotSize = sizeUnitRange.Min + (float)random.NextDouble() * (sizeUnitRange.Max - sizeUnitRange.Min);
+            var spotVertexCount = random.Next(5, 8);
+            var spotUnitVertices = GenerateJitteredPolygon(random, spotVertexCount, 0.5f, 0.4f);
+            var spotXnaVertices = new Microsoft.Xna.Framework.Vector2[spotUnitVertices.Length];
+            for (var p = 0; p < spotXnaVertices.Length; p++) spotXnaVertices[p] = spotUnitVertices[p].ToXna();
+
+            spots[s] = new ProceduralTextures.PolygonSpot(spotCenter, spotXnaVertices, spotSize);
+        }
+
+        return spots;
     }
 }

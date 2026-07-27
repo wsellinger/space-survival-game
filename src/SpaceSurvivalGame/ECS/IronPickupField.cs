@@ -77,24 +77,7 @@ public static class IronPickupField
             // Baked once per shape variant (not per spawned instance) — a fixed, static surface
             // stain rather than something that needs to vary chunk-to-chunk the way position/
             // physics do.
-            var spotCount = random.Next(ironConfig.RustSpotCountRange.Min, ironConfig.RustSpotCountRange.Max + 1);
-            var spots = new ProceduralTextures.PolygonSpot[spotCount];
-            for (var s = 0; s < spotCount; s++)
-            {
-                var spotAngle = (float)(random.NextDouble() * Math.PI * 2);
-                var edgeRadius = ProceduralShapeGenerator.GetPolygonRadiusAtAngle(shapeVariants[v], spotAngle);
-                var placementRadius = edgeRadius * MathF.Sqrt((float)random.NextDouble()) * 0.7f;
-                var spotCenter = new Microsoft.Xna.Framework.Vector2(MathF.Cos(spotAngle), MathF.Sin(spotAngle)) * placementRadius;
-
-                var spotSize = ironConfig.RustSpotSizeUnitRange.Min +
-                    (float)random.NextDouble() * (ironConfig.RustSpotSizeUnitRange.Max - ironConfig.RustSpotSizeUnitRange.Min);
-                var spotVertexCount = random.Next(5, 8);
-                var spotUnitVertices = ProceduralShapeGenerator.GenerateJitteredPolygon(random, spotVertexCount, 0.5f, 0.4f);
-                var spotXnaVertices = new Microsoft.Xna.Framework.Vector2[spotUnitVertices.Length];
-                for (var p = 0; p < spotXnaVertices.Length; p++) spotXnaVertices[p] = spotUnitVertices[p].ToXna();
-
-                spots[s] = new ProceduralTextures.PolygonSpot(spotCenter, spotXnaVertices, spotSize);
-            }
+            var spots = ProceduralShapeGenerator.GenerateJaggedSpots(random, shapeVariants[v], ironConfig.RustSpotCountRange, ironConfig.RustSpotSizeUnitRange);
 
             shapeTextures[v] = ProceduralTextures.CreateSpottedPolygon(graphicsDevice, TextureSize, oreColor, oreXnaVertices, spots, rustSpotColor);
         }

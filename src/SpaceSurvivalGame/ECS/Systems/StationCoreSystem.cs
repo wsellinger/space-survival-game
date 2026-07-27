@@ -145,28 +145,33 @@ public static class StationCoreSystem
     }
 
     /// <summary>
-    /// Gives the now-arrived core a real static Box2D body — a square matching the fully-grown
+    /// Gives the now-arrived core a real dynamic Box2D body — a square matching the fully-grown
     /// circuit-board build effect's own footprint (BuildEffectMaxSizePixels; see
     /// StationCoreBuildEffectRenderSystem), not just the small core dot on top of it, since that
     /// square is what's actually left permanently visible on the ground once construction
     /// finishes — so it solidly blocks the ship/asteroids/pickups from here on instead of just
-    /// being a visual. Static rather than dynamic since a landed station core isn't meant to ever
-    /// move again; no Damaging tag, so CollisionDamageSystem still leaves the ship alone on
-    /// contact, same as bumping an O2/iron pickup.
+    /// being a visual. Dynamic (not static/kinematic) so later collisions can actually knock it
+    /// around like any other body, mass driven by PhysicsMaterialDensity; also adds a Velocity
+    /// component so PhysicsSyncSystem picks it up and keeps its Transform following the body from
+    /// here on, the same way every other physics-driven entity works. No Damaging tag, so
+    /// CollisionDamageSystem still leaves the ship alone on contact, same as bumping an O2/iron
+    /// pickup.
     /// </summary>
     private static void CreatePhysicsBody(World world, PhysicsWorld physicsWorld, Entity coreEntity, Vector2 positionMeters, StationCoreConfig config)
     {
         var bodyDef = B2Api.b2DefaultBodyDef();
-        bodyDef.type = b2BodyType.b2_staticBody;
+        bodyDef.type = b2BodyType.b2_dynamicBody;
         bodyDef.position = positionMeters;
         var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
 
         var shapeDef = B2Api.b2DefaultShapeDef();
+        shapeDef.density = config.PhysicsMaterialDensity;
+        shapeDef.material.restitution = config.PhysicsRestitution;
         var halfWidthMeters = PhysicsWorld.PixelsToMeters(config.BuildEffectMaxSizePixels) / 2f;
         var square = B2Api.b2MakeSquare(halfWidthMeters);
         B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in square);
 
-        world.Add(coreEntity, new PhysicsBody { BodyId = bodyId });
+        world.Add(coreEntity, new PhysicsBody { BodyId = bodyId }, new Velocity());
     }
 
     /// <summary>

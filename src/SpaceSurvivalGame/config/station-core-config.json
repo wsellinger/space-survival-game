@@ -23,5 +23,7 @@
   "ShockwaveRingInnerRadiusFraction": 0.98,
   "ShockwaveImpulseStrength": 1,
   "ShockwaveShipImpulseMultiplier": 0.15,
-  "ShockwavePickupImpulseMultiplier": 0.05
+  "ShockwavePickupImpulseMultiplier": 0.05,
+  "PhysicsMaterialDensity": 1,
+  "PhysicsRestitution": 0.2
 }

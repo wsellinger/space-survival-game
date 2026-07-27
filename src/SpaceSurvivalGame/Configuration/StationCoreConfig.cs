@@ -86,5 +86,13 @@ public class StationCoreConfig
     // from the ship's own multiplier.
     public float ShockwavePickupImpulseMultiplier { get; set; } = 0.25f;
 
+    // Once landed, the core becomes a dynamic Box2D body (see StationCoreSystem.CreatePhysicsBody)
+    // instead of a fixed fixture, so it can actually be knocked around by later collisions rather
+    // than acting as an immovable wall. Density drives its mass (bigger footprint + higher density
+    // = harder to push); restitution is kept low since a heavy built structure should mostly
+    // absorb impacts rather than bounce.
+    public float PhysicsMaterialDensity { get; set; } = 1f;
+    public float PhysicsRestitution { get; set; } = 0.2f;
+
     public static StationCoreConfig Load(string path) => ConfigLoader.Load<StationCoreConfig>(path);
 }

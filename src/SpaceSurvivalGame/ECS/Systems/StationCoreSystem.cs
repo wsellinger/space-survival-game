@@ -20,7 +20,10 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// search never re-evaluated even if asteroids later drift closer. From then on this system
 /// eases the core toward that target over a fixed duration (distance / FlightSpeedMetersPerSecond,
 /// shaped by FlightEaseExponent for a slow start/finish), stopping exactly on arrival and
-/// becoming an independent, stationary object. A one-time shockwave fires once flight progress
+/// becoming an independent, stationary object — at which point it also gains a real static
+/// Box2D body (see CreatePhysicsBody) so it solidly blocks the ship/asteroids/pickups instead of
+/// just sitting there visually; it has no Damaging tag, so bumping it doesn't hurt the ship. A
+/// one-time shockwave fires once flight progress
 /// first reaches ShockwaveTriggerProgress — not necessarily full arrival, so it can go off
 /// slightly before the core actually stops: an outward impulse on every nearby PhysicsBody (see
 /// ApplyShockwave, which also grants the ship a brief Invulnerability window as a failsafe) and a
@@ -33,7 +36,7 @@ public static class StationCoreSystem
     private static readonly QueryDescription AsteroidQuery = new QueryDescription().WithAll<Transform, Asteroid>();
     private static readonly QueryDescription PhysicsBodyQuery = new QueryDescription().WithAll<PhysicsBody, Transform>();
 
-    public static void Run(World world, Camera camera, StationCoreConfig config, float deltaSeconds)
+    public static void Run(World world, Camera camera, PhysicsWorld physicsWorld, StationCoreConfig config, float deltaSeconds)
     {
         var shipEntity = Entity.Null;
         var shipPositionMeters = Vector2.Zero;
@@ -48,7 +51,7 @@ public static class StationCoreSystem
         });
         if (!foundShip) return;
 
-        world.Query(in CoreQuery, (ref Transform coreTransform, ref StationCore core) =>
+        world.Query(in CoreQuery, (Entity coreEntity, ref Transform coreTransform, ref StationCore core) =>
         {
             if (core.Attached)
             {
@@ -64,12 +67,13 @@ public static class StationCoreSystem
                     core.FlightDurationSeconds = flightDistance / MathF.Max(0.0001f, config.FlightSpeedMetersPerSecond);
 
                     // No flight needed (it already detached right at its own target) — the usual
-                    // per-frame trigger check below never runs for this core, so fire it here
-                    // instead of losing the shockwave entirely.
+                    // per-frame trigger check below never runs for this core, so fire the
+                    // shockwave and the arrival physics body here instead of losing them entirely.
                     if (core.FlightDurationSeconds <= 0f)
                     {
                         core.ShockwaveElapsedSeconds = 0f;
                         ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity);
+                        CreatePhysicsBody(world, physicsWorld, coreEntity, coreTransform.PositionMeters, config);
                     }
                 }
                 else
@@ -96,7 +100,11 @@ public static class StationCoreSystem
                     ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity);
                 }
 
-                if (progress >= 1f) core.FlightDurationSeconds = 0f; // marks arrival so this branch is skipped from here on
+                if (progress >= 1f)
+                {
+                    core.FlightDurationSeconds = 0f; // marks arrival so this branch is skipped from here on
+                    CreatePhysicsBody(world, physicsWorld, coreEntity, coreTransform.PositionMeters, config);
+                }
             }
 
             if (core.ShockwaveElapsedSeconds >= 0f && core.ShockwaveElapsedSeconds < config.ShockwaveDurationSeconds)
@@ -134,6 +142,31 @@ public static class StationCoreSystem
         });
 
         world.Get<Invulnerability>(shipEntity).RemainingSeconds = config.ShockwaveDurationSeconds;
+    }
+
+    /// <summary>
+    /// Gives the now-arrived core a real static Box2D body — a square matching the fully-grown
+    /// circuit-board build effect's own footprint (BuildEffectMaxSizePixels; see
+    /// StationCoreBuildEffectRenderSystem), not just the small core dot on top of it, since that
+    /// square is what's actually left permanently visible on the ground once construction
+    /// finishes — so it solidly blocks the ship/asteroids/pickups from here on instead of just
+    /// being a visual. Static rather than dynamic since a landed station core isn't meant to ever
+    /// move again; no Damaging tag, so CollisionDamageSystem still leaves the ship alone on
+    /// contact, same as bumping an O2/iron pickup.
+    /// </summary>
+    private static void CreatePhysicsBody(World world, PhysicsWorld physicsWorld, Entity coreEntity, Vector2 positionMeters, StationCoreConfig config)
+    {
+        var bodyDef = B2Api.b2DefaultBodyDef();
+        bodyDef.type = b2BodyType.b2_staticBody;
+        bodyDef.position = positionMeters;
+        var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
+
+        var shapeDef = B2Api.b2DefaultShapeDef();
+        var halfWidthMeters = PhysicsWorld.PixelsToMeters(config.BuildEffectMaxSizePixels) / 2f;
+        var square = B2Api.b2MakeSquare(halfWidthMeters);
+        B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in square);
+
+        world.Add(coreEntity, new PhysicsBody { BodyId = bodyId });
     }
 
     /// <summary>

@@ -18,15 +18,23 @@ namespace SpaceSurvivalGame.Rendering;
 /// shrinks. Both are drawn around the bar's own center (via origin) so a non-1 scale
 /// grows/shrinks it evenly instead of just toward one corner — used by the O2 bar's
 /// empty-oxygen pulse.
+///
+/// Also draws a plain "IRON: n" text counter at HudConfig.IronCounterPositionX/Y (a raw
+/// screen-space pixel coordinate, hand-placed rather than derived from a corner/margin) — Iron
+/// has no Max (unlike Health/Oxygen), so a fraction-based bar doesn't apply; a counter is the
+/// natural fit for an uncapped resource. Plain white for now — the ore's own configured color was
+/// too hard to read. Must be drawn after StrafeModeIndicatorRenderer (see MainGame.Draw's call
+/// order) so the counter reads on top of that corner's bracket instead of being drawn under it.
 /// </summary>
 public static class HudRenderer
 {
-    private static readonly QueryDescription Query = new QueryDescription().WithAll<Health, Oxygen, HealthBarFeedback, PlayerControlled>();
+    private static readonly QueryDescription Query = new QueryDescription().WithAll<Health, Oxygen, Iron, HealthBarFeedback, PlayerControlled>();
 
     public static void Run(World world, SpriteBatch spriteBatch, int viewportWidth, int viewportHeight, HudConfig config, HudFeedbackConfig feedbackConfig,
-        HealthWarningConfig healthWarningConfig, OxygenWarningConfig oxygenWarningConfig, float totalGameSeconds, Texture2D fillTexture, Texture2D outlineTexture)
+        HealthWarningConfig healthWarningConfig, OxygenWarningConfig oxygenWarningConfig, SpriteFont font,
+        float totalGameSeconds, Texture2D fillTexture, Texture2D outlineTexture)
     {
-        world.Query(in Query, (ref Health health, ref Oxygen oxygen, ref HealthBarFeedback feedback) =>
+        world.Query(in Query, (ref Health health, ref Oxygen oxygen, ref Iron iron, ref HealthBarFeedback feedback) =>
         {
             var basePosition = new Vector2((viewportWidth - config.BarLengthPixels) / 2f, viewportHeight - config.MarginPixels - config.BarThicknessPixels);
             var oxygenPosition = basePosition - new Vector2(0, config.BarThicknessPixels + config.BarSpacingPixels);
@@ -72,6 +80,10 @@ public static class HudRenderer
             }
 
             DrawBar(spriteBatch, config, fillTexture, outlineTexture, oxygenPosition, oxygenFraction, oxygenColor, oxygenOutlineColor, oxygenScale);
+
+            var ironText = $"IRON: {(int)iron.Current}";
+            var ironPosition = new Vector2(config.IronCounterPositionX, config.IronCounterPositionY);
+            spriteBatch.DrawString(font, ironText, ironPosition, Color.White, 0f, Vector2.Zero, config.IronCounterTextScale, SpriteEffects.None, 0f);
         });
     }
 

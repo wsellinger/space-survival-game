@@ -17,5 +17,12 @@ public class HudConfig
     // in sync rather than drifting apart with independently-tuned cadences.
     public float WarningFlashBeatSeconds { get; set; } = 0.15f;
 
+    // Iron has no Max (an uncapped resource, unlike Health/Oxygen), so it's a plain text counter
+    // rather than a bar. Position is the screen-space pixel coordinate of the text's own top-left
+    // corner (raw, not margin-relative) so it can be placed by hand.
+    public float IronCounterPositionX { get; set; } = 16f;
+    public float IronCounterPositionY { get; set; } = 1020f;
+    public float IronCounterTextScale { get; set; } = 1f;
+
     public static HudConfig Load(string path) => ConfigLoader.Load<HudConfig>(path);
 }

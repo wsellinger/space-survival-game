@@ -4,5 +4,8 @@
   "BarOutlineThicknessPixels": 1,
   "MarginPixels": 16,
   "BarSpacingPixels": 6,
-  "WarningFlashBeatSeconds": 0.115
+  "WarningFlashBeatSeconds": 0.115,
+  "IronCounterPositionX": 40,
+  "IronCounterPositionY": 1020,
+  "IronCounterTextScale": 1
 }

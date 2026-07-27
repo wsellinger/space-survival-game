@@ -501,11 +501,13 @@ public class MainGame : Game
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
         _spriteBatch.Begin();
-        HudRenderer.Run(_world, _spriteBatch, WindowWidth, WindowHeight, _hudConfig, _hudFeedbackConfig, _healthWarningConfig, _oxygenWarningConfig,
-            (float)gameTime.TotalGameTime.TotalSeconds, _hudBarFillTexture, _hudBarOutlineTexture);
         ScreenWarningRenderer.Run(_world, _spriteBatch, _screenWarningConfig, _healthWarningConfig, _oxygenWarningConfig, _hudFeedbackConfig,
             (float)gameTime.TotalGameTime.TotalSeconds, _screenWarningOutlineTexture, _screenWarningVignetteTexture);
         StrafeModeIndicatorRenderer.Run(_world, _spriteBatch, _uiFont, _strafeModeIndicatorConfig, _strafeModeIndicatorTexture, (float)gameTime.TotalGameTime.TotalSeconds);
+        // Drawn after StrafeModeIndicatorRenderer so the bottom-left iron counter reads on top of
+        // that corner's bracket instead of being drawn under it.
+        HudRenderer.Run(_world, _spriteBatch, WindowWidth, WindowHeight, _hudConfig, _hudFeedbackConfig, _healthWarningConfig, _oxygenWarningConfig,
+            _uiFont, (float)gameTime.TotalGameTime.TotalSeconds, _hudBarFillTexture, _hudBarOutlineTexture);
 #if DEBUG
         _spriteBatch.DrawString(_uiFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
 #endif

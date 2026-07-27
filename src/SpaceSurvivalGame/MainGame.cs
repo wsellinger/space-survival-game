@@ -57,6 +57,8 @@ public class MainGame : Game
     private OxygenPickupField.PickupAssets _pickupAssets;
     private IronPickupConfig _ironPickupConfig;
     private IronPickupField.PickupAssets _ironAssets;
+    private StationCoreConfig _stationCoreConfig;
+    private Texture2D _stationCoreTexture;
     private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -160,6 +162,11 @@ public class MainGame : Game
         var ironPickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "iron-pickup-config.json");
         _ironPickupConfig = IronPickupConfig.Load(ironPickupConfigPath);
 
+        var stationCoreConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "station-core-config.json");
+        _stationCoreConfig = StationCoreConfig.Load(stationCoreConfigPath);
+        _stationCoreTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, _stationCoreConfig.SpriteSizePixels,
+            ColorHex.Parse(_stationCoreConfig.CoreColorHex), ColorHex.Parse(_stationCoreConfig.RingColorHex), _stationCoreConfig.InnerRadiusFraction);
+
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
         _screenWarningOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, WindowWidth, WindowHeight, 0f, _screenWarningConfig.OutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
@@ -189,6 +196,7 @@ public class MainGame : Game
         _camera.PositionMeters = _shipSpawnPositionMeters;
         _camera.TargetPositionMeters = _shipSpawnPositionMeters;
         ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _shipConfig, _playerConfig);
+        StationCoreEntity.Create(_world, _shipSpawnPositionMeters, _stationCoreTexture, _stationCoreConfig.SpriteSizePixels);
 
         foreach (var layer in starfieldConfig.Layers)
         {
@@ -413,6 +421,10 @@ public class MainGame : Game
         HudFeedbackSystem.Run(_world, deltaSeconds, _hudFeedbackConfig, _random);
         SpeedCapSystem.Run(_world, deltaSeconds, _shipConfig.SpeedCapEaseSpeed);
         PhysicsSyncSystem.Run(_world);
+        // Must run after PhysicsSyncSystem so it copies the ship's just-synced position for
+        // this frame, not last frame's stale value (a one-frame lag reads as constant drift
+        // while riding along).
+        StationCoreSystem.Run(_world, _stationCoreConfig);
 
         // Camera casts out toward wherever the aim input points, not the ship's facing
         // (which lags behind at a capped turn rate): the right stick's own direction in

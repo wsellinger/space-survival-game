@@ -50,7 +50,11 @@ public static class ShipEntity
             new PhysicsBody { BodyId = bodyId },
             new Transform { PositionMeters = startPositionMeters, RotationRadians = 0f },
             new Velocity(),
-            new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = config.SpriteSize, Scale = 1f, Parallax = 1f },
+            // Nudged slightly behind the documented frontmost value (0) so the station core —
+            // which rides at the ship's own center at the default 0 while still Attached (see
+            // StationCoreSystem) — reliably draws on top of the ship instead of an undefined
+            // same-depth tie under SpriteSortMode.BackToFront.
+            new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = config.SpriteSize, Scale = 1f, LayerDepth = 0.01f, Parallax = 1f },
             new ShipMovement
             {
                 ThrustAcceleration = config.Thrust.Acceleration,

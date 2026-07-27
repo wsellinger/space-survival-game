@@ -1,0 +1,7 @@
+{
+  "IronAmountRequired": 10,
+  "SpriteSizePixels": 8,
+  "CoreColorHex": "#FF1A1A",
+  "RingColorHex": "#999999",
+  "InnerRadiusFraction": 0.65
+}

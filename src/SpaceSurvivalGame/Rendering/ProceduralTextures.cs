@@ -141,6 +141,39 @@ public static class ProceduralTextures
     }
 
     /// <summary>
+    /// A solid filled circle inscribed in a size x size square (like CreateCircle), but with a
+    /// ring band of ringColor from innerRadiusFraction out to the full radius — e.g. the station
+    /// core's shiny-red-center/grey-ring look. Hard edge between the two colors (no feathering),
+    /// transparent outside the full circle.
+    /// </summary>
+    public static Texture2D CreateRingedCircle(GraphicsDevice graphicsDevice, int size, Color innerColor, Color ringColor, float innerRadiusFraction)
+    {
+        var data = new Color[size * size];
+        var center = new Vector2(size / 2f, size / 2f);
+        var radius = size / 2f;
+        var innerRadius = radius * innerRadiusFraction;
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                var distance = Vector2.Distance(point, center);
+                Color pixelColor;
+                if (distance <= innerRadius) pixelColor = innerColor;
+                else if (distance <= radius) pixelColor = ringColor;
+                else pixelColor = Color.Transparent;
+
+                data[y * size + x] = pixelColor;
+            }
+        }
+
+        var texture = new Texture2D(graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
+    /// <summary>
     /// Fills a size x size square with the polygon described by unitVertices — points
     /// given in a -1..1 local space around the texture's center, e.g. for an irregular
     /// rock shape. Vertices must be in angular order around the center (a "star-shaped"

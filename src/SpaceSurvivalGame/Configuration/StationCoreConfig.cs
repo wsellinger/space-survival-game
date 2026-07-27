@@ -56,5 +56,25 @@ public class StationCoreConfig
     public string CircuitLineColorHex { get; set; } = "#222222";
     public float CircuitLineThicknessFraction { get; set; } = 0.08f; // fraction of the square's own half-size
 
+    // Fires once, when the flight's own (un-eased) progress first reaches this fraction —
+    // 1 = only once fully arrived, lower = fires a bit before the core actually stops (from
+    // wherever it happens to be at that instant, not the final target). An outward Box2D impulse
+    // on every nearby PhysicsBody (ship, asteroids, pickups alike), falling off linearly to 0 at
+    // ShockwaveRadiusMeters, paired with a matching barely-visible expanding ring
+    // (StationCoreShockwaveRenderSystem) that fades out over ShockwaveDurationSeconds — the same
+    // radius drives both the physics push and how far the visual ring grows, so what you see
+    // lines up with what's actually affected.
+    public float ShockwaveTriggerProgress { get; set; } = 0.9f;
+    public string ShockwaveColorHex { get; set; } = "#FFFFFF";
+    public float ShockwaveMaxAlpha { get; set; } = 0.2f; // barely visible, per spec
+    public float ShockwaveDurationSeconds { get; set; } = 0.5f;
+    public float ShockwaveRadiusMeters { get; set; } = 8f;
+    public float ShockwaveRingInnerRadiusFraction { get; set; } = 0.85f; // how thin the ring band is — closer to 1 = thinner
+    public float ShockwaveImpulseStrength { get; set; } = 5f; // impulse (Ns) at zero distance from the core, fading to 0 at ShockwaveRadiusMeters
+
+    // Multiplies the impulse specifically for the player's own ship — 1 = same as everything
+    // else, lower = the ship barely feels it while asteroids/pickups still get the full push.
+    public float ShockwaveShipImpulseMultiplier { get; set; } = 0.15f;
+
     public static StationCoreConfig Load(string path) => ConfigLoader.Load<StationCoreConfig>(path);
 }

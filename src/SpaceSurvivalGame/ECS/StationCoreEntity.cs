@@ -18,6 +18,6 @@ public static class StationCoreEntity
         world.Create(
             new Transform { PositionMeters = positionMeters, RotationRadians = 0f },
             new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = spriteSizePixels, Scale = 1f, Parallax = 1f },
-            new StationCore { Attached = true });
+            new StationCore { Attached = true, ShockwaveElapsedSeconds = -1f });
     }
 }

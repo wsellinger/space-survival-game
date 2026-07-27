@@ -13,5 +13,13 @@
   "BuildEffectMaxSizePixels": 38,
   "BuildEffectSpinRevolutions": 2,
   "CircuitLineColorHex": "#222222",
-  "CircuitLineThicknessFraction": 0.08
+  "CircuitLineThicknessFraction": 0.08,
+  "ShockwaveTriggerProgress": 0.8,
+  "ShockwaveColorHex": "#FFFFFF",
+  "ShockwaveMaxAlpha": 0.2,
+  "ShockwaveDurationSeconds": 0.5,
+  "ShockwaveRadiusMeters": 8,
+  "ShockwaveRingInnerRadiusFraction": 0.98,
+  "ShockwaveImpulseStrength": 1,
+  "ShockwaveShipImpulseMultiplier": 0.15
 }

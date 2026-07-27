@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Box2dNet.Interop;
 using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.Physics;
 using SpaceSurvivalGame.Rendering;
@@ -19,13 +20,17 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// search never re-evaluated even if asteroids later drift closer. From then on this system
 /// eases the core toward that target over a fixed duration (distance / FlightSpeedMetersPerSecond,
 /// shaped by FlightEaseExponent for a slow start/finish), stopping exactly on arrival and
-/// becoming an independent, stationary object.
+/// becoming an independent, stationary object. A one-time shockwave fires once flight progress
+/// first reaches ShockwaveTriggerProgress — not necessarily full arrival, so it can go off
+/// slightly before the core actually stops: an outward impulse on every nearby PhysicsBody and a
+/// starting timer for the matching expanding-ring visual (see StationCoreShockwaveRenderSystem).
 /// </summary>
 public static class StationCoreSystem
 {
     private static readonly QueryDescription ShipQuery = new QueryDescription().WithAll<Transform, Iron, PlayerControlled>();
     private static readonly QueryDescription CoreQuery = new QueryDescription().WithAll<Transform, StationCore>();
     private static readonly QueryDescription AsteroidQuery = new QueryDescription().WithAll<Transform, Asteroid>();
+    private static readonly QueryDescription PhysicsBodyQuery = new QueryDescription().WithAll<PhysicsBody, Transform>();
 
     public static void Run(World world, Camera camera, StationCoreConfig config, float deltaSeconds)
     {
@@ -56,6 +61,15 @@ public static class StationCoreSystem
                     core.FlightElapsedSeconds = 0f;
                     var flightDistance = Vector2.Distance(core.FlightStartPositionMeters, core.TargetPositionMeters);
                     core.FlightDurationSeconds = flightDistance / MathF.Max(0.0001f, config.FlightSpeedMetersPerSecond);
+
+                    // No flight needed (it already detached right at its own target) — the usual
+                    // per-frame trigger check below never runs for this core, so fire it here
+                    // instead of losing the shockwave entirely.
+                    if (core.FlightDurationSeconds <= 0f)
+                    {
+                        core.ShockwaveElapsedSeconds = 0f;
+                        ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity);
+                    }
                 }
                 else
                 {
@@ -65,14 +79,53 @@ public static class StationCoreSystem
                 return;
             }
 
-            if (core.FlightDurationSeconds <= 0f) return; // already arrived (or detached right at its target) — done for good
+            if (core.FlightDurationSeconds > 0f)
+            {
+                core.FlightElapsedSeconds += deltaSeconds;
+                var progress = MathF.Min(1f, core.FlightElapsedSeconds / core.FlightDurationSeconds);
+                var easedProgress = EaseInOut(progress, config.FlightEaseInExponent, config.FlightEaseOutExponent);
+                coreTransform.PositionMeters = Vector2.Lerp(core.FlightStartPositionMeters, core.TargetPositionMeters, easedProgress);
 
-            core.FlightElapsedSeconds += deltaSeconds;
-            var progress = MathF.Min(1f, core.FlightElapsedSeconds / core.FlightDurationSeconds);
-            var easedProgress = EaseInOut(progress, config.FlightEaseInExponent, config.FlightEaseOutExponent);
-            coreTransform.PositionMeters = Vector2.Lerp(core.FlightStartPositionMeters, core.TargetPositionMeters, easedProgress);
+                // Fires once, as soon as progress first crosses ShockwaveTriggerProgress — not
+                // necessarily full arrival (progress >= 1) — from wherever the core currently is,
+                // guarded by ShockwaveElapsedSeconds still being -1 so it can't refire next frame.
+                if (core.ShockwaveElapsedSeconds < 0f && progress >= config.ShockwaveTriggerProgress)
+                {
+                    core.ShockwaveElapsedSeconds = 0f;
+                    ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity);
+                }
 
-            if (progress >= 1f) core.FlightDurationSeconds = 0f; // marks arrival so the guard above short-circuits from here on
+                if (progress >= 1f) core.FlightDurationSeconds = 0f; // marks arrival so this branch is skipped from here on
+            }
+
+            if (core.ShockwaveElapsedSeconds >= 0f && core.ShockwaveElapsedSeconds < config.ShockwaveDurationSeconds)
+                core.ShockwaveElapsedSeconds += deltaSeconds; // stops advancing once past the duration — GetFlightProgress-style done flag, not an unbounded timer
+        });
+    }
+
+    /// <summary>
+    /// A one-time outward push on every nearby PhysicsBody, scaling from ShockwaveImpulseStrength
+    /// at zero distance down to 0 at ShockwaveRadiusMeters. Applying the same base impulse
+    /// regardless of an entity's own mass is deliberate — Box2D's own impulse/mass=deltaV means
+    /// heavier bodies (a big asteroid) still end up pushed less far than light ones (a pickup) for
+    /// the same blast, matching what a real shockwave would do. The player's own ship is a
+    /// deliberate exception on top of that: ShockwaveShipImpulseMultiplier scales its impulse down
+    /// separately so the player barely feels it while everything else nearby gets the full push.
+    /// </summary>
+    private static void ApplyShockwave(World world, Vector2 originMeters, StationCoreConfig config, Entity shipEntity)
+    {
+        world.Query(in PhysicsBodyQuery, (Entity entity, ref PhysicsBody physicsBody, ref Transform transform) =>
+        {
+            var offset = transform.PositionMeters - originMeters;
+            var distance = offset.Length();
+            if (distance < 0.0001f || distance > config.ShockwaveRadiusMeters) return;
+
+            var falloff = 1f - distance / config.ShockwaveRadiusMeters;
+            var strength = config.ShockwaveImpulseStrength * falloff;
+            if (entity == shipEntity) strength *= config.ShockwaveShipImpulseMultiplier;
+
+            var impulse = offset / distance * strength;
+            B2Api.b2Body_ApplyLinearImpulseToCenter(physicsBody.BodyId, impulse, wake: true);
         });
     }
 

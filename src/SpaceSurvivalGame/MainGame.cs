@@ -60,6 +60,7 @@ public class MainGame : Game
     private StationCoreConfig _stationCoreConfig;
     private Texture2D _stationCoreTexture;
     private Texture2D _stationCoreBuildEffectTexture;
+    private Texture2D _stationCoreShockwaveTexture;
     private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -169,6 +170,13 @@ public class MainGame : Game
             ColorHex.Parse(_stationCoreConfig.CoreColorHex), ColorHex.Parse(_stationCoreConfig.RingColorHex), _stationCoreConfig.InnerRadiusFraction);
         _stationCoreBuildEffectTexture = ProceduralTextures.CreateCircuitSquare(GraphicsDevice, _stationCoreConfig.BuildEffectMaxSizePixels,
             ColorHex.Parse(_stationCoreConfig.BuildEffectColorHex), ColorHex.Parse(_stationCoreConfig.CircuitLineColorHex), _stationCoreConfig.CircuitLineThicknessFraction);
+        // Baked at exactly its own final size (see StationCoreShockwaveRenderSystem) so it only
+        // ever shrinks, never upscales, staying crisp out to full size. Transparent center, tinted
+        // white ring — actual color/alpha applied at draw time so ShockwaveColorHex/MaxAlpha can
+        // be re-tuned without re-baking.
+        var shockwaveDiameterPixels = (int)PhysicsWorld.MetersToPixels(_stationCoreConfig.ShockwaveRadiusMeters * 2f);
+        _stationCoreShockwaveTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, shockwaveDiameterPixels,
+            Microsoft.Xna.Framework.Color.Transparent, Microsoft.Xna.Framework.Color.White, _stationCoreConfig.ShockwaveRingInnerRadiusFraction);
 
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
@@ -513,6 +521,7 @@ public class MainGame : Game
         StationCoreBuildEffectRenderSystem.Run(_world, _spriteBatch, _camera, _stationCoreConfig, _stationCoreBuildEffectTexture);
         EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _shipConfig.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds);
         MetallicSparkleRenderSystem.Run(_world, _spriteBatch, _camera, _ironPickupConfig, (float)gameTime.TotalGameTime.TotalSeconds);
+        StationCoreShockwaveRenderSystem.Run(_world, _spriteBatch, _camera, _stationCoreConfig, _stationCoreShockwaveTexture);
         _spriteBatch.End();
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
@@ -612,6 +621,7 @@ public class MainGame : Game
         _strafeModeIndicatorTexture.Dispose();
         _sparkTexture.Dispose();
         _stationCoreBuildEffectTexture.Dispose();
+        _stationCoreShockwaveTexture.Dispose();
         _buttonFillTexture.Dispose();
         _buttonOutlineTexture.Dispose();
         _solidPixelTexture.Dispose();

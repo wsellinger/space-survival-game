@@ -1,0 +1,6 @@
+{
+  "DurationSeconds": 1.0,
+  "RiseSpeedPixelsPerSecond": 50,
+  "SpawnHeightAbovePixels": 40,
+  "TextScale": 1
+}

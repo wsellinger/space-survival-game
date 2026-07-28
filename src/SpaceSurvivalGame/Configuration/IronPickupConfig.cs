@@ -14,6 +14,11 @@ public class IronPickupConfig
     // Parsed via SpaceSurvivalGame.Rendering.ColorHex — "#RRGGBB" or "#RRGGBBAA".
     public string ColorHex { get; set; } = "#69768A";
 
+    // Color of the "+N Iron" popup (see ParticleEffects.SpawnFloatingText/IronPickupSystem) —
+    // independent of ColorHex above, since the ore's own sprite color can be too dark/subtle to
+    // read well as legible on-screen text.
+    public string FloatingTextColorHex { get; set; } = "#69768A";
+
     public IronSparkleConfig Sparkle { get; set; } = new();
     public IronRustSpotConfig RustSpots { get; set; } = new();
     public PickupMotionConfig Motion { get; set; } = new();

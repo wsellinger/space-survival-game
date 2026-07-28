@@ -8,7 +8,7 @@ using SpaceSurvivalGame.Configuration;
 
 namespace SpaceSurvivalGame.ECS;
 
-/// <summary>Spawns short-lived, physics-free spark particles at a world position, e.g. for collision impact, pickup-collection, or death-explosion feedback.</summary>
+/// <summary>Spawns short-lived, physics-free spark particles and text popups at a world position, e.g. for collision impact, pickup-collection, or death-explosion feedback.</summary>
 public static class ParticleEffects
 {
     public static void SpawnSparkBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, SparkConfig config) =>
@@ -57,6 +57,25 @@ public static class ParticleEffects
                 new Particle { RemainingSeconds = lifetime, TotalSeconds = lifetime, BaseColor = color });
         }
     }
+
+    /// <summary>
+    /// A "+N Resource" text popup (see FloatingText/FloatingTextSystem/FloatingTextRenderSystem)
+    /// that rises straight up in screen space from screenPositionPixels and fades out over
+    /// config.DurationSeconds — used by OxygenPickupSystem/IronPickupSystem to confirm how much
+    /// of what was just collected, in that resource's own configured color. Deliberately
+    /// screen-space (not world-space) so the rise stays a constant, camera-independent pixel
+    /// rate — see the FloatingText component's own doc comment.
+    /// </summary>
+    public static void SpawnFloatingText(World world, Microsoft.Xna.Framework.Vector2 screenPositionPixels, string text, Microsoft.Xna.Framework.Color color, FloatingTextConfig config) =>
+        world.Create(new FloatingText
+        {
+            Text = text,
+            Color = color,
+            ScreenPositionPixels = screenPositionPixels,
+            RiseSpeedPixelsPerSecond = config.RiseSpeedPixelsPerSecond,
+            RemainingSeconds = config.DurationSeconds,
+            TotalSeconds = config.DurationSeconds
+        });
 
     /// <summary>
     /// A small handful of short-lived particles puffing outward from a mount point, spread

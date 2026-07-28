@@ -3,6 +3,7 @@
   "OxygenAmount": 20,
   "SpriteSizePixels": 16,
   "ColorHex": "#7398f5",
+  "FloatingTextColorHex": "#7398f5",
   "GlowRadius": 2.5,
   "Motion": {
     "MaterialDensity": 0.3,

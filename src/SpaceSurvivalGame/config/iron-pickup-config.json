@@ -3,6 +3,7 @@
   "IronAmount": 5,
   "SpriteSizePixels": 18,
   "ColorHex": "#444d72",
+  "FloatingTextColorHex": "#b5bad3",
   "Sparkle": {
     "ColorHex": "#bac1ec",
     "Count": 12,
@@ -13,13 +14,13 @@
   },
   "RustSpots": {
     "ColorHex": "#8B451399",
-    "CountRange": [3, 6],
-    "SizeUnitRange": [0.25, 0.65]
+    "CountRange": [ 3, 6 ],
+    "SizeUnitRange": [ 0.25, 0.65 ]
   },
   "Motion": {
     "MaterialDensity": 0.3,
     "Restitution": 0.6,
-    "SpeedMetersPerSecondRange": [0.1, 0.5],
-    "AngularVelocityRadiansPerSecondRange": [0.1, 1]
+    "SpeedMetersPerSecondRange": [ 0.1, 0.5 ],
+    "AngularVelocityRadiansPerSecondRange": [ 0.1, 1 ]
   }
 }

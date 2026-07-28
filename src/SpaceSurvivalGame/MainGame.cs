@@ -57,6 +57,7 @@ public class MainGame : Game
     private OxygenPickupField.PickupAssets _pickupAssets;
     private IronPickupConfig _ironPickupConfig;
     private IronPickupField.PickupAssets _ironAssets;
+    private FloatingTextConfig _floatingTextConfig;
     private StationCoreConfig _stationCoreConfig;
     private Texture2D _stationCoreTexture;
     private Texture2D _stationCoreBuildEffectTexture;
@@ -165,6 +166,9 @@ public class MainGame : Game
 
         var ironPickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "iron-pickup-config.json");
         _ironPickupConfig = IronPickupConfig.Load(ironPickupConfigPath);
+
+        var floatingTextConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "floating-text-config.json");
+        _floatingTextConfig = FloatingTextConfig.Load(floatingTextConfigPath);
 
         var stationCoreConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "station-core-config.json");
         _stationCoreConfig = StationCoreConfig.Load(stationCoreConfigPath);
@@ -414,8 +418,8 @@ public class MainGame : Game
         }
 
         VitalsSystem.Run(_world, deltaSeconds, _playerConfig, _suffocationConfig);
-        OxygenPickupSystem.Run(_world, _shipConfig, _oxygenPickupConfig, _sparkConfig, _sparkTexture, _random);
-        IronPickupSystem.Run(_world, _shipConfig, _ironPickupConfig, _sparkConfig, _sparkTexture, _random);
+        OxygenPickupSystem.Run(_world, _shipConfig, _oxygenPickupConfig, _sparkConfig, _sparkTexture, _floatingTextConfig, _camera, _random);
+        IronPickupSystem.Run(_world, _shipConfig, _ironPickupConfig, _sparkConfig, _sparkTexture, _floatingTextConfig, _camera, _random);
 
         // Suffocation kills once its post-process effect has fully played out. No explosion
         // and no extra fade here — the screen's already fully black from the vignette by
@@ -432,6 +436,7 @@ public class MainGame : Game
         }
 
         ParticleSystem.Run(_world, deltaSeconds);
+        FloatingTextSystem.Run(_world, deltaSeconds);
         HitFlashSystem.Run(_world, deltaSeconds, _hitFlashConfig);
         InvulnerabilitySystem.Run(_world, deltaSeconds);
         HudFeedbackSystem.Run(_world, deltaSeconds, _hudFeedbackConfig, _random);
@@ -531,6 +536,7 @@ public class MainGame : Game
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
         _spriteBatch.Begin();
+        FloatingTextRenderSystem.Run(_world, _spriteBatch, _uiFont, _floatingTextConfig.TextScale);
         ScreenWarningRenderer.Run(_world, _spriteBatch, _screenWarningConfig, _healthWarningConfig, _oxygenWarningConfig, _hudFeedbackConfig,
             (float)gameTime.TotalGameTime.TotalSeconds, _screenWarningOutlineTexture, _screenWarningVignetteTexture);
         StrafeModeIndicatorRenderer.Run(_world, _spriteBatch, _uiFont, _strafeModeIndicatorConfig, _strafeModeIndicatorTexture, (float)gameTime.TotalGameTime.TotalSeconds);

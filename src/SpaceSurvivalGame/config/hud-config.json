@@ -8,8 +8,8 @@
     "WarningFlashBeatSeconds": 0.115
   },
   "IronCounter": {
-    "PositionX": 40,
-    "PositionY": 1020,
+    "PositionX": 1130,
+    "PositionY": 1043,
     "TextScale": 1
   }
 }

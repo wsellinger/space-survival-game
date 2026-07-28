@@ -17,8 +17,9 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// Transform each frame (pickups don't opt into Box2D hit events, so CollisionDamageSystem
 /// never sees them — this is the only place that detects contact with one). On collection,
 /// the pickup's body and entity are destroyed, a small particle burst plays at its position (in
-/// the ore's own color rather than the O2 pickups' blue), and Iron.Current gains
-/// IronPickupConfig.IronAmount — no cap, nothing consumes it yet.
+/// the ore's own color rather than the O2 pickups' blue), Iron.Current gains
+/// IronPickupConfig.IronAmount — no cap, nothing consumes it yet — and a "+N Iron" popup (see
+/// ParticleEffects.SpawnFloatingText) appears above the ship per pickup collected.
 /// </summary>
 public static class IronPickupSystem
 {
@@ -28,7 +29,8 @@ public static class IronPickupSystem
 
     private static readonly Microsoft.Xna.Framework.Color BurstAccentColor = new(230, 232, 235); // pale metallic glint, paired with the ore's own configured color
 
-    public static void Run(World world, ShipConfig shipConfig, IronPickupConfig ironConfig, SparkConfig sparkConfig, Texture2D sparkTexture, Random random)
+    public static void Run(World world, ShipConfig shipConfig, IronPickupConfig ironConfig, SparkConfig sparkConfig, Texture2D sparkTexture,
+        FloatingTextConfig floatingTextConfig, Camera camera, Random random)
     {
         var shipPositionMeters = Vector2.Zero;
         var foundShip = false;
@@ -60,6 +62,11 @@ public static class IronPickupSystem
         var oreColor = ColorHex.Parse(ironConfig.ColorHex);
         foreach (var position in collectedPositions)
             ParticleEffects.SpawnPickupBurst(world, sparkTexture, position, random, sparkConfig, oreColor, BurstAccentColor);
+
+        var popupPositionPixels = camera.WorldToScreen(shipPositionMeters) + new Microsoft.Xna.Framework.Vector2(0f, -floatingTextConfig.SpawnHeightAbovePixels);
+        var floatingTextColor = ColorHex.Parse(ironConfig.FloatingTextColorHex);
+        for (var i = 0; i < collectedEntities.Count; i++)
+            ParticleEffects.SpawnFloatingText(world, popupPositionPixels, $"+{(int)ironConfig.IronAmount} Iron", floatingTextColor, floatingTextConfig);
 
         var totalIronGained = ironConfig.IronAmount * collectedEntities.Count;
         world.Query(in ShipIronQuery, (ref Iron iron) => iron.Current += totalIronGained);

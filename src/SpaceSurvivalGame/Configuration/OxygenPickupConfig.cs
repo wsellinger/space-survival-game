@@ -14,6 +14,11 @@ public class OxygenPickupConfig
     // Parsed via SpaceSurvivalGame.Rendering.ColorHex — "#RRGGBB" or "#RRGGBBAA".
     public string ColorHex { get; set; } = "#6495ED"; // CornflowerBlue's own hex value
 
+    // Color of the "+N Oxygen" popup (see ParticleEffects.SpawnFloatingText/OxygenPickupSystem) —
+    // independent of ColorHex above, since the crystal's own sprite color can be too dark/subtle
+    // to read well as legible on-screen text.
+    public string FloatingTextColorHex { get; set; } = "#6495ED";
+
     // How far the glow halo extends beyond the crystal's own edge, as a multiple of the
     // crystal's size — 1 = no glow, 1.5 = reaches half again as far out. Purely cosmetic:
     // never affects the crystal's actual on-screen size or its physics/collision shape.

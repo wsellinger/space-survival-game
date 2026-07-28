@@ -273,6 +273,7 @@ public class MainGame : Game
                 if (_gameState == GameState.GameOver)
                 {
                     ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
+                    StationCoreEntity.Show(_world); // undoes the Hide from death, if it was still Attached
                     ParticleSystem.Clear(_world); // no leftover explosion sparks/ship fragments carrying over from the previous life
                     _camera.PositionMeters = _shipSpawnPositionMeters;
                     _camera.TargetPositionMeters = _shipSpawnPositionMeters;
@@ -315,6 +316,7 @@ public class MainGame : Game
         if (keyboard.IsKeyDown(Keys.R) && !_previousKeyboardState.IsKeyDown(Keys.R))
         {
             ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
+            StationCoreEntity.Show(_world);
             ParticleSystem.Clear(_world);
         }
 
@@ -412,6 +414,7 @@ public class MainGame : Game
             _world.Query(in PlayerPhysicsBodyQuery, (ref PhysicsBody physicsBody) => shipVelocity = B2Api.b2Body_GetLinearVelocity(physicsBody.BodyId));
             ShipFragments.SpawnDebris(_world, _shipFragmentTextures, deathPositionMeters, shipVelocity, _random, _deathSequenceConfig);
             ShipEntity.Hide(_world);
+            StationCoreEntity.Hide(_world); // no-op if it already detached and became its own object
 
             _gameState = GameState.Dying;
             _deathElapsedSeconds = 0f;

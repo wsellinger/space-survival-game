@@ -20,4 +20,24 @@ public static class StationCoreEntity
             new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = spriteSizePixels, Scale = 1f, Parallax = 1f },
             new StationCore { Attached = true, ShockwaveElapsedSeconds = -1f });
     }
+
+    private static readonly QueryDescription HideQuery = new QueryDescription().WithAll<StationCore, Sprite>();
+
+    /// <summary>Hides the core's own dot sprite for the ship's collision death sequence, but only while it's still Attached — once detached it's already its own independently built object, so the ship dying shouldn't make it vanish too.</summary>
+    public static void Hide(World world)
+    {
+        world.Query(in HideQuery, (ref StationCore core, ref Sprite sprite) =>
+        {
+            if (core.Attached) sprite.Color = Microsoft.Xna.Framework.Color.Transparent;
+        });
+    }
+
+    /// <summary>Undoes Hide on respawn — same Attached guard, so an already-detached core (never hidden in the first place) is left untouched.</summary>
+    public static void Show(World world)
+    {
+        world.Query(in HideQuery, (ref StationCore core, ref Sprite sprite) =>
+        {
+            if (core.Attached) sprite.Color = Microsoft.Xna.Framework.Color.White;
+        });
+    }
 }

@@ -21,9 +21,13 @@ namespace SpaceSurvivalGame.ECS.Components;
 /// DriftImpulseIntervalSecondsRange after each one fires) StationCoreSystem gives it a small
 /// random linear + angular impulse nudged to pull it back toward HomePositionMeters/
 /// HomeRotationRadians — the exact spot/orientation it landed at — so it wanders in place rather
-/// than drifting off or spinning up over time. Each impulse also starts a brief gas-puff visual
-/// (StationCoreSystem.SpawnDriftPuffs) tracked by PuffElapsedSeconds/PuffPushDirection/
-/// PuffAngularSign, same -1-means-inactive convention as ShockwaveElapsedSeconds.
+/// than drifting off or spinning up over time. Each impulse also kicks off a staggered gas-puff
+/// sequence (StationCoreSystem.SpawnSequencedDriftPuff) — the linear puff (slot 0) and the two
+/// angular corner puffs (slots 1/2) each START DriftPuffs.StaggerSeconds apart (PuffNextIndex/
+/// PuffNextStartSeconds), and once started each slot keeps re-emitting on its own for
+/// DriftPuffs.DurationSeconds (Puff0ElapsedSeconds/Puff1ElapsedSeconds/Puff2ElapsedSeconds, -1 =
+/// not yet started/already finished) so each individual puff still looks like a proper little
+/// burst rather than a single-frame pop.
 /// </summary>
 public struct StationCore
 {
@@ -36,7 +40,11 @@ public struct StationCore
     public Vector2 HomePositionMeters; // where it landed — every drift impulse is nudged back toward this
     public float HomeRotationRadians; // the rotation it landed at — every drift angular impulse is nudged back toward this
     public float DriftTimerSeconds; // counts down to the next drift impulse; re-rolled from DriftImpulseIntervalSecondsRange after each one fires
-    public Vector2 PuffPushDirection; // direction of the most recent drift impulse's linear component (Vector2.Zero = none) — angles the puff burst
-    public float PuffAngularSign; // sign of the most recent drift impulse's angular component (0 = none) — angles the corner puff pair
-    public float PuffElapsedSeconds; // -1 = no active puff burst; counts up from 0 for DriftPuffs.DurationSeconds once one starts
+    public Vector2 PuffPushDirection; // direction of the most recent drift impulse's linear component (Vector2.Zero = none) — angles puff slot 0
+    public float PuffAngularSign; // sign of the most recent drift impulse's angular component (0 = none) — angles puff slots 1/2
+    public int PuffNextIndex; // 0..3 — which puff slot starts next; 3 = all three have already started
+    public float PuffNextStartSeconds; // counts down to starting PuffNextIndex; re-rolled from DriftPuffs.StaggerSeconds each time
+    public float Puff0ElapsedSeconds; // -1 = puff slot 0 (linear) not yet started/already finished; 0+ while it's actively re-emitting, up to DriftPuffs.DurationSeconds
+    public float Puff1ElapsedSeconds; // same, for puff slot 1 (corner A, angular)
+    public float Puff2ElapsedSeconds; // same, for puff slot 2 (corner B, angular)
 }

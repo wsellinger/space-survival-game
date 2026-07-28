@@ -128,14 +128,39 @@ public static class StationCoreSystem
                     core.DriftTimerSeconds = NextInRange(random, config.DriftImpulseIntervalSecondsRange);
                 }
 
-                // Sustains the gas-puff visual for DriftPuffs.DurationSeconds after each drift
-                // impulse (started by ApplyDriftImpulse above) instead of a single instant burst.
-                if (core.PuffElapsedSeconds >= 0f && core.PuffElapsedSeconds < config.DriftPuffs.DurationSeconds)
+                // Starts the next puff slot in the staggered sequence kicked off by
+                // ApplyDriftImpulse above (see SpawnSequencedDriftPuff) — one starts every
+                // DriftPuffs.StaggerSeconds instead of all three at once.
+                if (core.PuffNextIndex < PuffSequenceCount)
+                {
+                    core.PuffNextStartSeconds -= deltaSeconds;
+                    if (core.PuffNextStartSeconds <= 0f)
+                    {
+                        SetPuffSlotElapsed(ref core, core.PuffNextIndex, 0f);
+                        core.PuffNextIndex++;
+                        core.PuffNextStartSeconds = config.DriftPuffs.StaggerSeconds;
+                    }
+                }
+
+                // Sustains each already-started puff slot's own emission for
+                // DriftPuffs.DurationSeconds, independent of the other slots' own timers — so an
+                // individual puff still looks like a proper little burst rather than a
+                // single-frame pop, regardless of how far apart the three slots started.
+                if (GetPuffSlotElapsed(in core, 0) >= 0f || GetPuffSlotElapsed(in core, 1) >= 0f || GetPuffSlotElapsed(in core, 2) >= 0f)
                 {
                     var bodyId = world.Get<PhysicsBody>(coreEntity).BodyId;
-                    SpawnDriftPuffs(world, driftPuffTexture, driftPuffColor, config, random,
-                        B2Api.b2Body_GetPosition(bodyId), B2Api.b2Body_GetRotation(bodyId).GetAngle(), core.PuffPushDirection, core.PuffAngularSign);
-                    core.PuffElapsedSeconds += deltaSeconds;
+                    var positionMeters = B2Api.b2Body_GetPosition(bodyId);
+                    var rotationRadians = B2Api.b2Body_GetRotation(bodyId).GetAngle();
+
+                    for (var puffIndex = 0; puffIndex < PuffSequenceCount; puffIndex++)
+                    {
+                        var elapsedSeconds = GetPuffSlotElapsed(in core, puffIndex);
+                        if (elapsedSeconds < 0f || elapsedSeconds >= config.DriftPuffs.DurationSeconds) continue;
+
+                        SpawnSequencedDriftPuff(world, driftPuffTexture, driftPuffColor, config, random,
+                            positionMeters, rotationRadians, core.PuffPushDirection, core.PuffAngularSign, puffIndex);
+                        SetPuffSlotElapsed(ref core, puffIndex, elapsedSeconds + deltaSeconds);
+                    }
                 }
             }
         });
@@ -257,7 +282,10 @@ public static class StationCoreSystem
         core.HomePositionMeters = positionMeters;
         core.HomeRotationRadians = 0f;
         core.DriftTimerSeconds = NextInRange(random, config.DriftImpulseIntervalSecondsRange);
-        core.PuffElapsedSeconds = -1f;
+        core.PuffNextIndex = PuffSequenceCount; // nothing pending
+        SetPuffSlotElapsed(ref core, 0, -1f);
+        SetPuffSlotElapsed(ref core, 1, -1f);
+        SetPuffSlotElapsed(ref core, 2, -1f);
 
         world.Add(coreEntity, new PhysicsBody { BodyId = bodyId }, new Velocity());
     }
@@ -269,10 +297,10 @@ public static class StationCoreSystem
     /// angular impulse (random sign, magnitude from DriftAngularImpulseStrengthRange) plus a
     /// correction proportional to how far its rotation has drifted from homeRotationRadians. The
     /// correction terms are what keep it wandering in place rather than walking away or spinning
-    /// up over many impulses — each one is nudged back toward home, not just random. Also starts
-    /// a brief gas-puff visual (PuffElapsedSeconds/PuffPushDirection/PuffAngularSign; see
-    /// SpawnDriftPuffs, called separately each frame while one is active) angled to match this
-    /// impulse, same idea as RotationJetSystem's ship-turning puffs.
+    /// up over many impulses — each one is nudged back toward home, not just random. Also kicks
+    /// off a staggered gas-puff sequence (PuffNextIndex/PuffNextStartSeconds/PuffPushDirection/
+    /// PuffAngularSign; see SpawnSequencedDriftPuff, started/sustained each frame in Run) angled to
+    /// match this impulse, same idea as RotationJetSystem's ship-turning puffs.
     /// </summary>
     private static void ApplyDriftImpulse(World world, Entity coreEntity, ref StationCore core, StationCoreConfig config, Random random)
     {
@@ -295,43 +323,72 @@ public static class StationCoreSystem
 
         core.PuffPushDirection = totalLinearImpulse.LengthSquared() > 0.0000001f ? Vector2.Normalize(totalLinearImpulse) : Vector2.Zero;
         core.PuffAngularSign = MathF.Sign(totalAngularImpulse);
-        core.PuffElapsedSeconds = 0f;
+
+        // Restarts the staggered sequence from slot 0, abandoning whatever the previous impulse's
+        // sequence was still doing — DriftImpulseIntervalSecondsRange can roll shorter than a full
+        // sequence takes to play out (StaggerSeconds * 3, plus each slot's own DurationSeconds), so
+        // a new impulse can easily land before the last one's puffs are all done.
+        core.PuffNextIndex = 0;
+        core.PuffNextStartSeconds = 0f; // start slot 0 immediately on the next tick
+        SetPuffSlotElapsed(ref core, 0, -1f);
+        SetPuffSlotElapsed(ref core, 1, -1f);
+        SetPuffSlotElapsed(ref core, 2, -1f);
+    }
+
+    // Total puffs in one drift-impulse sequence: the linear one, then the two angular corner ones.
+    private const int PuffSequenceCount = 3;
+
+    private static float GetPuffSlotElapsed(in StationCore core, int puffIndex) => puffIndex switch
+    {
+        0 => core.Puff0ElapsedSeconds,
+        1 => core.Puff1ElapsedSeconds,
+        _ => core.Puff2ElapsedSeconds
+    };
+
+    private static void SetPuffSlotElapsed(ref StationCore core, int puffIndex, float value)
+    {
+        switch (puffIndex)
+        {
+            case 0: core.Puff0ElapsedSeconds = value; break;
+            case 1: core.Puff1ElapsedSeconds = value; break;
+            default: core.Puff2ElapsedSeconds = value; break;
+        }
     }
 
     /// <summary>
-    /// Little gas-puff visuals for an active drift-impulse puff burst (see
-    /// ParticleEffects.SpawnRotationJetPuff, reused here), called once per frame for
-    /// DriftPuffs.DurationSeconds after each drift impulse — one puff mounted on the square's edge
-    /// opposite pushDirection, exhaust firing further that same opposite way (a real thruster
-    /// mounted there would fire backward to push the core the way the impulse did), plus a
-    /// diagonal pair of corner puffs firing tangentially for angularSign, same "exhaust opposes
-    /// the push it causes" convention RotationJetSystem already uses for the ship's own turning
-    /// jets. Mount points sit at the fully-grown build-effect square's own half-width
-    /// (BuildEffectMaxSizePixels), matching the physics body's actual footprint.
+    /// Emits one frame's worth of particles for puff slot puffIndex — 0 is the linear one (mounted
+    /// on the square's edge opposite pushDirection, exhaust firing further that same opposite way
+    /// — a real thruster mounted there would fire backward to push the core the way the impulse
+    /// did), 1/2 are the diagonal corner pair firing tangentially for angularSign, same "exhaust
+    /// opposes the push it causes" convention RotationJetSystem already uses for the ship's own
+    /// turning jets. Mount points sit at the fully-grown build-effect square's own half-width
+    /// (BuildEffectMaxSizePixels), matching the physics body's actual footprint. Called every
+    /// frame a slot is active in Run — slots START DriftPuffs.StaggerSeconds apart (that's what
+    /// reads as three quick puffs one after another instead of one simultaneous cluster) and each
+    /// keeps being called like this for its own DriftPuffs.DurationSeconds once started.
     /// </summary>
-    private static void SpawnDriftPuffs(World world, Texture2D driftPuffTexture, Microsoft.Xna.Framework.Color driftPuffColor, StationCoreConfig config,
-        Random random, Vector2 positionMeters, float rotationRadians, Vector2 pushDirection, float angularSign)
+    private static void SpawnSequencedDriftPuff(World world, Texture2D driftPuffTexture, Microsoft.Xna.Framework.Color driftPuffColor, StationCoreConfig config,
+        Random random, Vector2 positionMeters, float rotationRadians, Vector2 pushDirection, float angularSign, int puffIndex)
     {
         var halfWidthMeters = PhysicsWorld.PixelsToMeters(config.BuildEffectMaxSizePixels) / 2f;
 
-        if (pushDirection != Vector2.Zero)
+        if (puffIndex == 0)
         {
+            if (pushDirection == Vector2.Zero) return;
             var mountWorld = positionMeters - pushDirection * halfWidthMeters;
             SpawnDriftPuff(world, driftPuffTexture, mountWorld, -pushDirection, random, config.DriftPuffs, driftPuffColor);
+            return;
         }
 
-        if (angularSign != 0f)
-        {
-            var forward = new Vector2(MathF.Cos(rotationRadians), MathF.Sin(rotationRadians));
-            var right = new Vector2(-forward.Y, forward.X);
-            Vector2 ToWorldPosition(Vector2 local) => positionMeters + forward * local.X + right * local.Y;
-            Vector2 ToWorldDirection(Vector2 local) => forward * local.X + right * local.Y;
+        if (angularSign == 0f) return;
 
-            var cornerA = new Vector2(halfWidthMeters, halfWidthMeters);
-            var cornerB = -cornerA;
-            SpawnDriftPuff(world, driftPuffTexture, ToWorldPosition(cornerA), ToWorldDirection(AngularExhaustLocal(cornerA, angularSign)), random, config.DriftPuffs, driftPuffColor);
-            SpawnDriftPuff(world, driftPuffTexture, ToWorldPosition(cornerB), ToWorldDirection(AngularExhaustLocal(cornerB, angularSign)), random, config.DriftPuffs, driftPuffColor);
-        }
+        var forward = new Vector2(MathF.Cos(rotationRadians), MathF.Sin(rotationRadians));
+        var right = new Vector2(-forward.Y, forward.X);
+        Vector2 ToWorldPosition(Vector2 local) => positionMeters + forward * local.X + right * local.Y;
+        Vector2 ToWorldDirection(Vector2 local) => forward * local.X + right * local.Y;
+
+        var corner = puffIndex == 1 ? new Vector2(halfWidthMeters, halfWidthMeters) : new Vector2(-halfWidthMeters, -halfWidthMeters);
+        SpawnDriftPuff(world, driftPuffTexture, ToWorldPosition(corner), ToWorldDirection(AngularExhaustLocal(corner, angularSign)), random, config.DriftPuffs, driftPuffColor);
     }
 
     /// <summary>Opposite of the tangential direction a point at cornerLocal would move due to an angular velocity of the given sign — see SpawnDriftPuffs.</summary>

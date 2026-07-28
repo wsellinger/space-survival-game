@@ -147,18 +147,25 @@ public class AntiGravityFieldConfig
 
 /// <summary>
 /// Small particle puffs (see ParticleEffects.SpawnRotationJetPuff, reused here — same idea as
-/// RotationJetSystem's ship-turning puffs) that flash from the landed core's own edges whenever a
-/// drift impulse fires (see StationCoreSystem.ApplyDriftImpulse), angled to visually match that
-/// impulse: one puff opposite the linear push direction, plus a diagonal pair of corner puffs for
-/// the angular one — same thruster-reaction convention (exhaust fires opposite the push it
-/// causes) as the ship's own rotation jets.
+/// RotationJetSystem's ship-turning puffs) that fire whenever a drift impulse fires (see
+/// StationCoreSystem.ApplyDriftImpulse), angled to visually match that impulse: one puff opposite
+/// the linear push direction, plus a diagonal pair of corner puffs for the angular one — same
+/// thruster-reaction convention (exhaust fires opposite the push it causes) as the ship's own
+/// rotation jets. The three don't fire together — see StaggerSeconds — and each one keeps
+/// re-emitting for its own DurationSeconds once it starts, rather than firing just a single frame.
 /// </summary>
 public class StationCoreDriftPuffConfig
 {
-    // How long each drift impulse's puff burst keeps spawning fresh particles for — 0 fires just
-    // a single instant burst; higher sustains it like a brief continuous hiss (still made up of
-    // short-lived individual particles, per ParticleLifetimeSecondsRange).
-    public float DurationSeconds { get; set; } = 0.15f;
+    // Delay between each of the three puffs in the sequence STARTING (linear, then the two
+    // angular corner puffs), so they read as three quick puffs one after another instead of one
+    // simultaneous cluster. 0 starts all three on the same frame.
+    public float StaggerSeconds { get; set; } = 0.03f;
+
+    // How long each individual puff, once started, keeps spawning fresh particles for — 0 fires
+    // just a single instant burst; higher sustains it like a brief continuous hiss (still made up
+    // of short-lived individual particles, per ParticleLifetimeSecondsRange). Independent of
+    // StaggerSeconds — a puff's own duration can outlast the delay before the next one starts.
+    public float DurationSeconds { get; set; } = 0.1f;
 
     public IntRange ParticleCountPerFrame { get; set; } = new(1, 2);
     public FloatRange ParticleSpeedMetersPerSecondRange { get; set; } = new(0.3f, 0.7f);

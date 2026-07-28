@@ -94,6 +94,11 @@ public class StationCoreConfig
     public float PhysicsMaterialDensity { get; set; } = 1f;
     public float PhysicsRestitution { get; set; } = 0.2f;
 
+    // Scales collision damage the core deals to the ship on contact (see CollisionDamageSystem)
+    // relative to an ordinary Damaging hit (asteroid) at the same speed — 1 would be the same as
+    // an asteroid, lower means bumping the core hurts less.
+    public float CollisionDamageMultiplier { get; set; } = 0.5f;
+
     // Damps out drift velocity between impulses (see below) so each nudge glides to a stop within
     // a couple seconds instead of coasting freely forever (Box2D bodies have zero damping by
     // default, same as the ship) — without this the core would just keep drifting in whatever

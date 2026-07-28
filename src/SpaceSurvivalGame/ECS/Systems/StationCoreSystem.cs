@@ -23,8 +23,9 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// shaped by FlightEaseExponent for a slow start/finish), stopping exactly on arrival and
 /// becoming an independent, stationary object — at which point it also gains a real static
 /// Box2D body (see CreatePhysicsBody) so it solidly blocks the ship/asteroids/pickups instead of
-/// just sitting there visually; it has no Damaging tag, so bumping it doesn't hurt the ship. A
-/// one-time shockwave fires once flight progress
+/// just sitting there visually; it does deal collision damage to the ship on contact, scaled down
+/// by CollisionDamageMultiplier compared to an ordinary asteroid hit (see CollisionDamageSystem).
+/// A one-time shockwave fires once flight progress
 /// first reaches ShockwaveTriggerProgress — not necessarily full arrival, so it can go off
 /// slightly before the core actually stops: an outward impulse on every nearby PhysicsBody (see
 /// ApplyShockwave, which also grants the ship a brief Invulnerability window as a failsafe) and a
@@ -240,8 +241,9 @@ public static class StationCoreSystem
     /// impulses — see ApplyDriftImpulse) can actually move it like any other body, mass driven by
     /// PhysicsMaterialDensity; also adds a Velocity component so PhysicsSyncSystem picks it up and
     /// keeps its Transform following the body from here on, the same way every other
-    /// physics-driven entity works. No Damaging tag, so CollisionDamageSystem still leaves the
-    /// ship alone on contact, same as bumping an O2/iron pickup.
+    /// physics-driven entity works. Tagged Damaging with a DamageMultiplier of
+    /// CollisionDamageMultiplier so bumping it does hurt the ship, just less than an ordinary
+    /// asteroid hit at the same speed (see CollisionDamageSystem).
     ///
     /// Also records HomePositionMeters/HomeRotationRadians (where it landed — the body always
     /// starts at rotation 0, since bodyDef never sets one) and rolls the first DriftTimerSeconds,
@@ -287,7 +289,8 @@ public static class StationCoreSystem
         SetPuffSlotElapsed(ref core, 1, -1f);
         SetPuffSlotElapsed(ref core, 2, -1f);
 
-        world.Add(coreEntity, new PhysicsBody { BodyId = bodyId }, new Velocity());
+        world.Add(coreEntity, new PhysicsBody { BodyId = bodyId }, new Velocity(),
+            new Damaging(), new DamageMultiplier { Value = config.CollisionDamageMultiplier });
     }
 
     /// <summary>

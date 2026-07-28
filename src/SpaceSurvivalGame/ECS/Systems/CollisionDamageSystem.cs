@@ -18,13 +18,15 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// (see ShipEntity.Create), every hit event involving the ship fires regardless of what it hit,
 /// so the Damaging check is what keeps harmless things like O2 pickups from ever dealing
 /// damage. Damage is a linear map from the event's approach speed to HP, clamped at both ends
-/// by PlayerConfig.Collision's SpeedMetersPerSecondRange and DamageRange. Each qualifying hit
-/// also spawns a spark burst at the impact point; total damage this frame also triggers the
-/// ship's hit-flash and a screen shake scaled by how much of DamageRange.Max it represents.
-/// Must run after PhysicsWorld.Step (hit events are only populated post-step) and before the
-/// next Step call overwrites them. Skips everything (damage, sparks, shake, flash) entirely
-/// while the ship's own Invulnerability.RemainingSeconds is still positive — see
-/// InvulnerabilitySystem and whatever set it (e.g. StationCoreSystem's arrival shockwave).
+/// by PlayerConfig.Collision's SpeedMetersPerSecondRange and DamageRange, then scaled by the
+/// other body's own DamageMultiplier if it has one (defaults to 1 — e.g. the station core deals
+/// reduced damage compared to an ordinary asteroid hit). Each qualifying hit also spawns a spark
+/// burst at the impact point; total damage this frame also triggers the ship's hit-flash and a
+/// screen shake scaled by how much of DamageRange.Max it represents. Must run after
+/// PhysicsWorld.Step (hit events are only populated post-step) and before the next Step call
+/// overwrites them. Skips everything (damage, sparks, shake, flash) entirely while the ship's
+/// own Invulnerability.RemainingSeconds is still positive — see InvulnerabilitySystem and
+/// whatever set it (e.g. StationCoreSystem's arrival shockwave).
 /// </summary>
 public static class CollisionDamageSystem
 {
@@ -48,9 +50,9 @@ public static class CollisionDamageSystem
         });
         if (!foundShip || isInvulnerable) return;
 
-        var damagingBodyIds = new HashSet<(int, ushort, ushort)>();
-        world.Query(in DamagingBodyQuery, (ref PhysicsBody physicsBody) =>
-            damagingBodyIds.Add(BodyIdKey(physicsBody.BodyId)));
+        var damageMultipliers = new Dictionary<(int, ushort, ushort), float>();
+        world.Query(in DamagingBodyQuery, (Entity entity, ref PhysicsBody physicsBody) =>
+            damageMultipliers[BodyIdKey(physicsBody.BodyId)] = world.Has<DamageMultiplier>(entity) ? world.Get<DamageMultiplier>(entity).Value : 1f);
 
         var contactEvents = B2Api.b2World_GetContactEvents(physicsWorld.WorldId);
         var totalDamage = 0f;
@@ -65,12 +67,12 @@ public static class CollisionDamageSystem
             else if (BodyIdEquals(bodyB, shipBodyId)) otherBody = bodyA;
             else continue; // doesn't involve the ship at all
 
-            if (!damagingBodyIds.Contains(BodyIdKey(otherBody))) continue; // e.g. an O2 pickup — never deals damage
+            if (!damageMultipliers.TryGetValue(BodyIdKey(otherBody), out var multiplier)) continue; // e.g. an O2 pickup — never deals damage
 
             var speedFraction = (hitEvent.approachSpeed - config.Collision.SpeedMetersPerSecondRange.Min) /
                                  (config.Collision.SpeedMetersPerSecondRange.Max - config.Collision.SpeedMetersPerSecondRange.Min);
             speedFraction = System.Math.Clamp(speedFraction, 0f, 1f);
-            totalDamage += config.Collision.DamageRange.Min + speedFraction * (config.Collision.DamageRange.Max - config.Collision.DamageRange.Min);
+            totalDamage += (config.Collision.DamageRange.Min + speedFraction * (config.Collision.DamageRange.Max - config.Collision.DamageRange.Min)) * multiplier;
 
             ParticleEffects.SpawnSparkBurst(world, sparkTexture, hitEvent.point, random, sparkConfig);
         }

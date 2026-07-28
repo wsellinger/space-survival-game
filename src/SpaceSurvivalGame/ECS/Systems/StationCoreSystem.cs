@@ -29,7 +29,9 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// slightly before the core actually stops: an outward impulse on every nearby PhysicsBody (see
 /// ApplyShockwave, which also grants the ship a brief Invulnerability window as a failsafe) and a
 /// starting timer for the matching expanding-ring visual (see StationCoreShockwaveRenderSystem).
-/// Once landed it also starts drifting very gently in place (see ApplyDriftImpulse).
+/// Once landed it also starts drifting very gently in place (see ApplyDriftImpulse) and runs a
+/// continuous "anti-gravity" push on any nearby asteroid/pickup every frame (see
+/// ApplyAntiGravityField), keeping the area right around it naturally clear.
 /// </summary>
 public static class StationCoreSystem
 {
@@ -117,6 +119,8 @@ public static class StationCoreSystem
             // would have returned) — gently drift in place forever after.
             if (core.FlightDurationSeconds <= 0f)
             {
+                ApplyAntiGravityField(world, coreTransform.PositionMeters, config, coreEntity);
+
                 core.DriftTimerSeconds -= deltaSeconds;
                 if (core.DriftTimerSeconds <= 0f)
                 {
@@ -172,6 +176,33 @@ public static class StationCoreSystem
         });
 
         world.Get<Invulnerability>(shipEntity).RemainingSeconds = config.ShockwaveDurationSeconds;
+    }
+
+    /// <summary>
+    /// A continuous, always-on outward push while the core is landed — every frame, every nearby
+    /// asteroid/O2-pickup/iron-pickup gets pushed directly away from the core's own center via a
+    /// real force (not a one-time impulse, so it keeps acting for as long as something lingers in
+    /// range), scaling from AntiGravityField.ForceStrength at zero distance down to 0 at
+    /// AntiGravityField.RadiusMeters — same linear falloff shape as ApplyShockwave, just
+    /// continuous instead of a single kick. Deliberately whitelist-only (Asteroid/OxygenPickup/
+    /// IronPickup) rather than "everyone except the ship" — the field is meant to keep debris off
+    /// the built station, not to shove the ship itself around every time it flies nearby.
+    /// </summary>
+    private static void ApplyAntiGravityField(World world, Vector2 originMeters, StationCoreConfig config, Entity coreEntity)
+    {
+        world.Query(in PhysicsBodyQuery, (Entity entity, ref PhysicsBody physicsBody, ref Transform transform) =>
+        {
+            if (entity == coreEntity) return;
+            if (!world.Has<Asteroid>(entity) && !world.Has<OxygenPickup>(entity) && !world.Has<IronPickup>(entity)) return;
+
+            var offset = transform.PositionMeters - originMeters;
+            var distance = offset.Length();
+            if (distance < 0.0001f || distance > config.AntiGravityField.RadiusMeters) return;
+
+            var falloff = 1f - distance / config.AntiGravityField.RadiusMeters;
+            var force = offset / distance * (config.AntiGravityField.ForceStrength * falloff);
+            B2Api.b2Body_ApplyForceToCenter(physicsBody.BodyId, force, wake: true);
+        });
     }
 
     /// <summary>

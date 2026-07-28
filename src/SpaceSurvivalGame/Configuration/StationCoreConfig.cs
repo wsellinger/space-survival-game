@@ -125,7 +125,24 @@ public class StationCoreConfig
 
     public StationCoreDriftPuffConfig DriftPuffs { get; set; } = new();
 
+    public AntiGravityFieldConfig AntiGravityField { get; set; } = new();
+
     public static StationCoreConfig Load(string path) => ConfigLoader.Load<StationCoreConfig>(path);
+}
+
+/// <summary>
+/// A continuous outward force field around the landed core (see StationCoreSystem.
+/// ApplyAntiGravityField) — every frame, every asteroid/O2-pickup/iron-pickup within
+/// RadiusMeters gets pushed directly away from the core's center, force scaling from
+/// ForceStrength at zero distance down to 0 at RadiusMeters (same linear falloff shape as the
+/// one-time arrival shockwave, just applied continuously via b2Body_ApplyForceToCenter instead of
+/// a single impulse), keeping the area right around the built station naturally clear. The ship
+/// is deliberately left alone — this keeps debris out of the way, it isn't meant to be a hazard.
+/// </summary>
+public class AntiGravityFieldConfig
+{
+    public float RadiusMeters { get; set; } = 6f;
+    public float ForceStrength { get; set; } = 2f; // outward force (N) at zero distance from the core, falling off linearly to 0 at RadiusMeters
 }
 
 /// <summary>

@@ -43,5 +43,9 @@
     "ParticleSizePixels": 1,
     "SpreadAngleDegrees": 2,
     "ColorHex": "#CFE8FFFF"
+  },
+  "AntiGravityField": {
+    "RadiusMeters": 6,
+    "ForceStrength": 0.1
   }
 }

@@ -21,7 +21,9 @@ namespace SpaceSurvivalGame.ECS.Components;
 /// DriftImpulseIntervalSecondsRange after each one fires) StationCoreSystem gives it a small
 /// random linear + angular impulse nudged to pull it back toward HomePositionMeters/
 /// HomeRotationRadians — the exact spot/orientation it landed at — so it wanders in place rather
-/// than drifting off or spinning up over time.
+/// than drifting off or spinning up over time. Each impulse also starts a brief gas-puff visual
+/// (StationCoreSystem.SpawnDriftPuffs) tracked by PuffElapsedSeconds/PuffPushDirection/
+/// PuffAngularSign, same -1-means-inactive convention as ShockwaveElapsedSeconds.
 /// </summary>
 public struct StationCore
 {
@@ -34,4 +36,7 @@ public struct StationCore
     public Vector2 HomePositionMeters; // where it landed — every drift impulse is nudged back toward this
     public float HomeRotationRadians; // the rotation it landed at — every drift angular impulse is nudged back toward this
     public float DriftTimerSeconds; // counts down to the next drift impulse; re-rolled from DriftImpulseIntervalSecondsRange after each one fires
+    public Vector2 PuffPushDirection; // direction of the most recent drift impulse's linear component (Vector2.Zero = none) — angles the puff burst
+    public float PuffAngularSign; // sign of the most recent drift impulse's angular component (0 = none) — angles the corner puff pair
+    public float PuffElapsedSeconds; // -1 = no active puff burst; counts up from 0 for DriftPuffs.DurationSeconds once one starts
 }

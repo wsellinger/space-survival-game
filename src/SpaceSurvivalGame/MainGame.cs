@@ -61,6 +61,8 @@ public class MainGame : Game
     private Texture2D _stationCoreTexture;
     private Texture2D _stationCoreBuildEffectTexture;
     private Texture2D _stationCoreShockwaveTexture;
+    private Texture2D _stationCoreDriftPuffTexture;
+    private Microsoft.Xna.Framework.Color _stationCoreDriftPuffColor;
     private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -177,6 +179,8 @@ public class MainGame : Game
         var shockwaveDiameterPixels = (int)PhysicsWorld.MetersToPixels(_stationCoreConfig.ShockwaveRadiusMeters * 2f);
         _stationCoreShockwaveTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, shockwaveDiameterPixels,
             Microsoft.Xna.Framework.Color.Transparent, Microsoft.Xna.Framework.Color.White, _stationCoreConfig.ShockwaveRingInnerRadiusFraction);
+        _stationCoreDriftPuffTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _stationCoreConfig.DriftPuffs.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
+        _stationCoreDriftPuffColor = ColorHex.Parse(_stationCoreConfig.DriftPuffs.ColorHex);
 
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
@@ -436,7 +440,7 @@ public class MainGame : Game
         // Must run after PhysicsSyncSystem so it copies the ship's just-synced position for
         // this frame, not last frame's stale value (a one-frame lag reads as constant drift
         // while riding along).
-        StationCoreSystem.Run(_world, _camera, _physicsWorld, _stationCoreConfig, deltaSeconds, _random);
+        StationCoreSystem.Run(_world, _camera, _physicsWorld, _stationCoreConfig, deltaSeconds, _random, _stationCoreDriftPuffTexture, _stationCoreDriftPuffColor);
 
         // Camera casts out toward wherever the aim input points, not the ship's facing
         // (which lags behind at a capped turn rate): the right stick's own direction in
@@ -623,6 +627,7 @@ public class MainGame : Game
         _sparkTexture.Dispose();
         _stationCoreBuildEffectTexture.Dispose();
         _stationCoreShockwaveTexture.Dispose();
+        _stationCoreDriftPuffTexture.Dispose();
         _buttonFillTexture.Dispose();
         _buttonOutlineTexture.Dispose();
         _solidPixelTexture.Dispose();

@@ -60,18 +60,20 @@ public static class RotationJetSystem
 
             if (angularVelocity > 0f) // clockwise: nose-left + tail-right
             {
-                ParticleEffects.SpawnRotationJetPuff(world, particleTexture, ToWorldPosition(noseLeftLocal), ToWorldDirection(leftExhaustLocal),
-                    random, config.RotationJets, jetColor);
-                ParticleEffects.SpawnRotationJetPuff(world, particleTexture, ToWorldPosition(rightCornerLocal), ToWorldDirection(tailRightExhaustLocal),
-                    random, config.RotationJets, jetColor);
+                SpawnPuff(world, particleTexture, ToWorldPosition(noseLeftLocal), ToWorldDirection(leftExhaustLocal), random, config.RotationJets, jetColor);
+                SpawnPuff(world, particleTexture, ToWorldPosition(rightCornerLocal), ToWorldDirection(tailRightExhaustLocal), random, config.RotationJets, jetColor);
             }
             else // counterclockwise: nose-right + tail-left
             {
-                ParticleEffects.SpawnRotationJetPuff(world, particleTexture, ToWorldPosition(noseRightLocal), ToWorldDirection(rightExhaustLocal),
-                    random, config.RotationJets, jetColor);
-                ParticleEffects.SpawnRotationJetPuff(world, particleTexture, ToWorldPosition(leftCornerLocal), ToWorldDirection(tailLeftExhaustLocal),
-                    random, config.RotationJets, jetColor);
+                SpawnPuff(world, particleTexture, ToWorldPosition(noseRightLocal), ToWorldDirection(rightExhaustLocal), random, config.RotationJets, jetColor);
+                SpawnPuff(world, particleTexture, ToWorldPosition(leftCornerLocal), ToWorldDirection(tailLeftExhaustLocal), random, config.RotationJets, jetColor);
             }
         });
     }
+
+    private static void SpawnPuff(World world, Texture2D particleTexture, NVector2 positionMeters, NVector2 outwardDirection,
+        Random random, RotationJetConfig config, Microsoft.Xna.Framework.Color color) =>
+        ParticleEffects.SpawnRotationJetPuff(world, particleTexture, positionMeters, outwardDirection, random,
+            config.ParticleCountPerFrame, config.ParticleSpeedMetersPerSecondRange, config.ParticleLifetimeSecondsRange,
+            config.ParticleSizePixels, config.SpreadAngleDegrees, color);
 }

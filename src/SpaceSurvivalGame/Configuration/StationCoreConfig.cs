@@ -123,5 +123,30 @@ public class StationCoreConfig
     public FloatRange InitialLinearSpeedMetersPerSecondRange { get; set; } = new(0.05f, 0.15f); // random direction
     public FloatRange InitialAngularSpeedRadiansPerSecondRange { get; set; } = new(0.03f, 0.1f); // random sign
 
+    public StationCoreDriftPuffConfig DriftPuffs { get; set; } = new();
+
     public static StationCoreConfig Load(string path) => ConfigLoader.Load<StationCoreConfig>(path);
+}
+
+/// <summary>
+/// Small particle puffs (see ParticleEffects.SpawnRotationJetPuff, reused here — same idea as
+/// RotationJetSystem's ship-turning puffs) that flash from the landed core's own edges whenever a
+/// drift impulse fires (see StationCoreSystem.ApplyDriftImpulse), angled to visually match that
+/// impulse: one puff opposite the linear push direction, plus a diagonal pair of corner puffs for
+/// the angular one — same thruster-reaction convention (exhaust fires opposite the push it
+/// causes) as the ship's own rotation jets.
+/// </summary>
+public class StationCoreDriftPuffConfig
+{
+    // How long each drift impulse's puff burst keeps spawning fresh particles for — 0 fires just
+    // a single instant burst; higher sustains it like a brief continuous hiss (still made up of
+    // short-lived individual particles, per ParticleLifetimeSecondsRange).
+    public float DurationSeconds { get; set; } = 0.15f;
+
+    public IntRange ParticleCountPerFrame { get; set; } = new(1, 2);
+    public FloatRange ParticleSpeedMetersPerSecondRange { get; set; } = new(0.3f, 0.7f);
+    public FloatRange ParticleLifetimeSecondsRange { get; set; } = new(0.1f, 0.2f);
+    public int ParticleSizePixels { get; set; } = 3;
+    public float SpreadAngleDegrees { get; set; } = 20f;
+    public string ColorHex { get; set; } = "#CFE8FFFF"; // pale blue-white, like a puff of gas
 }

@@ -130,9 +130,9 @@ public class MainGame : Game
 
         var hudConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hud-config.json");
         _hudConfig = HudConfig.Load(hudConfigPath);
-        var barCornerRadius = _hudConfig.BarThicknessPixels / 2f;
-        _hudBarFillTexture = ProceduralTextures.CreateRoundedRect(GraphicsDevice, _hudConfig.BarLengthPixels, _hudConfig.BarThicknessPixels, barCornerRadius, Microsoft.Xna.Framework.Color.White);
-        _hudBarOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, _hudConfig.BarLengthPixels, _hudConfig.BarThicknessPixels, barCornerRadius, _hudConfig.BarOutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
+        var barCornerRadius = _hudConfig.Bars.ThicknessPixels / 2f;
+        _hudBarFillTexture = ProceduralTextures.CreateRoundedRect(GraphicsDevice, _hudConfig.Bars.LengthPixels, _hudConfig.Bars.ThicknessPixels, barCornerRadius, Microsoft.Xna.Framework.Color.White);
+        _hudBarOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, _hudConfig.Bars.LengthPixels, _hudConfig.Bars.ThicknessPixels, barCornerRadius, _hudConfig.Bars.OutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
         var sparkConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "spark-config.json");
         _sparkConfig = SparkConfig.Load(sparkConfigPath);
         _sparkTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _sparkConfig.SparkTextureSizePixels, Microsoft.Xna.Framework.Color.White);
@@ -168,19 +168,19 @@ public class MainGame : Game
 
         var stationCoreConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "station-core-config.json");
         _stationCoreConfig = StationCoreConfig.Load(stationCoreConfigPath);
-        _stationCoreTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, _stationCoreConfig.SpriteSizePixels,
-            ColorHex.Parse(_stationCoreConfig.CoreColorHex), ColorHex.Parse(_stationCoreConfig.RingColorHex), _stationCoreConfig.InnerRadiusFraction);
-        _stationCoreBuildEffectTexture = ProceduralTextures.CreateCircuitSquare(GraphicsDevice, _stationCoreConfig.BuildEffectMaxSizePixels,
-            ColorHex.Parse(_stationCoreConfig.BuildEffectColorHex), ColorHex.Parse(_stationCoreConfig.CircuitLineColorHex), _stationCoreConfig.CircuitLineThicknessFraction);
+        _stationCoreTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, _stationCoreConfig.CoreDot.SpriteSizePixels,
+            ColorHex.Parse(_stationCoreConfig.CoreDot.ColorHex), ColorHex.Parse(_stationCoreConfig.CoreDot.RingColorHex), _stationCoreConfig.CoreDot.InnerRadiusFraction);
+        _stationCoreBuildEffectTexture = ProceduralTextures.CreateCircuitSquare(GraphicsDevice, _stationCoreConfig.Build.MaxSizePixels,
+            ColorHex.Parse(_stationCoreConfig.Build.ColorHex), ColorHex.Parse(_stationCoreConfig.Circuit.ColorHex), _stationCoreConfig.Circuit.ThicknessFraction);
         // Baked at exactly its own final size (see StationCoreShockwaveRenderSystem) so it only
         // ever shrinks, never upscales, staying crisp out to full size. Transparent center, tinted
-        // white ring — actual color/alpha applied at draw time so ShockwaveColorHex/MaxAlpha can
+        // white ring — actual color/alpha applied at draw time so Shockwave.ColorHex/MaxAlpha can
         // be re-tuned without re-baking.
-        var shockwaveDiameterPixels = (int)PhysicsWorld.MetersToPixels(_stationCoreConfig.ShockwaveRadiusMeters * 2f);
+        var shockwaveDiameterPixels = (int)PhysicsWorld.MetersToPixels(_stationCoreConfig.Shockwave.RadiusMeters * 2f);
         _stationCoreShockwaveTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, shockwaveDiameterPixels,
-            Microsoft.Xna.Framework.Color.Transparent, Microsoft.Xna.Framework.Color.White, _stationCoreConfig.ShockwaveRingInnerRadiusFraction);
-        _stationCoreDriftPuffTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _stationCoreConfig.DriftPuffs.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
-        _stationCoreDriftPuffColor = ColorHex.Parse(_stationCoreConfig.DriftPuffs.ColorHex);
+            Microsoft.Xna.Framework.Color.Transparent, Microsoft.Xna.Framework.Color.White, _stationCoreConfig.Shockwave.RingInnerRadiusFraction);
+        _stationCoreDriftPuffTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _stationCoreConfig.Drift.Puffs.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
+        _stationCoreDriftPuffColor = ColorHex.Parse(_stationCoreConfig.Drift.Puffs.ColorHex);
 
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
@@ -211,7 +211,7 @@ public class MainGame : Game
         _camera.PositionMeters = _shipSpawnPositionMeters;
         _camera.TargetPositionMeters = _shipSpawnPositionMeters;
         ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _shipConfig, _playerConfig);
-        StationCoreEntity.Create(_world, _shipSpawnPositionMeters, _stationCoreTexture, _stationCoreConfig.SpriteSizePixels);
+        StationCoreEntity.Create(_world, _shipSpawnPositionMeters, _stationCoreTexture, _stationCoreConfig.CoreDot.SpriteSizePixels);
 
         foreach (var layer in starfieldConfig.Layers)
         {

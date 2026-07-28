@@ -1,50 +1,66 @@
 {
   "IronAmountRequired": 10,
-  "SpriteSizePixels": 8,
-  "CoreColorHex": "#FF1A1A",
-  "RingColorHex": "#999999",
-  "InnerRadiusFraction": 0.65,
-  "FlightSpeedMetersPerSecond": 6,
-  "OpenSpotSearchResolution": 24,
-  "MaxSearchRangeMeters": 5,
-  "MinDistanceFromShipMeters": 2,
-  "FlightEaseInExponent": 2,
-  "FlightEaseOutExponent": 3,
-  "BuildEffectColorHex": "#444444",
-  "BuildEffectMaxSizePixels": 38,
-  "BuildEffectSpinRevolutions": 2,
-  "CircuitLineColorHex": "#222222",
-  "CircuitLineThicknessFraction": 0.08,
-  "ShockwaveTriggerProgress": 0.8,
-  "ShockwaveColorHex": "#FFFFFF",
-  "ShockwaveMaxAlpha": 0.2,
-  "ShockwaveDurationSeconds": 0.5,
-  "ShockwaveRadiusMeters": 8,
-  "ShockwaveRingInnerRadiusFraction": 0.98,
-  "ShockwaveImpulseStrength": 1,
-  "ShockwaveShipImpulseMultiplier": 0.15,
-  "ShockwavePickupImpulseMultiplier": 0.05,
-  "PhysicsMaterialDensity": 4,
-  "PhysicsRestitution": 0.2,
-  "PhysicsLinearDamping": 0.8,
-  "PhysicsAngularDamping": 0.8,
-  "CollisionDamageMultiplier": 0.5,
-  "DriftImpulseIntervalSecondsRange": [1.0, 5.0],
-  "DriftLinearImpulseStrengthRange": [0.001, 0.003],
-  "DriftReturnStrength": 0.005,
-  "DriftAngularImpulseStrengthRange": [0.00002, 0.00006],
-  "DriftAngularReturnStrength": 0.001,
-  "InitialLinearSpeedMetersPerSecondRange": [0.005, 0.015],
-  "InitialAngularSpeedRadiansPerSecondRange": [0.0003, 0.001],
-  "DriftPuffs": {
-    "StaggerSeconds": 0.075,
-    "DurationSeconds": 0.1,
-    "ParticleCountPerFrame": [5, 10],
-    "ParticleSpeedMetersPerSecondRange": [1, 3],
-    "ParticleLifetimeSecondsRange": [0.04, 0.08],
-    "ParticleSizePixels": 1,
-    "SpreadAngleDegrees": 2,
-    "ColorHex": "#CFE8FFFF"
+  "CoreDot": {
+    "SpriteSizePixels": 8,
+    "ColorHex": "#FF1A1A",
+    "RingColorHex": "#999999",
+    "InnerRadiusFraction": 0.65
+  },
+  "Flight": {
+    "SpeedMetersPerSecond": 6,
+    "OpenSpotSearchResolution": 24,
+    "MaxSearchRangeMeters": 5,
+    "MinDistanceFromShipMeters": 2,
+    "EaseInExponent": 2,
+    "EaseOutExponent": 3
+  },
+  "Build": {
+    "ColorHex": "#444444",
+    "MaxSizePixels": 38,
+    "SpinRevolutions": 2
+  },
+  "Circuit": {
+    "ColorHex": "#222222",
+    "ThicknessFraction": 0.08
+  },
+  "Shockwave": {
+    "TriggerProgress": 0.8,
+    "ColorHex": "#FFFFFF",
+    "MaxAlpha": 0.2,
+    "DurationSeconds": 0.5,
+    "RadiusMeters": 8,
+    "RingInnerRadiusFraction": 0.98,
+    "ImpulseStrength": 1,
+    "ShipImpulseMultiplier": 0.15,
+    "PickupImpulseMultiplier": 0.05
+  },
+  "Physics": {
+    "MaterialDensity": 4,
+    "Restitution": 0.2,
+    "CollisionDamageMultiplier": 0.5,
+    "LinearDamping": 0.8,
+    "AngularDamping": 0.8
+  },
+  "Drift": {
+    "ImpulseIntervalSecondsRange": [1.0, 5.0],
+    "LinearImpulseStrengthRange": [0.001, 0.003],
+    "ReturnStrength": 0.005,
+    "AngularImpulseStrengthRange": [0.00002, 0.00006],
+    "AngularReturnStrength": 0.001,
+    "Puffs": {
+      "StaggerSeconds": 0.075,
+      "DurationSeconds": 0.1,
+      "ParticleCountPerFrame": [5, 10],
+      "ParticleSpeedMetersPerSecondRange": [1, 3],
+      "ParticleLifetimeSecondsRange": [0.04, 0.08],
+      "ParticleSizePixels": 1,
+      "SpreadAngleDegrees": 2,
+      "ColorHex": "#CFE8FFFF"
+    }
+  },
+  "InitialSpeed": {
+    "LinearMetersPerSecondRange": [0.005, 0.015],
+    "AngularRadiansPerSecondRange": [0.0003, 0.001]
   },
   "AntiGravityField": {
     "RadiusMeters": 6,

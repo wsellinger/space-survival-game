@@ -33,8 +33,8 @@ public static class MetallicSparkleRenderSystem
 
     public static void Run(World world, SpriteBatch spriteBatch, Camera camera, IronPickupConfig ironConfig, float totalGameTimeSeconds)
     {
-        var sparkleColor = ColorHex.Parse(ironConfig.SparkleColorHex);
-        var frequencyRadiansPerSecond = ironConfig.SparkleFrequencyHz * System.MathF.Tau;
+        var sparkleColor = ColorHex.Parse(ironConfig.Sparkle.ColorHex);
+        var frequencyRadiansPerSecond = ironConfig.Sparkle.FrequencyHz * System.MathF.Tau;
 
         world.Query(in Query, (ref Transform transform, ref MetallicSparkle sparkle) =>
         {
@@ -46,7 +46,7 @@ public static class MetallicSparkleRenderSystem
             for (var i = 0; i < sparkle.OffsetsPixels.Length; i++)
             {
                 var brightness = System.MathF.Max(0f, System.MathF.Sin(totalGameTimeSeconds * frequencyRadiansPerSecond + sparkle.PhasesRadians[i]));
-                var alphaFraction = System.MathF.Pow(brightness, ironConfig.SparkleSharpness) * ironConfig.SparkleMaxAlpha;
+                var alphaFraction = System.MathF.Pow(brightness, ironConfig.Sparkle.Sharpness) * ironConfig.Sparkle.MaxAlpha;
                 if (alphaFraction <= 0.001f) continue; // not worth a draw call this frame
 
                 var offset = sparkle.OffsetsPixels[i];

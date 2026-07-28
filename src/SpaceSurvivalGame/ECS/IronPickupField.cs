@@ -61,7 +61,7 @@ public static class IronPickupField
     {
         var random = new Random();
         var oreColor = ColorHex.Parse(ironConfig.ColorHex);
-        var rustSpotColor = ColorHex.Parse(ironConfig.RustSpotColorHex);
+        var rustSpotColor = ColorHex.Parse(ironConfig.RustSpots.ColorHex);
 
         var shapeVariants = new Vector2[ShapeVariantCount][];
         var shapeTextures = new Texture2D[ShapeVariantCount];
@@ -77,14 +77,14 @@ public static class IronPickupField
             // Baked once per shape variant (not per spawned instance) — a fixed, static surface
             // stain rather than something that needs to vary chunk-to-chunk the way position/
             // physics do.
-            var spots = ProceduralShapeGenerator.GenerateJaggedSpots(random, shapeVariants[v], ironConfig.RustSpotCountRange, ironConfig.RustSpotSizeUnitRange);
+            var spots = ProceduralShapeGenerator.GenerateJaggedSpots(random, shapeVariants[v], ironConfig.RustSpots.CountRange, ironConfig.RustSpots.SizeUnitRange);
 
             shapeTextures[v] = ProceduralTextures.CreateSpottedPolygon(graphicsDevice, TextureSize, oreColor, oreXnaVertices, spots, rustSpotColor);
         }
 
         // Baked white (like ParticleEffects' own spark texture) and tinted at draw time via
         // MetallicSparkleRenderSystem, so SparkleColorHex can be re-tuned without re-baking.
-        var sparkleTexture = ProceduralTextures.CreateCircle(graphicsDevice, ironConfig.SparkleSizePixels, Microsoft.Xna.Framework.Color.White);
+        var sparkleTexture = ProceduralTextures.CreateCircle(graphicsDevice, ironConfig.Sparkle.SizePixels, Microsoft.Xna.Framework.Color.White);
 
         var assets = new PickupAssets(shapeVariants, shapeTextures, sparkleTexture);
 
@@ -115,13 +115,13 @@ public static class IronPickupField
         bodyDef.position = positionMeters;
         bodyDef.rotation = b2Rot.FromAngle(rotationRadians);
 
-        var speed = config.SpeedMetersPerSecondRange.Min +
-                    (float)random.NextDouble() * (config.SpeedMetersPerSecondRange.Max - config.SpeedMetersPerSecondRange.Min);
+        var speed = config.Motion.SpeedMetersPerSecondRange.Min +
+                    (float)random.NextDouble() * (config.Motion.SpeedMetersPerSecondRange.Max - config.Motion.SpeedMetersPerSecondRange.Min);
         var velocityAngle = (float)(random.NextDouble() * Math.PI * 2);
         bodyDef.linearVelocity = new Vector2(MathF.Cos(velocityAngle), MathF.Sin(velocityAngle)) * speed;
 
-        var angularSpeed = config.AngularVelocityRadiansPerSecondRange.Min +
-                            (float)random.NextDouble() * (config.AngularVelocityRadiansPerSecondRange.Max - config.AngularVelocityRadiansPerSecondRange.Min);
+        var angularSpeed = config.Motion.AngularVelocityRadiansPerSecondRange.Min +
+                            (float)random.NextDouble() * (config.Motion.AngularVelocityRadiansPerSecondRange.Max - config.Motion.AngularVelocityRadiansPerSecondRange.Min);
         bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
         var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
@@ -138,8 +138,8 @@ public static class IronPickupField
         // collision mask excludes the ship specifically — the ship should fly straight through
         // and get it collected via IronPickupSystem's distance check, not bounce off it.
         var shapeDef = B2Api.b2DefaultShapeDef();
-        shapeDef.density = config.MaterialDensity;
-        shapeDef.material.restitution = config.Restitution;
+        shapeDef.density = config.Motion.MaterialDensity;
+        shapeDef.material.restitution = config.Motion.Restitution;
         shapeDef.filter.maskBits = ~CollisionCategories.Ship;
         var hull = B2Api.b2ComputeHull(points, points.Length);
         var polygon = B2Api.b2MakePolygon(hull, 0f);
@@ -150,7 +150,7 @@ public static class IronPickupField
         // in the chunk's own unrotated local space — MetallicSparkleRenderSystem rotates each by
         // the entity's current facing every frame so they stay fixed to their facets as the chunk
         // spins, and each flares on its own independent phase.
-        var (sparkleOffsetsPixels, sparklePhasesRadians) = ProceduralShapeGenerator.GenerateSparklePoints(random, unitVertices, config.SparkleCount, config.SpriteSizePixels / 2f);
+        var (sparkleOffsetsPixels, sparklePhasesRadians) = ProceduralShapeGenerator.GenerateSparklePoints(random, unitVertices, config.Sparkle.Count, config.SpriteSizePixels / 2f);
 
         world.Create(
             new PhysicsBody { BodyId = bodyId },

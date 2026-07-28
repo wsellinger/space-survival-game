@@ -19,7 +19,7 @@ namespace SpaceSurvivalGame.Rendering;
 /// grows/shrinks it evenly instead of just toward one corner — used by the O2 bar's
 /// empty-oxygen pulse.
 ///
-/// Also draws a plain "IRON: n" text counter at HudConfig.IronCounterPositionX/Y (a raw
+/// Also draws a plain "IRON: n" text counter at HudConfig.IronCounter.PositionX/Y (a raw
 /// screen-space pixel coordinate, hand-placed rather than derived from a corner/margin) — Iron
 /// has no Max (unlike Health/Oxygen), so a fraction-based bar doesn't apply; a counter is the
 /// natural fit for an uncapped resource. Plain white for now — the ore's own configured color was
@@ -36,8 +36,8 @@ public static class HudRenderer
     {
         world.Query(in Query, (ref Health health, ref Oxygen oxygen, ref Iron iron, ref HealthBarFeedback feedback) =>
         {
-            var basePosition = new Vector2((viewportWidth - config.BarLengthPixels) / 2f, viewportHeight - config.MarginPixels - config.BarThicknessPixels);
-            var oxygenPosition = basePosition - new Vector2(0, config.BarThicknessPixels + config.BarSpacingPixels);
+            var basePosition = new Vector2((viewportWidth - config.Bars.LengthPixels) / 2f, viewportHeight - config.Bars.MarginPixels - config.Bars.ThicknessPixels);
+            var oxygenPosition = basePosition - new Vector2(0, config.Bars.ThicknessPixels + config.Bars.SpacingPixels);
             var healthPosition = basePosition + feedback.ShakeOffsetPixels;
 
             var flashFraction = MathHelper.Clamp(feedback.RemainingSeconds / feedbackConfig.FlashDurationSeconds, 0f, 1f);
@@ -45,7 +45,7 @@ public static class HudRenderer
 
             var healthFraction = health.Current / health.Max;
             if (health.Current > 0f && healthFraction <= healthWarningConfig.LowHealthThresholdFraction &&
-                IsInFlashBeat(totalGameSeconds, config.WarningFlashBeatSeconds))
+                IsInFlashBeat(totalGameSeconds, config.Bars.WarningFlashBeatSeconds))
             {
                 healthColor = Color.White; // the low-health blink overrides the hit-flash color during its "on" beats
             }
@@ -70,7 +70,7 @@ public static class HudRenderer
             }
             else if (oxygenFraction <= oxygenWarningConfig.LowOxygenThresholdFraction)
             {
-                oxygenColor = IsInFlashBeat(totalGameSeconds, config.WarningFlashBeatSeconds) ? Color.White : Color.CornflowerBlue;
+                oxygenColor = IsInFlashBeat(totalGameSeconds, config.Bars.WarningFlashBeatSeconds) ? Color.White : Color.CornflowerBlue;
                 oxygenOutlineColor = Color.White;
             }
             else
@@ -82,8 +82,8 @@ public static class HudRenderer
             DrawBar(spriteBatch, config, fillTexture, outlineTexture, oxygenPosition, oxygenFraction, oxygenColor, oxygenOutlineColor, oxygenScale);
 
             var ironText = $"IRON: {(int)iron.Current}";
-            var ironPosition = new Vector2(config.IronCounterPositionX, config.IronCounterPositionY);
-            spriteBatch.DrawString(font, ironText, ironPosition, Color.White, 0f, Vector2.Zero, config.IronCounterTextScale, SpriteEffects.None, 0f);
+            var ironPosition = new Vector2(config.IronCounter.PositionX, config.IronCounter.PositionY);
+            spriteBatch.DrawString(font, ironText, ironPosition, Color.White, 0f, Vector2.Zero, config.IronCounter.TextScale, SpriteEffects.None, 0f);
         });
     }
 
@@ -97,18 +97,18 @@ public static class HudRenderer
     private static void DrawBar(SpriteBatch spriteBatch, HudConfig config, Texture2D fillTexture, Texture2D outlineTexture, Vector2 position,
         float fraction, Color fillColor, Color outlineColor, float scale)
     {
-        var origin = new Vector2(config.BarLengthPixels / 2f, config.BarThicknessPixels / 2f);
+        var origin = new Vector2(config.Bars.LengthPixels / 2f, config.Bars.ThicknessPixels / 2f);
         var center = position + origin;
 
-        var fillWidth = (int)(config.BarLengthPixels * MathHelper.Clamp(fraction, 0f, 1f));
+        var fillWidth = (int)(config.Bars.LengthPixels * MathHelper.Clamp(fraction, 0f, 1f));
         if (fillWidth > 0)
         {
             // A horizontally-centered slice of the full-length texture, drawn centered at the
             // bar's own center — as fillWidth shrinks, both edges pull in toward the middle
             // symmetrically instead of the fill just receding from one side.
-            var offsetX = (config.BarLengthPixels - fillWidth) / 2;
-            var sourceRectangle = new Rectangle(offsetX, 0, fillWidth, config.BarThicknessPixels);
-            var fillOrigin = new Vector2(fillWidth / 2f, config.BarThicknessPixels / 2f);
+            var offsetX = (config.Bars.LengthPixels - fillWidth) / 2;
+            var sourceRectangle = new Rectangle(offsetX, 0, fillWidth, config.Bars.ThicknessPixels);
+            var fillOrigin = new Vector2(fillWidth / 2f, config.Bars.ThicknessPixels / 2f);
             spriteBatch.Draw(fillTexture, center, sourceRectangle, fillColor, 0f, fillOrigin, scale, SpriteEffects.None, 0f);
         }
 

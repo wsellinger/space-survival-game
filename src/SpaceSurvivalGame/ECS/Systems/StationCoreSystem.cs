@@ -17,16 +17,16 @@ namespace SpaceSurvivalGame.ECS.Systems;
 /// so it visually rides along at the ship's center. Once the ship's Iron.Current first reaches
 /// StationCoreConfig.IronAmountRequired, spends that amount, flips Attached false, and picks a
 /// TargetPositionMeters — the point within the CURRENT on-screen view (and within
-/// MaxSearchRangeMeters of the detach position) farthest from any asteroid's edge, a one-time
-/// search never re-evaluated even if asteroids later drift closer. From then on this system
-/// eases the core toward that target over a fixed duration (distance / FlightSpeedMetersPerSecond,
-/// shaped by FlightEaseExponent for a slow start/finish), stopping exactly on arrival and
-/// becoming an independent, stationary object — at which point it also gains a real static
-/// Box2D body (see CreatePhysicsBody) so it solidly blocks the ship/asteroids/pickups instead of
-/// just sitting there visually; it does deal collision damage to the ship on contact, scaled down
-/// by CollisionDamageMultiplier compared to an ordinary asteroid hit (see CollisionDamageSystem).
-/// A one-time shockwave fires once flight progress
-/// first reaches ShockwaveTriggerProgress — not necessarily full arrival, so it can go off
+/// Flight.MaxSearchRangeMeters of the detach position) farthest from any asteroid's edge, a
+/// one-time search never re-evaluated even if asteroids later drift closer. From then on this
+/// system eases the core toward that target over a fixed duration (distance /
+/// Flight.SpeedMetersPerSecond, shaped by Flight.EaseInExponent/EaseOutExponent for a slow
+/// start/finish), stopping exactly on arrival and becoming an independent, stationary object — at
+/// which point it also gains a real static Box2D body (see CreatePhysicsBody) so it solidly
+/// blocks the ship/asteroids/pickups instead of just sitting there visually; it does deal
+/// collision damage to the ship on contact, scaled down by Physics.CollisionDamageMultiplier
+/// compared to an ordinary asteroid hit (see CollisionDamageSystem). A one-time shockwave fires
+/// once flight progress first reaches Shockwave.TriggerProgress — not necessarily full arrival, so it can go off
 /// slightly before the core actually stops: an outward impulse on every nearby PhysicsBody (see
 /// ApplyShockwave, which also grants the ship a brief Invulnerability window as a failsafe) and a
 /// starting timer for the matching expanding-ring visual (see StationCoreShockwaveRenderSystem).
@@ -70,7 +70,7 @@ public static class StationCoreSystem
                     core.TargetPositionMeters = FindOpenSpotOnScreen(world, camera, config, coreTransform.PositionMeters);
                     core.FlightElapsedSeconds = 0f;
                     var flightDistance = Vector2.Distance(core.FlightStartPositionMeters, core.TargetPositionMeters);
-                    core.FlightDurationSeconds = flightDistance / MathF.Max(0.0001f, config.FlightSpeedMetersPerSecond);
+                    core.FlightDurationSeconds = flightDistance / MathF.Max(0.0001f, config.Flight.SpeedMetersPerSecond);
 
                     // No flight needed (it already detached right at its own target) — the usual
                     // per-frame trigger check below never runs for this core, so fire the
@@ -94,13 +94,13 @@ public static class StationCoreSystem
             {
                 core.FlightElapsedSeconds += deltaSeconds;
                 var progress = MathF.Min(1f, core.FlightElapsedSeconds / core.FlightDurationSeconds);
-                var easedProgress = EaseInOut(progress, config.FlightEaseInExponent, config.FlightEaseOutExponent);
+                var easedProgress = EaseInOut(progress, config.Flight.EaseInExponent, config.Flight.EaseOutExponent);
                 coreTransform.PositionMeters = Vector2.Lerp(core.FlightStartPositionMeters, core.TargetPositionMeters, easedProgress);
 
                 // Fires once, as soon as progress first crosses ShockwaveTriggerProgress — not
                 // necessarily full arrival (progress >= 1) — from wherever the core currently is,
                 // guarded by ShockwaveElapsedSeconds still being -1 so it can't refire next frame.
-                if (core.ShockwaveElapsedSeconds < 0f && progress >= config.ShockwaveTriggerProgress)
+                if (core.ShockwaveElapsedSeconds < 0f && progress >= config.Shockwave.TriggerProgress)
                 {
                     core.ShockwaveElapsedSeconds = 0f;
                     ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity, coreEntity);
@@ -113,7 +113,7 @@ public static class StationCoreSystem
                 }
             }
 
-            if (core.ShockwaveElapsedSeconds >= 0f && core.ShockwaveElapsedSeconds < config.ShockwaveDurationSeconds)
+            if (core.ShockwaveElapsedSeconds >= 0f && core.ShockwaveElapsedSeconds < config.Shockwave.DurationSeconds)
                 core.ShockwaveElapsedSeconds += deltaSeconds; // stops advancing once past the duration — GetFlightProgress-style done flag, not an unbounded timer
 
             // Landed (Attached is already false by this point, or this frame's earlier branch
@@ -126,12 +126,12 @@ public static class StationCoreSystem
                 if (core.DriftTimerSeconds <= 0f)
                 {
                     ApplyDriftImpulse(world, coreEntity, ref core, config, random);
-                    core.DriftTimerSeconds = NextInRange(random, config.DriftImpulseIntervalSecondsRange);
+                    core.DriftTimerSeconds = NextInRange(random, config.Drift.ImpulseIntervalSecondsRange);
                 }
 
                 // Starts the next puff slot in the staggered sequence kicked off by
                 // ApplyDriftImpulse above (see SpawnSequencedDriftPuff) — one starts every
-                // DriftPuffs.StaggerSeconds instead of all three at once.
+                // Drift.Puffs.StaggerSeconds instead of all three at once.
                 if (core.PuffNextIndex < PuffSequenceCount)
                 {
                     core.PuffNextStartSeconds -= deltaSeconds;
@@ -139,12 +139,12 @@ public static class StationCoreSystem
                     {
                         SetPuffSlotElapsed(ref core, core.PuffNextIndex, 0f);
                         core.PuffNextIndex++;
-                        core.PuffNextStartSeconds = config.DriftPuffs.StaggerSeconds;
+                        core.PuffNextStartSeconds = config.Drift.Puffs.StaggerSeconds;
                     }
                 }
 
                 // Sustains each already-started puff slot's own emission for
-                // DriftPuffs.DurationSeconds, independent of the other slots' own timers — so an
+                // Drift.Puffs.DurationSeconds, independent of the other slots' own timers — so an
                 // individual puff still looks like a proper little burst rather than a
                 // single-frame pop, regardless of how far apart the three slots started.
                 if (GetPuffSlotElapsed(in core, 0) >= 0f || GetPuffSlotElapsed(in core, 1) >= 0f || GetPuffSlotElapsed(in core, 2) >= 0f)
@@ -156,7 +156,7 @@ public static class StationCoreSystem
                     for (var puffIndex = 0; puffIndex < PuffSequenceCount; puffIndex++)
                     {
                         var elapsedSeconds = GetPuffSlotElapsed(in core, puffIndex);
-                        if (elapsedSeconds < 0f || elapsedSeconds >= config.DriftPuffs.DurationSeconds) continue;
+                        if (elapsedSeconds < 0f || elapsedSeconds >= config.Drift.Puffs.DurationSeconds) continue;
 
                         SpawnSequencedDriftPuff(world, driftPuffTexture, driftPuffColor, config, random,
                             positionMeters, rotationRadians, core.PuffPushDirection, core.PuffAngularSign, puffIndex);
@@ -168,15 +168,15 @@ public static class StationCoreSystem
     }
 
     /// <summary>
-    /// A one-time outward push on every nearby PhysicsBody, scaling from ShockwaveImpulseStrength
-    /// at zero distance down to 0 at ShockwaveRadiusMeters. Applying the same base impulse
+    /// A one-time outward push on every nearby PhysicsBody, scaling from Shockwave.ImpulseStrength
+    /// at zero distance down to 0 at Shockwave.RadiusMeters. Applying the same base impulse
     /// regardless of an entity's own mass is deliberate — Box2D's own impulse/mass=deltaV means
     /// heavier bodies (a big asteroid) still end up pushed less far than light ones for the same
     /// blast, matching what a real shockwave would do — but O2/iron pickups are light enough that
     /// this alone still sends them flying far more violently than asteroids do, so
-    /// ShockwavePickupImpulseMultiplier tunes them down separately, same idea as the ship's own
-    /// ShockwaveShipImpulseMultiplier. Also grants the ship a failsafe window of Invulnerability
-    /// lasting ShockwaveDurationSeconds, since the shockwave can fling an asteroid straight into it
+    /// Shockwave.PickupImpulseMultiplier tunes them down separately, same idea as the ship's own
+    /// Shockwave.ShipImpulseMultiplier. Also grants the ship a failsafe window of Invulnerability
+    /// lasting Shockwave.DurationSeconds, since the shockwave can fling an asteroid straight into it
     /// right as it's still settling. coreEntity itself is always excluded — currently it never has
     /// a PhysicsBody yet at the moment its own shockwave fires anyway (CreatePhysicsBody runs
     /// after), but skipping it explicitly means it stays immune to its own blast even if a future
@@ -190,18 +190,18 @@ public static class StationCoreSystem
 
             var offset = transform.PositionMeters - originMeters;
             var distance = offset.Length();
-            if (distance < 0.0001f || distance > config.ShockwaveRadiusMeters) return;
+            if (distance < 0.0001f || distance > config.Shockwave.RadiusMeters) return;
 
-            var falloff = 1f - distance / config.ShockwaveRadiusMeters;
-            var strength = config.ShockwaveImpulseStrength * falloff;
-            if (entity == shipEntity) strength *= config.ShockwaveShipImpulseMultiplier;
-            else if (world.Has<OxygenPickup>(entity) || world.Has<IronPickup>(entity)) strength *= config.ShockwavePickupImpulseMultiplier;
+            var falloff = 1f - distance / config.Shockwave.RadiusMeters;
+            var strength = config.Shockwave.ImpulseStrength * falloff;
+            if (entity == shipEntity) strength *= config.Shockwave.ShipImpulseMultiplier;
+            else if (world.Has<OxygenPickup>(entity) || world.Has<IronPickup>(entity)) strength *= config.Shockwave.PickupImpulseMultiplier;
 
             var impulse = offset / distance * strength;
             B2Api.b2Body_ApplyLinearImpulseToCenter(physicsBody.BodyId, impulse, wake: true);
         });
 
-        world.Get<Invulnerability>(shipEntity).RemainingSeconds = config.ShockwaveDurationSeconds;
+        world.Get<Invulnerability>(shipEntity).RemainingSeconds = config.Shockwave.DurationSeconds;
     }
 
     /// <summary>
@@ -233,43 +233,43 @@ public static class StationCoreSystem
 
     /// <summary>
     /// Gives the now-arrived core a real dynamic Box2D body — a square matching the fully-grown
-    /// circuit-board build effect's own footprint (BuildEffectMaxSizePixels; see
+    /// circuit-board build effect's own footprint (Build.MaxSizePixels; see
     /// StationCoreBuildEffectRenderSystem), not just the small core dot on top of it, since that
     /// square is what's actually left permanently visible on the ground once construction
     /// finishes — so it solidly blocks the ship/asteroids/pickups from here on instead of just
     /// being a visual. Dynamic (not static/kinematic) so later collisions (and its own drift
     /// impulses — see ApplyDriftImpulse) can actually move it like any other body, mass driven by
-    /// PhysicsMaterialDensity; also adds a Velocity component so PhysicsSyncSystem picks it up and
+    /// Physics.MaterialDensity; also adds a Velocity component so PhysicsSyncSystem picks it up and
     /// keeps its Transform following the body from here on, the same way every other
     /// physics-driven entity works. Tagged Damaging with a DamageMultiplier of
-    /// CollisionDamageMultiplier so bumping it does hurt the ship, just less than an ordinary
-    /// asteroid hit at the same speed (see CollisionDamageSystem).
+    /// Physics.CollisionDamageMultiplier so bumping it does hurt the ship, just less than an
+    /// ordinary asteroid hit at the same speed (see CollisionDamageSystem).
     ///
     /// Also records HomePositionMeters/HomeRotationRadians (where it landed — the body always
     /// starts at rotation 0, since bodyDef never sets one) and rolls the first DriftTimerSeconds,
     /// so drifting can start from here. Starts with a small random linear + angular velocity
-    /// (InitialLinearSpeedMetersPerSecondRange/InitialAngularSpeedRadiansPerSecondRange) baked
-    /// straight into bodyDef, so it's already gently moving the instant it lands rather than
-    /// sitting frozen until the first drift impulse fires.
+    /// (InitialSpeed.LinearMetersPerSecondRange/AngularRadiansPerSecondRange) baked straight into
+    /// bodyDef, so it's already gently moving the instant it lands rather than sitting frozen
+    /// until the first drift impulse fires.
     /// </summary>
     private static void CreatePhysicsBody(World world, PhysicsWorld physicsWorld, Entity coreEntity, ref StationCore core, Vector2 positionMeters, StationCoreConfig config, Random random)
     {
         var initialSpeedAngle = (float)(random.NextDouble() * Math.PI * 2);
-        var initialSpeed = NextInRange(random, config.InitialLinearSpeedMetersPerSecondRange);
+        var initialSpeed = NextInRange(random, config.InitialSpeed.LinearMetersPerSecondRange);
 
         var bodyDef = B2Api.b2DefaultBodyDef();
         bodyDef.type = b2BodyType.b2_dynamicBody;
         bodyDef.position = positionMeters;
-        bodyDef.linearDamping = config.PhysicsLinearDamping;
-        bodyDef.angularDamping = config.PhysicsAngularDamping;
+        bodyDef.linearDamping = config.Physics.LinearDamping;
+        bodyDef.angularDamping = config.Physics.AngularDamping;
         bodyDef.linearVelocity = new Vector2(MathF.Cos(initialSpeedAngle), MathF.Sin(initialSpeedAngle)) * initialSpeed;
-        bodyDef.angularVelocity = NextInRange(random, config.InitialAngularSpeedRadiansPerSecondRange) * (random.Next(2) == 0 ? -1f : 1f);
+        bodyDef.angularVelocity = NextInRange(random, config.InitialSpeed.AngularRadiansPerSecondRange) * (random.Next(2) == 0 ? -1f : 1f);
         var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
 
         var shapeDef = B2Api.b2DefaultShapeDef();
-        shapeDef.density = config.PhysicsMaterialDensity;
-        shapeDef.material.restitution = config.PhysicsRestitution;
-        var halfWidthMeters = PhysicsWorld.PixelsToMeters(config.BuildEffectMaxSizePixels) / 2f;
+        shapeDef.density = config.Physics.MaterialDensity;
+        shapeDef.material.restitution = config.Physics.Restitution;
+        var halfWidthMeters = PhysicsWorld.PixelsToMeters(config.Build.MaxSizePixels) / 2f;
         var square = B2Api.b2MakeSquare(halfWidthMeters);
         B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in square);
 
@@ -283,21 +283,21 @@ public static class StationCoreSystem
         // look exactly like getting hit by a shockwave.
         core.HomePositionMeters = positionMeters;
         core.HomeRotationRadians = 0f;
-        core.DriftTimerSeconds = NextInRange(random, config.DriftImpulseIntervalSecondsRange);
+        core.DriftTimerSeconds = NextInRange(random, config.Drift.ImpulseIntervalSecondsRange);
         core.PuffNextIndex = PuffSequenceCount; // nothing pending
         SetPuffSlotElapsed(ref core, 0, -1f);
         SetPuffSlotElapsed(ref core, 1, -1f);
         SetPuffSlotElapsed(ref core, 2, -1f);
 
         world.Add(coreEntity, new PhysicsBody { BodyId = bodyId }, new Velocity(),
-            new Damaging(), new DamageMultiplier { Value = config.CollisionDamageMultiplier });
+            new Damaging(), new DamageMultiplier { Value = config.Physics.CollisionDamageMultiplier });
     }
 
     /// <summary>
     /// Fires once every DriftTimerSeconds for a landed core: a small random linear impulse (random
-    /// direction, magnitude from DriftLinearImpulseStrengthRange) plus a correction proportional
+    /// direction, magnitude from Drift.LinearImpulseStrengthRange) plus a correction proportional
     /// to how far the core has drifted from homePositionMeters, and separately a small random
-    /// angular impulse (random sign, magnitude from DriftAngularImpulseStrengthRange) plus a
+    /// angular impulse (random sign, magnitude from Drift.AngularImpulseStrengthRange) plus a
     /// correction proportional to how far its rotation has drifted from homeRotationRadians. The
     /// correction terms are what keep it wandering in place rather than walking away or spinning
     /// up over many impulses — each one is nudged back toward home, not just random. Also kicks
@@ -312,15 +312,15 @@ public static class StationCoreSystem
         var rotationRadians = B2Api.b2Body_GetRotation(bodyId).GetAngle();
 
         var randomAngle = (float)(random.NextDouble() * Math.PI * 2);
-        var randomImpulse = new Vector2(MathF.Cos(randomAngle), MathF.Sin(randomAngle)) * NextInRange(random, config.DriftLinearImpulseStrengthRange);
+        var randomImpulse = new Vector2(MathF.Cos(randomAngle), MathF.Sin(randomAngle)) * NextInRange(random, config.Drift.LinearImpulseStrengthRange);
         var displacementMeters = core.HomePositionMeters - positionMeters;
-        var returnImpulse = displacementMeters * config.DriftReturnStrength;
+        var returnImpulse = displacementMeters * config.Drift.ReturnStrength;
         var totalLinearImpulse = randomImpulse + returnImpulse;
         B2Api.b2Body_ApplyLinearImpulseToCenter(bodyId, totalLinearImpulse, wake: true);
 
-        var randomAngularImpulse = NextInRange(random, config.DriftAngularImpulseStrengthRange) * (random.Next(2) == 0 ? -1f : 1f);
+        var randomAngularImpulse = NextInRange(random, config.Drift.AngularImpulseStrengthRange) * (random.Next(2) == 0 ? -1f : 1f);
         var angleErrorRadians = WrapAngle(core.HomeRotationRadians - rotationRadians);
-        var returnAngularImpulse = angleErrorRadians * config.DriftAngularReturnStrength;
+        var returnAngularImpulse = angleErrorRadians * config.Drift.AngularReturnStrength;
         var totalAngularImpulse = randomAngularImpulse + returnAngularImpulse;
         B2Api.b2Body_ApplyAngularImpulse(bodyId, totalAngularImpulse, wake: true);
 
@@ -365,21 +365,21 @@ public static class StationCoreSystem
     /// did), 1/2 are the diagonal corner pair firing tangentially for angularSign, same "exhaust
     /// opposes the push it causes" convention RotationJetSystem already uses for the ship's own
     /// turning jets. Mount points sit at the fully-grown build-effect square's own half-width
-    /// (BuildEffectMaxSizePixels), matching the physics body's actual footprint. Called every
-    /// frame a slot is active in Run — slots START DriftPuffs.StaggerSeconds apart (that's what
-    /// reads as three quick puffs one after another instead of one simultaneous cluster) and each
-    /// keeps being called like this for its own DriftPuffs.DurationSeconds once started.
+    /// (Build.MaxSizePixels), matching the physics body's actual footprint. Called every frame a
+    /// slot is active in Run — slots START Drift.Puffs.StaggerSeconds apart (that's what reads as
+    /// three quick puffs one after another instead of one simultaneous cluster) and each keeps
+    /// being called like this for its own Drift.Puffs.DurationSeconds once started.
     /// </summary>
     private static void SpawnSequencedDriftPuff(World world, Texture2D driftPuffTexture, Microsoft.Xna.Framework.Color driftPuffColor, StationCoreConfig config,
         Random random, Vector2 positionMeters, float rotationRadians, Vector2 pushDirection, float angularSign, int puffIndex)
     {
-        var halfWidthMeters = PhysicsWorld.PixelsToMeters(config.BuildEffectMaxSizePixels) / 2f;
+        var halfWidthMeters = PhysicsWorld.PixelsToMeters(config.Build.MaxSizePixels) / 2f;
 
         if (puffIndex == 0)
         {
             if (pushDirection == Vector2.Zero) return;
             var mountWorld = positionMeters - pushDirection * halfWidthMeters;
-            SpawnDriftPuff(world, driftPuffTexture, mountWorld, -pushDirection, random, config.DriftPuffs, driftPuffColor);
+            SpawnDriftPuff(world, driftPuffTexture, mountWorld, -pushDirection, random, config.Drift.Puffs, driftPuffColor);
             return;
         }
 
@@ -391,7 +391,7 @@ public static class StationCoreSystem
         Vector2 ToWorldDirection(Vector2 local) => forward * local.X + right * local.Y;
 
         var corner = puffIndex == 1 ? new Vector2(halfWidthMeters, halfWidthMeters) : new Vector2(-halfWidthMeters, -halfWidthMeters);
-        SpawnDriftPuff(world, driftPuffTexture, ToWorldPosition(corner), ToWorldDirection(AngularExhaustLocal(corner, angularSign)), random, config.DriftPuffs, driftPuffColor);
+        SpawnDriftPuff(world, driftPuffTexture, ToWorldPosition(corner), ToWorldDirection(AngularExhaustLocal(corner, angularSign)), random, config.Drift.Puffs, driftPuffColor);
     }
 
     /// <summary>Opposite of the tangential direction a point at cornerLocal would move due to an angular velocity of the given sign — see SpawnDriftPuffs.</summary>
@@ -439,13 +439,14 @@ public static class StationCoreSystem
 
     /// <summary>
     /// Samples a resolution x resolution grid across the current viewport (world-space, centered
-    /// on the camera) and returns whichever candidate — within MaxSearchRangeMeters of
+    /// on the camera) and returns whichever candidate — within Flight.MaxSearchRangeMeters of
     /// originMeters (the ship's own position at the moment of detaching) but no closer than
-    /// MinDistanceFromShipMeters to it — maximizes its distance to the nearest asteroid's own
-    /// edge (distance to center minus that asteroid's RadiusMeters): the biggest gap currently
+    /// Flight.MinDistanceFromShipMeters to it — maximizes its distance to the nearest asteroid's
+    /// own edge (distance to center minus that asteroid's RadiusMeters): the biggest gap currently
     /// visible, not just the biggest gap between centers. Falls back to a point exactly
-    /// MinDistanceFromShipMeters from originMeters (an arbitrary fixed direction) if no candidate
-    /// qualifies at all, so the fallback itself never violates the minimum-distance failsafe.
+    /// Flight.MinDistanceFromShipMeters from originMeters (an arbitrary fixed direction) if no
+    /// candidate qualifies at all, so the fallback itself never violates the minimum-distance
+    /// failsafe.
     /// </summary>
     private static Vector2 FindOpenSpotOnScreen(World world, Camera camera, StationCoreConfig config, Vector2 originMeters)
     {
@@ -460,8 +461,8 @@ public static class StationCoreSystem
         var halfWidthMeters = PhysicsWorld.PixelsToMeters(camera.ViewportWidth / 2f);
         var halfHeightMeters = PhysicsWorld.PixelsToMeters(camera.ViewportHeight / 2f);
 
-        var resolution = Math.Max(1, config.OpenSpotSearchResolution);
-        var bestPositionMeters = originMeters + new Vector2(config.MinDistanceFromShipMeters, 0f);
+        var resolution = Math.Max(1, config.Flight.OpenSpotSearchResolution);
+        var bestPositionMeters = originMeters + new Vector2(config.Flight.MinDistanceFromShipMeters, 0f);
         var bestClearanceMeters = float.NegativeInfinity;
 
         for (var gx = 0; gx < resolution; gx++)
@@ -475,7 +476,7 @@ public static class StationCoreSystem
                     (fractionY * 2f - 1f) * halfHeightMeters);
 
                 var distanceFromShip = Vector2.Distance(candidateMeters, originMeters);
-                if (distanceFromShip > config.MaxSearchRangeMeters || distanceFromShip < config.MinDistanceFromShipMeters) continue;
+                if (distanceFromShip > config.Flight.MaxSearchRangeMeters || distanceFromShip < config.Flight.MinDistanceFromShipMeters) continue;
 
                 var clearanceMeters = float.PositiveInfinity;
                 for (var i = 0; i < asteroidPositions.Count; i++)

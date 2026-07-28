@@ -19,12 +19,7 @@ public class OxygenPickupConfig
     // never affects the crystal's actual on-screen size or its physics/collision shape.
     public float GlowRadius { get; set; } = 1.5f;
 
-    public float MaterialDensity { get; set; } = 0.3f;
-    public float Restitution { get; set; } = 0.6f;
-    public FloatRange SpeedMetersPerSecondRange { get; set; } = new(0.1f, 0.5f);
-
-    // Initial spin, magnitude only — sign (direction) is randomized separately at spawn time.
-    public FloatRange AngularVelocityRadiansPerSecondRange { get; set; } = new(0.1f, 1f);
+    public PickupMotionConfig Motion { get; set; } = new();
 
     public static OxygenPickupConfig Load(string path) => ConfigLoader.Load<OxygenPickupConfig>(path);
 }

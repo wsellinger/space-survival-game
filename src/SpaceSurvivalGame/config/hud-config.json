@@ -1,12 +1,15 @@
 {
-  "BarLengthPixels": 300,
-  "BarThicknessPixels": 8,
-  "BarOutlineThicknessPixels": 1,
-  "MarginPixels": 16,
-  "BarSpacingPixels": 6,
-  "WarningFlashBeatSeconds": 0.115,
-  "IronCounterPositionX": 40,
-  "IronCounterPositionY": 1020,
-  "IronCounterTextScale": 1
+  "Bars": {
+    "LengthPixels": 300,
+    "ThicknessPixels": 8,
+    "OutlineThicknessPixels": 1,
+    "MarginPixels": 16,
+    "SpacingPixels": 6,
+    "WarningFlashBeatSeconds": 0.115
+  },
+  "IronCounter": {
+    "PositionX": 40,
+    "PositionY": 1020,
+    "TextScale": 1
+  }
 }
- 

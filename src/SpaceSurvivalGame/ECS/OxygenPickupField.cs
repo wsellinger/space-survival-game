@@ -99,13 +99,13 @@ public static class OxygenPickupField
         bodyDef.position = positionMeters;
         bodyDef.rotation = b2Rot.FromAngle(rotationRadians);
 
-        var speed = config.SpeedMetersPerSecondRange.Min +
-                    (float)random.NextDouble() * (config.SpeedMetersPerSecondRange.Max - config.SpeedMetersPerSecondRange.Min);
+        var speed = config.Motion.SpeedMetersPerSecondRange.Min +
+                    (float)random.NextDouble() * (config.Motion.SpeedMetersPerSecondRange.Max - config.Motion.SpeedMetersPerSecondRange.Min);
         var velocityAngle = (float)(random.NextDouble() * Math.PI * 2);
         bodyDef.linearVelocity = new Vector2(MathF.Cos(velocityAngle), MathF.Sin(velocityAngle)) * speed;
 
-        var angularSpeed = config.AngularVelocityRadiansPerSecondRange.Min +
-                            (float)random.NextDouble() * (config.AngularVelocityRadiansPerSecondRange.Max - config.AngularVelocityRadiansPerSecondRange.Min);
+        var angularSpeed = config.Motion.AngularVelocityRadiansPerSecondRange.Min +
+                            (float)random.NextDouble() * (config.Motion.AngularVelocityRadiansPerSecondRange.Max - config.Motion.AngularVelocityRadiansPerSecondRange.Min);
         bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
         var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
@@ -126,8 +126,8 @@ public static class OxygenPickupField
         // excludes the ship specifically — the ship should fly straight through and get
         // it collected via OxygenPickupSystem's distance check, not bounce off it.
         var shapeDef = B2Api.b2DefaultShapeDef();
-        shapeDef.density = config.MaterialDensity;
-        shapeDef.material.restitution = config.Restitution;
+        shapeDef.density = config.Motion.MaterialDensity;
+        shapeDef.material.restitution = config.Motion.Restitution;
         shapeDef.filter.maskBits = ~CollisionCategories.Ship;
         var hull = B2Api.b2ComputeHull(points, points.Length);
         var polygon = B2Api.b2MakePolygon(hull, 0f);

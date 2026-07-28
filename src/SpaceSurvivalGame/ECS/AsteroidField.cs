@@ -48,7 +48,7 @@ public static class AsteroidField
         var rockColor = ColorHex.Parse(config.Asteroid.RockColorHex);
         var crystalColor = ColorHex.Parse(oxygenPickupConfig.ColorHex);
         var oreColor = ColorHex.Parse(ironPickupConfig.ColorHex);
-        var rustSpotColor = ColorHex.Parse(ironPickupConfig.RustSpotColorHex);
+        var rustSpotColor = ColorHex.Parse(ironPickupConfig.RustSpots.ColorHex);
 
         // Canvas margin for the rich-asteroid textures only: embedded/protruding speckles can
         // extend past the rock's own unit-magnitude-1 edge, but (unlike the plain rock texture,
@@ -65,7 +65,7 @@ public static class AsteroidField
         // dot) and tinted at draw time by the shared MetallicSparkleRenderSystem, so an
         // iron-rich asteroid's embedded speckles can carry the same animated glint as the
         // standalone ore chunks.
-        var sparkleTexture = ProceduralTextures.CreateCircle(graphicsDevice, ironPickupConfig.SparkleSizePixels, Microsoft.Xna.Framework.Color.White);
+        var sparkleTexture = ProceduralTextures.CreateCircle(graphicsDevice, ironPickupConfig.Sparkle.SizePixels, Microsoft.Xna.Framework.Color.White);
 
         var shapeVariants = new Vector2[ShapeVariantCount][];
         var shapeTextures = new Texture2D[ShapeVariantCount];
@@ -92,7 +92,7 @@ public static class AsteroidField
             (ironRichShapeTextures[v], ironSpecklesPerVariant[v]) = CreateSpeckledRockTexture(random, graphicsDevice, shapeVariants[v], ironRichConfig, ironCanvasMarginScale,
                 IronRichShapeTextureSize, IronPickupField.OreMinVerticesPerShape, IronPickupField.OreMaxVerticesPerShape, IronPickupField.OreMinVertexRadiusFactor,
                 IronPickupField.OreAngleJitterFraction, IronPickupField.OreElongationFactor, rockColor, oreColor,
-                rustSpotColor, ironPickupConfig.RustSpotCountRange, ironPickupConfig.RustSpotSizeUnitRange);
+                rustSpotColor, ironPickupConfig.RustSpots.CountRange, ironPickupConfig.RustSpots.SizeUnitRange);
         }
 
         // Cell size = the largest possible sum-of-radii between any two asteroids,
@@ -190,7 +190,7 @@ public static class AsteroidField
                 new Damaging());
 
             // Same animated glints as the standalone ore chunks (see MetallicSparkleRenderSystem)
-            // — IronPickupConfig.SparkleCount of them PER embedded speckle (not one total), so an
+            // — IronPickupConfig.Sparkle.Count of them PER embedded speckle (not one total), so an
             // asteroid's ore reads with the same sparkle density as a loose chunk rather than
             // just a single glint per speckle. Each speckle's own points are generated in that
             // speckle's own local face (GenerateSparklePoints, same technique as the standalone
@@ -201,8 +201,8 @@ public static class AsteroidField
             if (type == AsteroidType.IronRich)
             {
                 var speckles = ironSpecklesPerVariant[variantIndex];
-                var sparkleOffsetsPixels = new Microsoft.Xna.Framework.Vector2[speckles.Length * ironPickupConfig.SparkleCount];
-                var sparklePhasesRadians = new float[speckles.Length * ironPickupConfig.SparkleCount];
+                var sparkleOffsetsPixels = new Microsoft.Xna.Framework.Vector2[speckles.Length * ironPickupConfig.Sparkle.Count];
+                var sparklePhasesRadians = new float[speckles.Length * ironPickupConfig.Sparkle.Count];
                 var sparkleIndex = 0;
                 foreach (var speckle in speckles)
                 {
@@ -211,7 +211,7 @@ public static class AsteroidField
 
                     var speckleCenterPixels = speckle.Center * (textureSize / 2f) * scale;
                     var speckleRadiusPixels = speckle.Radius * (textureSize / 2f) * scale;
-                    var (localOffsetsPixels, localPhasesRadians) = ProceduralShapeGenerator.GenerateSparklePoints(random, speckleUnitVertices, ironPickupConfig.SparkleCount, speckleRadiusPixels);
+                    var (localOffsetsPixels, localPhasesRadians) = ProceduralShapeGenerator.GenerateSparklePoints(random, speckleUnitVertices, ironPickupConfig.Sparkle.Count, speckleRadiusPixels);
 
                     for (var s = 0; s < localOffsetsPixels.Length; s++)
                     {

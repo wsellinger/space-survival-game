@@ -4,6 +4,9 @@
   "SpriteSize": 24,
   "NotchDepthFraction": 0.15,
   "SpeedCapEaseSpeed": 8,
+  "ColorHex": "#444444",
+  "AccentColorHex": "#666666",
+  "SocketColorHex": "#333333",
   "Thrust": {
     "Acceleration": 3.8,
     "AngleThresholdDegrees": 45

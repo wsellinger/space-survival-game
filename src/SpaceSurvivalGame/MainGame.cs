@@ -210,7 +210,7 @@ public class MainGame : Game
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
         _camera.TargetPositionMeters = _shipSpawnPositionMeters;
-        ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _shipConfig, _playerConfig);
+        ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _shipConfig, _playerConfig, _stationCoreConfig.CoreDot.SpriteSizePixels);
         StationCoreEntity.Create(_world, _shipSpawnPositionMeters, _stationCoreTexture, _stationCoreConfig.CoreDot.SpriteSizePixels);
 
         foreach (var layer in starfieldConfig.Layers)

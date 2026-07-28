@@ -14,7 +14,8 @@ namespace SpaceSurvivalGame.ECS;
 /// <summary>Creates the player ship entity and handles the one-off respawn action.</summary>
 public static class ShipEntity
 {
-    public static Entity Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 startPositionMeters, ShipConfig config, PlayerConfig playerConfig)
+    public static Entity Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 startPositionMeters, ShipConfig config, PlayerConfig playerConfig,
+        int coreSocketDiameterPixels)
     {
         var bodyDef = B2Api.b2DefaultBodyDef();
         bodyDef.type = b2BodyType.b2_dynamicBody;
@@ -44,7 +45,8 @@ public static class ShipEntity
         B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in triangle);
 
         // Visual only — the physics collider above stays the simpler flat-back triangle.
-        var texture = ProceduralTextures.CreateConcaveArrowShip(graphicsDevice, config.SpriteSize, config.NotchDepthFraction, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.Red);
+        var texture = ProceduralTextures.CreateConcaveArrowShip(graphicsDevice, config.SpriteSize, config.NotchDepthFraction,
+            ColorHex.Parse(config.ColorHex), ColorHex.Parse(config.AccentColorHex), coreSocketDiameterPixels, ColorHex.Parse(config.SocketColorHex));
 
         return world.Create(
             new PhysicsBody { BodyId = bodyId },

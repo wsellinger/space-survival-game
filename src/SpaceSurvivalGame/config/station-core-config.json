@@ -1,5 +1,5 @@
 {
-  "IronAmountRequired": 10,
+  "IronAmountRequired": 1,
   "CoreDot": {
     "SpriteSizePixels": 8,
     "ColorHex": "#FF1A1A",

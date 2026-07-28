@@ -48,6 +48,19 @@ public class ShipConfig
     // jet (EngineJetRenderer) mounts at this notch point instead of the flat back-center.
     public float NotchDepthFraction { get; set; } = 0.35f;
 
+    // Same flat-panel look as the station core's build effect (see StationCoreBuildConfig/
+    // StationCoreCircuitConfig) — a solid hull color plus accent trim lines along the hull's
+    // side/back edges, deliberately simpler than the core's own busier circuit-board trace
+    // pattern. Lighter than the core's own colors so the ship reads as its own thing rather
+    // than a literal copy.
+    public string ColorHex { get; set; } = "#888888";
+    public string AccentColorHex { get; set; } = "#444444";
+
+    // Color of the "mounting socket" circle baked at the ship's own center, sized to match the
+    // station core's own dot (see ShipEntity.Create) — hidden underneath the core's own sprite
+    // while it's still riding attached, revealed once it detaches, marking where it used to sit.
+    public string SocketColorHex { get; set; } = "#222222";
+
     public ThrustConfig Thrust { get; set; } = new();
     public StrafeConfig Strafe { get; set; } = new();
 

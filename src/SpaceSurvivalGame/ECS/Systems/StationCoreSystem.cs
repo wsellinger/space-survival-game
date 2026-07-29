@@ -61,110 +61,137 @@ public static class StationCoreSystem
         {
             if (core.Attached)
             {
-                if (ironCurrent >= config.IronAmountRequired)
-                {
-                    core.Attached = false;
-                    world.Get<Iron>(shipEntity).Current -= config.IronAmountRequired;
-
-                    core.FlightStartPositionMeters = coreTransform.PositionMeters;
-                    core.TargetPositionMeters = FindOpenSpotOnScreen(world, camera, config, coreTransform.PositionMeters);
-                    core.FlightElapsedSeconds = 0f;
-                    var flightDistance = Vector2.Distance(core.FlightStartPositionMeters, core.TargetPositionMeters);
-                    core.FlightDurationSeconds = flightDistance / MathF.Max(0.0001f, config.Flight.SpeedMetersPerSecond);
-
-                    // No flight needed (it already detached right at its own target) — the usual
-                    // per-frame trigger check below never runs for this core, so fire the
-                    // shockwave and the arrival physics body here instead of losing them entirely.
-                    if (core.FlightDurationSeconds <= 0f)
-                    {
-                        core.ShockwaveElapsedSeconds = 0f;
-                        ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity, coreEntity);
-                        CreatePhysicsBody(world, physicsWorld, coreEntity, ref core, coreTransform.PositionMeters, config, random);
-                    }
-                }
-                else
-                {
-                    coreTransform.PositionMeters = shipPositionMeters;
-                }
-
+                UpdateAttached(world, camera, physicsWorld, config, random, shipEntity, shipPositionMeters, ironCurrent,
+                    coreEntity, ref coreTransform, ref core);
                 return;
             }
 
-            if (core.FlightDurationSeconds > 0f)
-            {
-                core.FlightElapsedSeconds += deltaSeconds;
-                var progress = MathF.Min(1f, core.FlightElapsedSeconds / core.FlightDurationSeconds);
-                var easedProgress = EaseInOut(progress, config.Flight.EaseInExponent, config.Flight.EaseOutExponent);
-                coreTransform.PositionMeters = Vector2.Lerp(core.FlightStartPositionMeters, core.TargetPositionMeters, easedProgress);
-
-                // Fires once, as soon as progress first crosses ShockwaveTriggerProgress — not
-                // necessarily full arrival (progress >= 1) — from wherever the core currently is,
-                // guarded by ShockwaveElapsedSeconds still being -1 so it can't refire next frame.
-                if (core.ShockwaveElapsedSeconds < 0f && progress >= config.Shockwave.TriggerProgress)
-                {
-                    core.ShockwaveElapsedSeconds = 0f;
-                    ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity, coreEntity);
-                }
-
-                if (progress >= 1f)
-                {
-                    core.FlightDurationSeconds = 0f; // marks arrival so this branch is skipped from here on
-                    CreatePhysicsBody(world, physicsWorld, coreEntity, ref core, coreTransform.PositionMeters, config, random);
-                }
-            }
+            UpdateFlight(world, physicsWorld, config, random, shipEntity, coreEntity, deltaSeconds, ref coreTransform, ref core);
 
             if (core.ShockwaveElapsedSeconds >= 0f && core.ShockwaveElapsedSeconds < config.Shockwave.DurationSeconds)
                 core.ShockwaveElapsedSeconds += deltaSeconds; // stops advancing once past the duration — GetFlightProgress-style done flag, not an unbounded timer
 
-            // Landed (Attached is already false by this point, or this frame's earlier branch
-            // would have returned) — gently drift in place forever after.
+            // Landed (Attached is already false by this point, or UpdateAttached would have
+            // returned) — gently drift in place forever after.
+            if (core.FlightDurationSeconds <= 0f)
+                UpdateLanded(world, config, deltaSeconds, random, driftPuffTexture, driftPuffColor, coreEntity, coreTransform.PositionMeters, ref core);
+        });
+    }
+
+    /// <summary>
+    /// The core still rides along at the ship's own position every frame — unless Iron.Current
+    /// has just reached IronAmountRequired, in which case it spends that amount, flips Attached
+    /// false, and kicks off the detach flight (picking a target via FindOpenSpotOnScreen and
+    /// computing FlightDurationSeconds from the distance). If the chosen target happens to be
+    /// exactly where it already is (FlightDurationSeconds <= 0), the usual per-frame flight
+    /// trigger below never runs for this core, so the arrival shockwave and physics body fire
+    /// here instead of being lost entirely.
+    /// </summary>
+    private static void UpdateAttached(World world, Camera camera, PhysicsWorld physicsWorld, StationCoreConfig config, Random random,
+        Entity shipEntity, Vector2 shipPositionMeters, float ironCurrent, Entity coreEntity, ref Transform coreTransform, ref StationCore core)
+    {
+        if (ironCurrent >= config.IronAmountRequired)
+        {
+            core.Attached = false;
+            world.Get<Iron>(shipEntity).Current -= config.IronAmountRequired;
+
+            core.FlightStartPositionMeters = coreTransform.PositionMeters;
+            core.TargetPositionMeters = FindOpenSpotOnScreen(world, camera, config, coreTransform.PositionMeters);
+            core.FlightElapsedSeconds = 0f;
+            var flightDistance = Vector2.Distance(core.FlightStartPositionMeters, core.TargetPositionMeters);
+            core.FlightDurationSeconds = flightDistance / MathF.Max(0.0001f, config.Flight.SpeedMetersPerSecond);
+
             if (core.FlightDurationSeconds <= 0f)
             {
-                ApplyAntiGravityField(world, coreTransform.PositionMeters, config, coreEntity);
-
-                core.DriftTimerSeconds -= deltaSeconds;
-                if (core.DriftTimerSeconds <= 0f)
-                {
-                    ApplyDriftImpulse(world, coreEntity, ref core, config, random);
-                    core.DriftTimerSeconds = random.NextFloat(config.Drift.ImpulseIntervalSecondsRange);
-                }
-
-                // Starts the next puff slot in the staggered sequence kicked off by
-                // ApplyDriftImpulse above (see SpawnSequencedDriftPuff) — one starts every
-                // Drift.Puffs.StaggerSeconds instead of all three at once.
-                if (core.PuffNextIndex < PuffSequenceCount)
-                {
-                    core.PuffNextStartSeconds -= deltaSeconds;
-                    if (core.PuffNextStartSeconds <= 0f)
-                    {
-                        SetPuffSlotElapsed(ref core, core.PuffNextIndex, 0f);
-                        core.PuffNextIndex++;
-                        core.PuffNextStartSeconds = config.Drift.Puffs.StaggerSeconds;
-                    }
-                }
-
-                // Sustains each already-started puff slot's own emission for
-                // Drift.Puffs.DurationSeconds, independent of the other slots' own timers — so an
-                // individual puff still looks like a proper little burst rather than a
-                // single-frame pop, regardless of how far apart the three slots started.
-                if (GetPuffSlotElapsed(in core, 0) >= 0f || GetPuffSlotElapsed(in core, 1) >= 0f || GetPuffSlotElapsed(in core, 2) >= 0f)
-                {
-                    var bodyId = world.Get<PhysicsBody>(coreEntity).BodyId;
-                    var positionMeters = B2Api.b2Body_GetPosition(bodyId);
-                    var rotationRadians = B2Api.b2Body_GetRotation(bodyId).GetAngle();
-
-                    for (var puffIndex = 0; puffIndex < PuffSequenceCount; puffIndex++)
-                    {
-                        var elapsedSeconds = GetPuffSlotElapsed(in core, puffIndex);
-                        if (elapsedSeconds < 0f || elapsedSeconds >= config.Drift.Puffs.DurationSeconds) continue;
-
-                        SpawnSequencedDriftPuff(world, driftPuffTexture, driftPuffColor, config, random,
-                            positionMeters, rotationRadians, core.PuffPushDirection, core.PuffAngularSign, puffIndex);
-                        SetPuffSlotElapsed(ref core, puffIndex, elapsedSeconds + deltaSeconds);
-                    }
-                }
+                core.ShockwaveElapsedSeconds = 0f;
+                ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity, coreEntity);
+                CreatePhysicsBody(world, physicsWorld, coreEntity, ref core, coreTransform.PositionMeters, config, random);
             }
-        });
+        }
+        else
+        {
+            coreTransform.PositionMeters = shipPositionMeters;
+        }
+    }
+
+    /// <summary>
+    /// Eases the detached core toward TargetPositionMeters over FlightDurationSeconds (a no-op
+    /// once FlightDurationSeconds has been zeroed out to mark arrival). Fires the one-time
+    /// arrival shockwave as soon as progress first crosses Shockwave.TriggerProgress — not
+    /// necessarily full arrival — and gains a real physics body the instant progress reaches 1.
+    /// </summary>
+    private static void UpdateFlight(World world, PhysicsWorld physicsWorld, StationCoreConfig config, Random random,
+        Entity shipEntity, Entity coreEntity, float deltaSeconds, ref Transform coreTransform, ref StationCore core)
+    {
+        if (core.FlightDurationSeconds <= 0f) return;
+
+        core.FlightElapsedSeconds += deltaSeconds;
+        var progress = MathF.Min(1f, core.FlightElapsedSeconds / core.FlightDurationSeconds);
+        var easedProgress = EaseInOut(progress, config.Flight.EaseInExponent, config.Flight.EaseOutExponent);
+        coreTransform.PositionMeters = Vector2.Lerp(core.FlightStartPositionMeters, core.TargetPositionMeters, easedProgress);
+
+        // Guarded by ShockwaveElapsedSeconds still being -1 so it can't refire next frame.
+        if (core.ShockwaveElapsedSeconds < 0f && progress >= config.Shockwave.TriggerProgress)
+        {
+            core.ShockwaveElapsedSeconds = 0f;
+            ApplyShockwave(world, coreTransform.PositionMeters, config, shipEntity, coreEntity);
+        }
+
+        if (progress >= 1f)
+        {
+            core.FlightDurationSeconds = 0f; // marks arrival so this branch is skipped from here on
+            CreatePhysicsBody(world, physicsWorld, coreEntity, ref core, coreTransform.PositionMeters, config, random);
+        }
+    }
+
+    /// <summary>
+    /// Runs the landed core's continuous anti-gravity field and its gentle in-place drift —
+    /// periodic random impulses (see ApplyDriftImpulse) each kicking off a staggered 3-slot
+    /// gas-puff sequence (one starts every Drift.Puffs.StaggerSeconds, each sustaining its own
+    /// emission for Drift.Puffs.DurationSeconds once started) sustained here frame to frame.
+    /// </summary>
+    private static void UpdateLanded(World world, StationCoreConfig config, float deltaSeconds, Random random,
+        Texture2D driftPuffTexture, Microsoft.Xna.Framework.Color driftPuffColor, Entity coreEntity, Vector2 positionMeters, ref StationCore core)
+    {
+        ApplyAntiGravityField(world, positionMeters, config, coreEntity);
+
+        core.DriftTimerSeconds -= deltaSeconds;
+        if (core.DriftTimerSeconds <= 0f)
+        {
+            ApplyDriftImpulse(world, coreEntity, ref core, config, random);
+            core.DriftTimerSeconds = random.NextFloat(config.Drift.ImpulseIntervalSecondsRange);
+        }
+
+        if (core.PuffNextIndex < PuffSequenceCount)
+        {
+            core.PuffNextStartSeconds -= deltaSeconds;
+            if (core.PuffNextStartSeconds <= 0f)
+            {
+                SetPuffSlotElapsed(ref core, core.PuffNextIndex, 0f);
+                core.PuffNextIndex++;
+                core.PuffNextStartSeconds = config.Drift.Puffs.StaggerSeconds;
+            }
+        }
+
+        // Sustains each already-started puff slot's own emission, independent of the other
+        // slots' own timers — so an individual puff still looks like a proper little burst
+        // rather than a single-frame pop, regardless of how far apart the three slots started.
+        if (GetPuffSlotElapsed(in core, 0) >= 0f || GetPuffSlotElapsed(in core, 1) >= 0f || GetPuffSlotElapsed(in core, 2) >= 0f)
+        {
+            var bodyId = world.Get<PhysicsBody>(coreEntity).BodyId;
+            var bodyPositionMeters = B2Api.b2Body_GetPosition(bodyId);
+            var rotationRadians = B2Api.b2Body_GetRotation(bodyId).GetAngle();
+
+            for (var puffIndex = 0; puffIndex < PuffSequenceCount; puffIndex++)
+            {
+                var elapsedSeconds = GetPuffSlotElapsed(in core, puffIndex);
+                if (elapsedSeconds < 0f || elapsedSeconds >= config.Drift.Puffs.DurationSeconds) continue;
+
+                SpawnSequencedDriftPuff(world, driftPuffTexture, driftPuffColor, config, random,
+                    bodyPositionMeters, rotationRadians, core.PuffPushDirection, core.PuffAngularSign, puffIndex);
+                SetPuffSlotElapsed(ref core, puffIndex, elapsedSeconds + deltaSeconds);
+            }
+        }
     }
 
     /// <summary>

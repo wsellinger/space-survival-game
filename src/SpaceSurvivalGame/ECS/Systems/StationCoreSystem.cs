@@ -256,22 +256,15 @@ public static class StationCoreSystem
     {
         var initialSpeedAngle = (float)(random.NextDouble() * Math.PI * 2);
         var initialSpeed = random.NextFloat(config.InitialSpeed.LinearMetersPerSecondRange);
+        var initialAngularSpeed = random.NextFloat(config.InitialSpeed.AngularRadiansPerSecondRange) * (random.Next(2) == 0 ? -1f : 1f);
 
-        var bodyDef = B2Api.b2DefaultBodyDef();
-        bodyDef.type = b2BodyType.b2_dynamicBody;
-        bodyDef.position = positionMeters;
-        bodyDef.linearDamping = config.Physics.LinearDamping;
-        bodyDef.angularDamping = config.Physics.AngularDamping;
-        bodyDef.linearVelocity = new Vector2(MathF.Cos(initialSpeedAngle), MathF.Sin(initialSpeedAngle)) * initialSpeed;
-        bodyDef.angularVelocity = random.NextFloat(config.InitialSpeed.AngularRadiansPerSecondRange) * (random.Next(2) == 0 ? -1f : 1f);
-        var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
+        var bodyId = PhysicsBodyFactory.CreateDynamicBody(physicsWorld, positionMeters, rotationRadians: 0f,
+            linearVelocityMetersPerSecond: new Vector2(MathF.Cos(initialSpeedAngle), MathF.Sin(initialSpeedAngle)) * initialSpeed,
+            angularVelocityRadiansPerSecond: initialAngularSpeed,
+            linearDamping: config.Physics.LinearDamping, angularDamping: config.Physics.AngularDamping);
 
-        var shapeDef = B2Api.b2DefaultShapeDef();
-        shapeDef.density = config.Physics.MaterialDensity;
-        shapeDef.material.restitution = config.Physics.Restitution;
         var halfWidthMeters = PhysicsWorld.PixelsToMeters(config.Build.MaxSizePixels) / 2f;
-        var square = B2Api.b2MakeSquare(halfWidthMeters);
-        B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in square);
+        PhysicsBodyFactory.CreateSquareShape(bodyId, halfWidthMeters, config.Physics.MaterialDensity, config.Physics.Restitution);
 
         // Every StationCore field must be written BEFORE world.Add below — adding components
         // moves the entity to a new archetype, which invalidates this `ref core` (a reference into

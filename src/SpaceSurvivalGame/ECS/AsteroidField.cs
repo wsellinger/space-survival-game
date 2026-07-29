@@ -111,31 +111,22 @@ public static class AsteroidField
 
             grid.Add(positionMeters, radiusMeters);
 
-            var bodyDef = B2Api.b2DefaultBodyDef();
-            bodyDef.type = b2BodyType.b2_dynamicBody;
-            bodyDef.position = positionMeters;
-
             var speed = random.NextFloat(config.Asteroid.SpeedMetersPerSecondRange);
             var angle = (float)(random.NextDouble() * Math.PI * 2);
-            bodyDef.linearVelocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
-
             var angularSpeed = random.NextFloat(config.Asteroid.AngularVelocityRadiansPerSecondRange);
-            bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
+            angularSpeed = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
-            var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
+            var bodyId = PhysicsBodyFactory.CreateDynamicBody(physicsWorld, positionMeters, rotationRadians: 0f,
+                linearVelocityMetersPerSecond: new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed,
+                angularVelocityRadiansPerSecond: angularSpeed);
 
             var variantIndex = random.Next(ShapeVariantCount);
             var unitVertices = shapeVariants[variantIndex];
             var points = new Vector2[unitVertices.Length];
             for (var p = 0; p < unitVertices.Length; p++) points[p] = unitVertices[p] * radiusMeters;
 
-            var shapeDef = B2Api.b2DefaultShapeDef();
-            shapeDef.density = config.Asteroid.MaterialDensity;
-            shapeDef.material.restitution = config.Asteroid.Restitution;
-            shapeDef.enableHitEvents = true; // lets OxygenCrystalReleaseSystem/IronOreReleaseSystem see any collision this asteroid is part of, not just ones involving the ship
-            var hull = B2Api.b2ComputeHull(points, points.Length);
-            var polygon = B2Api.b2MakePolygon(hull, 0f);
-            B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);
+            // enableHitEvents lets OxygenCrystalReleaseSystem/IronOreReleaseSystem see any collision this asteroid is part of, not just ones involving the ship.
+            PhysicsBodyFactory.CreateHullPolygonShape(bodyId, points, config.Asteroid.MaterialDensity, config.Asteroid.Restitution, enableHitEvents: true);
 
             // Mutually exclusive: one additive roll across both rich-asteroid chances, so they
             // never overlap and their fractions add up intuitively (e.g. 15%+15% = 30% chance of

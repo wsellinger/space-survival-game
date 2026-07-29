@@ -110,19 +110,15 @@ public static class IronPickupField
     {
         var rotationRadians = (float)(random.NextDouble() * Math.PI * 2);
 
-        var bodyDef = B2Api.b2DefaultBodyDef();
-        bodyDef.type = b2BodyType.b2_dynamicBody;
-        bodyDef.position = positionMeters;
-        bodyDef.rotation = b2Rot.FromAngle(rotationRadians);
-
         var speed = random.NextFloat(config.Motion.SpeedMetersPerSecondRange);
         var velocityAngle = (float)(random.NextDouble() * Math.PI * 2);
-        bodyDef.linearVelocity = new Vector2(MathF.Cos(velocityAngle), MathF.Sin(velocityAngle)) * speed;
 
         var angularSpeed = random.NextFloat(config.Motion.AngularVelocityRadiansPerSecondRange);
-        bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
+        angularSpeed = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
-        var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
+        var bodyId = PhysicsBodyFactory.CreateDynamicBody(physicsWorld, positionMeters, rotationRadians,
+            linearVelocityMetersPerSecond: new Vector2(MathF.Cos(velocityAngle), MathF.Sin(velocityAngle)) * speed,
+            angularVelocityRadiansPerSecond: angularSpeed);
 
         var radiusMeters = PhysicsWorld.PixelsToMeters(config.SpriteSizePixels / 2f);
         var scale = (float)config.SpriteSizePixels / TextureSize;
@@ -135,13 +131,8 @@ public static class IronPickupField
         // Solid (so it still bounces off asteroids and other pickups like one), but its
         // collision mask excludes the ship specifically — the ship should fly straight through
         // and get it collected via IronPickupSystem's distance check, not bounce off it.
-        var shapeDef = B2Api.b2DefaultShapeDef();
-        shapeDef.density = config.Motion.MaterialDensity;
-        shapeDef.material.restitution = config.Motion.Restitution;
-        shapeDef.filter.maskBits = ~CollisionCategories.Ship;
-        var hull = B2Api.b2ComputeHull(points, points.Length);
-        var polygon = B2Api.b2MakePolygon(hull, 0f);
-        B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in polygon);
+        PhysicsBodyFactory.CreateHullPolygonShape(bodyId, points, config.Motion.MaterialDensity, config.Motion.Restitution,
+            maskBits: ~CollisionCategories.Ship);
 
         // A handful of fixed points scattered across the chunk's own visible face (so each reads
         // as its own facet catching the light rather than one glowing bullseye), rolled once here

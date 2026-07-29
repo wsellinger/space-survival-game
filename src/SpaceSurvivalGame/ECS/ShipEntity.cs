@@ -17,17 +17,9 @@ public static class ShipEntity
     public static Entity Create(World world, PhysicsWorld physicsWorld, GraphicsDevice graphicsDevice, Vector2 startPositionMeters, ShipConfig config, PlayerConfig playerConfig,
         int coreSocketDiameterPixels)
     {
-        var bodyDef = B2Api.b2DefaultBodyDef();
-        bodyDef.type = b2BodyType.b2_dynamicBody;
-        bodyDef.position = startPositionMeters;
-        bodyDef.linearDamping = 0f; // no drag: momentum carries the ship, like real space
-        bodyDef.angularDamping = 0f;
-        var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
-
-        var shapeDef = B2Api.b2DefaultShapeDef();
-        shapeDef.density = 1f;
-        shapeDef.enableHitEvents = true; // only one shape in a collision needs this set for CollisionDamageSystem to see it
-        shapeDef.filter.categoryBits = CollisionCategories.Ship; // lets OxygenPickupField exclude just the ship from its collision mask
+        // No damping: momentum carries the ship, like real space.
+        var bodyId = PhysicsBodyFactory.CreateDynamicBody(physicsWorld, startPositionMeters, rotationRadians: 0f,
+            linearVelocityMetersPerSecond: Vector2.Zero, angularVelocityRadiansPerSecond: 0f);
 
         // Matches ProceduralTextures.CreateRightFacingTriangle's vertex layout (tip at
         // (size-1, size/2), tail corners at (0,0)/(0,size-1)) relative to the sprite's
@@ -40,9 +32,10 @@ public static class ShipEntity
             PhysicsWorld.PixelsToMeters(new Vector2(-halfSize, -halfSize)),
             PhysicsWorld.PixelsToMeters(new Vector2(-halfSize, halfSize - 1f))
         };
-        var hull = B2Api.b2ComputeHull(trianglePointsMeters, trianglePointsMeters.Length);
-        var triangle = B2Api.b2MakePolygon(hull, 0f);
-        B2Api.b2CreatePolygonShape(bodyId, in shapeDef, in triangle);
+        // enableHitEvents: only one shape in a collision needs this set for CollisionDamageSystem to see it.
+        // categoryBits: lets OxygenPickupField/IronPickupField exclude just the ship from their collision masks.
+        PhysicsBodyFactory.CreateHullPolygonShape(bodyId, trianglePointsMeters, density: 1f, restitution: 0f,
+            enableHitEvents: true, categoryBits: CollisionCategories.Ship);
 
         // Visual only — the physics collider above stays the simpler flat-back triangle.
         var texture = ProceduralTextures.CreateConcaveArrowShip(graphicsDevice, config.SpriteSize, config.NotchDepthFraction,

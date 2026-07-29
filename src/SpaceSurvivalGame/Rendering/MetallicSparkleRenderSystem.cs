@@ -31,9 +31,8 @@ public static class MetallicSparkleRenderSystem
     // stays in-range on both ends.
     private const float SparkleLayerDepth = 0f;
 
-    public static void Run(World world, SpriteBatch spriteBatch, Camera camera, IronPickupConfig ironConfig, float totalGameTimeSeconds)
+    public static void Run(World world, SpriteBatch spriteBatch, Camera camera, IronPickupConfig ironConfig, float totalGameTimeSeconds, Microsoft.Xna.Framework.Color sparkleColor)
     {
-        var sparkleColor = ColorHex.Parse(ironConfig.Sparkle.ColorHex);
         var frequencyRadiansPerSecond = ironConfig.Sparkle.FrequencyHz * System.MathF.Tau;
 
         world.Query(in Query, (ref Transform transform, ref MetallicSparkle sparkle) =>

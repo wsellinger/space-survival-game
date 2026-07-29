@@ -25,16 +25,14 @@ public static class EngineJetRenderer
 {
     private static readonly QueryDescription Query = new QueryDescription().WithAll<Transform, EngineThrottle, PlayerControlled>();
 
-    public static void Run(World world, SpriteBatch spriteBatch, Camera camera, EngineConfig config, int shipSpriteSizePixels, float notchDepthFraction, Texture2D flameTexture, float totalGameSeconds)
+    public static void Run(World world, SpriteBatch spriteBatch, Camera camera, EngineConfig config, int shipSpriteSizePixels, float notchDepthFraction,
+        Texture2D flameTexture, float totalGameSeconds, Color outerColor, Color innerColor)
     {
         // A sum of two out-of-sync sine waves reads as an irregular flicker without needing
         // any per-frame random state; applied to both size and brightness together.
         var flicker = 1f + config.Flicker.Intensity * (
             MathF.Sin(totalGameSeconds * config.Flicker.SpeedHz * MathF.PI * 2f) * 0.6f +
             MathF.Sin(totalGameSeconds * config.Flicker.SpeedHz * 2.7f * MathF.PI * 2f) * 0.4f);
-
-        var outerColor = ColorHex.Parse(config.MainJet.Outer.ColorHex);
-        var innerColor = ColorHex.Parse(config.MainJet.Inner.ColorHex);
 
         // Hull geometry in local ship space (+X forward, +Y right), matching ShipEntity's
         // physics triangle and CreateConcaveArrowShip's texture points, relative to the

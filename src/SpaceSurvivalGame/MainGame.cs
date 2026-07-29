@@ -56,6 +56,7 @@ public class MainGame : Game
     private WorldConfig _worldConfig;
     private OxygenPickupField.PickupAssets _pickupAssets;
     private IronPickupConfig _ironPickupConfig;
+    private Microsoft.Xna.Framework.Color _ironSparkleColor;
     private IronPickupField.PickupAssets _ironAssets;
     private FloatingTextConfig _floatingTextConfig;
     private StationCoreConfig _stationCoreConfig;
@@ -64,6 +65,7 @@ public class MainGame : Game
     private Texture2D _stationCoreShockwaveTexture;
     private Texture2D _stationCoreDriftPuffTexture;
     private Microsoft.Xna.Framework.Color _stationCoreDriftPuffColor;
+    private Microsoft.Xna.Framework.Color _stationCoreShockwaveColor;
     private ScreenWarningConfig _screenWarningConfig;
     private Texture2D _hudBarFillTexture;
     private Texture2D _hudBarOutlineTexture;
@@ -74,10 +76,13 @@ public class MainGame : Game
     private Texture2D _flameTexture;
     private Texture2D _rotationJetTexture;
     private Microsoft.Xna.Framework.Color _rotationJetColor;
+    private Microsoft.Xna.Framework.Color _engineJetOuterColor;
+    private Microsoft.Xna.Framework.Color _engineJetInnerColor;
     private CrosshairConfig _crosshairConfig;
     private Texture2D _crosshairTexture;
     private StrafeModeIndicatorConfig _strafeModeIndicatorConfig;
     private Texture2D _strafeModeIndicatorTexture;
+    private Microsoft.Xna.Framework.Color _strafeModeIndicatorColor;
     private Texture2D _sparkTexture;
     private RenderTarget2D _sceneRenderTarget;
     private Effect _suffocationEffect;
@@ -166,6 +171,7 @@ public class MainGame : Game
 
         var ironPickupConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "iron-pickup-config.json");
         _ironPickupConfig = IronPickupConfig.Load(ironPickupConfigPath);
+        _ironSparkleColor = ColorHex.Parse(_ironPickupConfig.Sparkle.ColorHex);
 
         var floatingTextConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "floating-text-config.json");
         _floatingTextConfig = FloatingTextConfig.Load(floatingTextConfigPath);
@@ -185,6 +191,7 @@ public class MainGame : Game
             Microsoft.Xna.Framework.Color.Transparent, Microsoft.Xna.Framework.Color.White, _stationCoreConfig.Shockwave.RingInnerRadiusFraction);
         _stationCoreDriftPuffTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _stationCoreConfig.Drift.Puffs.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
         _stationCoreDriftPuffColor = ColorHex.Parse(_stationCoreConfig.Drift.Puffs.ColorHex);
+        _stationCoreShockwaveColor = ColorHex.Parse(_stationCoreConfig.Shockwave.ColorHex);
 
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
         _screenWarningConfig = ScreenWarningConfig.Load(screenWarningConfigPath);
@@ -199,6 +206,8 @@ public class MainGame : Game
         _flameTexture = ProceduralTextures.CreateRightFacingTriangle(GraphicsDevice, _engineConfig.FlameTextureSizePixels, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.White);
         _rotationJetTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _engineConfig.RotationJets.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
         _rotationJetColor = ColorHex.Parse(_engineConfig.RotationJets.ColorHex);
+        _engineJetOuterColor = ColorHex.Parse(_engineConfig.MainJet.Outer.ColorHex);
+        _engineJetInnerColor = ColorHex.Parse(_engineConfig.MainJet.Inner.ColorHex);
 
         var crosshairConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "crosshair-config.json");
         _crosshairConfig = CrosshairConfig.Load(crosshairConfigPath);
@@ -207,6 +216,7 @@ public class MainGame : Game
 
         var strafeModeIndicatorConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "strafe-mode-indicator-config.json");
         _strafeModeIndicatorConfig = StrafeModeIndicatorConfig.Load(strafeModeIndicatorConfigPath);
+        _strafeModeIndicatorColor = ColorHex.Parse(_strafeModeIndicatorConfig.ColorHex);
         var strafeIndicatorInset = (int)_strafeModeIndicatorConfig.InsetPixels;
         _strafeModeIndicatorTexture = ProceduralTextures.CreateCornerBrackets(GraphicsDevice, WindowWidth - strafeIndicatorInset * 2, WindowHeight - strafeIndicatorInset * 2,
             _strafeModeIndicatorConfig.CornerRadiusPixels, _strafeModeIndicatorConfig.OutlineThicknessPixels, _strafeModeIndicatorConfig.ArmLengthPixels, Microsoft.Xna.Framework.Color.White);
@@ -532,9 +542,9 @@ public class MainGame : Game
         _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
         StationCoreBuildEffectRenderSystem.Run(_world, _spriteBatch, _camera, _stationCoreConfig, _stationCoreBuildEffectTexture);
-        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _shipConfig.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds);
-        MetallicSparkleRenderSystem.Run(_world, _spriteBatch, _camera, _ironPickupConfig, (float)gameTime.TotalGameTime.TotalSeconds);
-        StationCoreShockwaveRenderSystem.Run(_world, _spriteBatch, _camera, _stationCoreConfig, _stationCoreShockwaveTexture);
+        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _shipConfig.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds, _engineJetOuterColor, _engineJetInnerColor);
+        MetallicSparkleRenderSystem.Run(_world, _spriteBatch, _camera, _ironPickupConfig, (float)gameTime.TotalGameTime.TotalSeconds, _ironSparkleColor);
+        StationCoreShockwaveRenderSystem.Run(_world, _spriteBatch, _camera, _stationCoreConfig, _stationCoreShockwaveTexture, _stationCoreShockwaveColor);
         _spriteBatch.End();
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
@@ -542,7 +552,7 @@ public class MainGame : Game
         FloatingTextRenderSystem.Run(_world, _spriteBatch, _uiFont, _floatingTextConfig.TextScale);
         ScreenWarningRenderer.Run(_world, _spriteBatch, _screenWarningConfig, _healthWarningConfig, _oxygenWarningConfig, _hudFeedbackConfig,
             (float)gameTime.TotalGameTime.TotalSeconds, _screenWarningOutlineTexture, _screenWarningVignetteTexture);
-        StrafeModeIndicatorRenderer.Run(_world, _spriteBatch, _uiFont, _strafeModeIndicatorConfig, _strafeModeIndicatorTexture, (float)gameTime.TotalGameTime.TotalSeconds);
+        StrafeModeIndicatorRenderer.Run(_world, _spriteBatch, _uiFont, _strafeModeIndicatorConfig, _strafeModeIndicatorTexture, (float)gameTime.TotalGameTime.TotalSeconds, _strafeModeIndicatorColor);
         // Drawn after StrafeModeIndicatorRenderer so the bottom-left iron counter reads on top of
         // that corner's bracket instead of being drawn under it.
         HudRenderer.Run(_world, _spriteBatch, WindowWidth, WindowHeight, _hudConfig, _hudFeedbackConfig, _healthWarningConfig, _oxygenWarningConfig,

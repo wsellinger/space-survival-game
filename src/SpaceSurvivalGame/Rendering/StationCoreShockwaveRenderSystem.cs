@@ -20,9 +20,8 @@ public static class StationCoreShockwaveRenderSystem
 {
     private static readonly QueryDescription Query = new QueryDescription().WithAll<Transform, StationCore>();
 
-    public static void Run(World world, SpriteBatch spriteBatch, Camera camera, StationCoreConfig config, Texture2D ringTexture)
+    public static void Run(World world, SpriteBatch spriteBatch, Camera camera, StationCoreConfig config, Texture2D ringTexture, Color color)
     {
-        var color = ColorHex.Parse(config.Shockwave.ColorHex);
         var origin = new Vector2(ringTexture.Width / 2f, ringTexture.Height / 2f);
 
         world.Query(in Query, (ref Transform transform, ref StationCore core) =>

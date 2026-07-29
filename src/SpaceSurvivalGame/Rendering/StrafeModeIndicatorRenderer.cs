@@ -19,13 +19,12 @@ public static class StrafeModeIndicatorRenderer
     private static readonly QueryDescription Query = new QueryDescription().WithAll<ShipMovement, PlayerControlled>();
 
     public static void Run(World world, SpriteBatch spriteBatch, SpriteFont font, StrafeModeIndicatorConfig config,
-        Texture2D bracketsTexture, float totalGameSeconds)
+        Texture2D bracketsTexture, float totalGameSeconds, Color color)
     {
         var isStrafing = false;
         world.Query(in Query, (ref ShipMovement movement) => isStrafing = movement.IsStrafing);
         if (!isStrafing) return;
 
-        var color = ColorHex.Parse(config.ColorHex);
         var inset = new Vector2(config.InsetPixels, config.InsetPixels);
         spriteBatch.Draw(bracketsTexture, inset, color);
 

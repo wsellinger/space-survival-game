@@ -1,10 +1,12 @@
 {
   "Explosion": {
     "BurstCount": 10,
-    "SparkCountRange": [8, 14],
-    "SparkSpeedMetersPerSecondRange": [1.5, 4],
-    "SparkLifetimeSecondsRange": [1.0, 2.0],
-    "SparkSizePixels": 6
+    "Burst": {
+      "SizePixels": 6,
+      "CountRange": [8, 14],
+      "SpeedMetersPerSecondRange": [1.5, 4],
+      "LifetimeSecondsRange": [1.0, 2.0]
+    }
   },
   "Fade": {
     "DelaySeconds": 0.5,

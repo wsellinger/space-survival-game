@@ -8,10 +8,7 @@ namespace SpaceSurvivalGame.Configuration;
 /// </summary>
 public class SparkConfig
 {
-    public int SparkTextureSizePixels { get; set; } = 6;
-    public IntRange SparkCountRange { get; set; } = new(8, 14);
-    public FloatRange SparkSpeedMetersPerSecondRange { get; set; } = new(1.5f, 4f);
-    public FloatRange SparkLifetimeSecondsRange { get; set; } = new(0.2f, 0.45f);
+    public SparkBurstConfig Burst { get; set; } = new();
 
     public static SparkConfig Load(string path) => ConfigLoader.Load<SparkConfig>(path);
 }

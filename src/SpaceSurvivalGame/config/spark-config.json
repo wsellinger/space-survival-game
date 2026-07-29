@@ -1,6 +1,8 @@
 {
-  "SparkTextureSizePixels": 3,
-  "SparkCountRange": [8, 14],
-  "SparkSpeedMetersPerSecondRange": [1.5, 4],
-  "SparkLifetimeSecondsRange": [0.2, 0.45]
+  "Burst": {
+    "SizePixels": 3,
+    "CountRange": [8, 14],
+    "SpeedMetersPerSecondRange": [1.5, 4],
+    "LifetimeSecondsRange": [0.2, 0.45]
+  }
 }

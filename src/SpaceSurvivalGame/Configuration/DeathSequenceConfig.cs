@@ -4,13 +4,10 @@ namespace SpaceSurvivalGame.Configuration;
 public class ExplosionConfig
 {
     // How many times ParticleEffects.SpawnExplosionBurst fires at the ship's position (each
-    // burst is SparkCountRange particles).
+    // burst is Burst.CountRange particles).
     public int BurstCount { get; set; } = 5;
 
-    public IntRange SparkCountRange { get; set; } = new(8, 14);
-    public FloatRange SparkSpeedMetersPerSecondRange { get; set; } = new(1.5f, 4f);
-    public FloatRange SparkLifetimeSecondsRange { get; set; } = new(0.2f, 0.45f);
-    public int SparkSizePixels { get; set; } = 6;
+    public SparkBurstConfig Burst { get; set; } = new();
 }
 
 public class FadeConfig

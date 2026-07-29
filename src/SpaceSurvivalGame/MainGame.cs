@@ -141,7 +141,7 @@ public class MainGame : Game
         _hudBarOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, _hudConfig.Bars.LengthPixels, _hudConfig.Bars.ThicknessPixels, barCornerRadius, _hudConfig.Bars.OutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
         var sparkConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "spark-config.json");
         _sparkConfig = SparkConfig.Load(sparkConfigPath);
-        _sparkTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _sparkConfig.SparkTextureSizePixels, Microsoft.Xna.Framework.Color.White);
+        _sparkTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _sparkConfig.Burst.SizePixels, Microsoft.Xna.Framework.Color.White);
 
         var hitFlashConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "hit-flash-config.json");
         _hitFlashConfig = HitFlashConfig.Load(hitFlashConfigPath);

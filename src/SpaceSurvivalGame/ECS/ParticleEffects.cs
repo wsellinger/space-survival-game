@@ -37,12 +37,12 @@ public static class ParticleEffects
     public static void SpawnPickupBurst(World world, Texture2D sparkTexture, Vector2 positionMeters, Random random, SparkConfig config,
         Microsoft.Xna.Framework.Color colorA, Microsoft.Xna.Framework.Color colorB)
     {
-        var count = random.Next(config.SparkCountRange.Min, config.SparkCountRange.Max + 1);
+        var count = random.NextInt(config.SparkCountRange);
         for (var i = 0; i < count; i++)
         {
             var angle = (float)(random.NextDouble() * Math.PI * 2);
-            var speed = config.SparkSpeedMetersPerSecondRange.Min + (float)random.NextDouble() * (config.SparkSpeedMetersPerSecondRange.Max - config.SparkSpeedMetersPerSecondRange.Min);
-            var lifetime = config.SparkLifetimeSecondsRange.Min + (float)random.NextDouble() * (config.SparkLifetimeSecondsRange.Max - config.SparkLifetimeSecondsRange.Min);
+            var speed = random.NextFloat(config.SparkSpeedMetersPerSecondRange);
+            var lifetime = random.NextFloat(config.SparkLifetimeSecondsRange);
             var color = random.Next(2) == 0 ? colorA : colorB;
 
             var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
@@ -88,17 +88,15 @@ public static class ParticleEffects
         Random random, IntRange particleCountPerFrame, FloatRange particleSpeedMetersPerSecondRange, FloatRange particleLifetimeSecondsRange,
         int particleSizePixels, float spreadAngleDegrees, Microsoft.Xna.Framework.Color color)
     {
-        var count = random.Next(particleCountPerFrame.Min, particleCountPerFrame.Max + 1);
+        var count = random.NextInt(particleCountPerFrame);
         var spreadRadians = spreadAngleDegrees * MathF.PI / 180f;
         var baseAngle = MathF.Atan2(outwardDirection.Y, outwardDirection.X);
 
         for (var i = 0; i < count; i++)
         {
             var angle = baseAngle + ((float)random.NextDouble() * 2f - 1f) * spreadRadians;
-            var speed = particleSpeedMetersPerSecondRange.Min +
-                        (float)random.NextDouble() * (particleSpeedMetersPerSecondRange.Max - particleSpeedMetersPerSecondRange.Min);
-            var lifetime = particleLifetimeSecondsRange.Min +
-                           (float)random.NextDouble() * (particleLifetimeSecondsRange.Max - particleLifetimeSecondsRange.Min);
+            var speed = random.NextFloat(particleSpeedMetersPerSecondRange);
+            var lifetime = random.NextFloat(particleLifetimeSecondsRange);
             var velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
 
             world.Create(

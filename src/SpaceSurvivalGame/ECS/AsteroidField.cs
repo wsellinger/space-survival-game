@@ -115,13 +115,11 @@ public static class AsteroidField
             bodyDef.type = b2BodyType.b2_dynamicBody;
             bodyDef.position = positionMeters;
 
-            var speed = config.Asteroid.SpeedMetersPerSecondRange.Min +
-                        (float)random.NextDouble() * (config.Asteroid.SpeedMetersPerSecondRange.Max - config.Asteroid.SpeedMetersPerSecondRange.Min);
+            var speed = random.NextFloat(config.Asteroid.SpeedMetersPerSecondRange);
             var angle = (float)(random.NextDouble() * Math.PI * 2);
             bodyDef.linearVelocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
 
-            var angularSpeed = config.Asteroid.AngularVelocityRadiansPerSecondRange.Min +
-                                (float)random.NextDouble() * (config.Asteroid.AngularVelocityRadiansPerSecondRange.Max - config.Asteroid.AngularVelocityRadiansPerSecondRange.Min);
+            var angularSpeed = random.NextFloat(config.Asteroid.AngularVelocityRadiansPerSecondRange);
             bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
             var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
@@ -272,7 +270,7 @@ public static class AsteroidField
         var marginedXnaVertices = new Microsoft.Xna.Framework.Vector2[rockUnitVertices.Length];
         for (var p = 0; p < marginedXnaVertices.Length; p++) marginedXnaVertices[p] = (rockUnitVertices[p] / canvasMarginScale).ToXna();
 
-        var speckleCount = random.Next(config.CrystalCountRange.Min, config.CrystalCountRange.Max + 1);
+        var speckleCount = random.NextInt(config.CrystalCountRange);
         var speckles = new ProceduralTextures.PolygonSpeckle[speckleCount];
         for (var s = 0; s < speckleCount; s++)
         {
@@ -284,13 +282,11 @@ public static class AsteroidField
             // keeps a speckle from ever landing entirely outside the silhouette as a detached
             // floating blob.
             var edgeRadius = ProceduralShapeGenerator.GetPolygonRadiusAtAngle(rockUnitVertices, placementAngle);
-            var edgeOffset = config.CrystalEdgeOffsetRange.Min +
-                (float)random.NextDouble() * (config.CrystalEdgeOffsetRange.Max - config.CrystalEdgeOffsetRange.Min);
+            var edgeOffset = random.NextFloat(config.CrystalEdgeOffsetRange);
             var placementRadius = edgeRadius + edgeOffset;
             var speckleCenter = new Vector2(MathF.Cos(placementAngle), MathF.Sin(placementAngle)) * placementRadius;
 
-            var speckleSize = config.CrystalSizeUnitRange.Min +
-                (float)random.NextDouble() * (config.CrystalSizeUnitRange.Max - config.CrystalSizeUnitRange.Min);
+            var speckleSize = random.NextFloat(config.CrystalSizeUnitRange);
 
             var crystalVertexCount = random.Next(crystalMinVerticesPerShape, crystalMaxVerticesPerShape + 1);
             var crystalUnitVertices = ProceduralShapeGenerator.GenerateJitteredPolygon(random, crystalVertexCount,
@@ -324,8 +320,7 @@ public static class AsteroidField
             var candidatePosition = centerMeters + new Vector2(
                 (float)(random.NextDouble() * 2 - 1) * config.FieldHalfExtentMeters,
                 (float)(random.NextDouble() * 2 - 1) * config.FieldHalfExtentMeters);
-            var candidateRadius = config.Asteroid.RadiusMetersRange.Min +
-                                   (float)random.NextDouble() * (config.Asteroid.RadiusMetersRange.Max - config.Asteroid.RadiusMetersRange.Min);
+            var candidateRadius = random.NextFloat(config.Asteroid.RadiusMetersRange);
 
             var minDistanceFromCenter = clearRadiusMeters + candidateRadius;
             if (Vector2.DistanceSquared(candidatePosition, centerMeters) < minDistanceFromCenter * minDistanceFromCenter)

@@ -87,7 +87,7 @@ public static class ProceduralShapeGenerator
     /// </summary>
     public static ProceduralTextures.PolygonSpot[] GenerateJaggedSpots(Random random, Vector2[] shapeUnitVertices, IntRange countRange, FloatRange sizeUnitRange)
     {
-        var spotCount = random.Next(countRange.Min, countRange.Max + 1);
+        var spotCount = random.NextInt(countRange);
         var spots = new ProceduralTextures.PolygonSpot[spotCount];
         for (var s = 0; s < spotCount; s++)
         {
@@ -96,7 +96,7 @@ public static class ProceduralShapeGenerator
             var placementRadius = edgeRadius * MathF.Sqrt((float)random.NextDouble()) * 0.7f;
             var spotCenter = new Microsoft.Xna.Framework.Vector2(MathF.Cos(spotAngle), MathF.Sin(spotAngle)) * placementRadius;
 
-            var spotSize = sizeUnitRange.Min + (float)random.NextDouble() * (sizeUnitRange.Max - sizeUnitRange.Min);
+            var spotSize = random.NextFloat(sizeUnitRange);
             var spotVertexCount = random.Next(5, 8);
             var spotUnitVertices = GenerateJitteredPolygon(random, spotVertexCount, 0.5f, 0.4f);
             var spotXnaVertices = new Microsoft.Xna.Framework.Vector2[spotUnitVertices.Length];

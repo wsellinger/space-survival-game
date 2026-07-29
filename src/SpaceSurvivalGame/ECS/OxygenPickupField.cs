@@ -99,13 +99,11 @@ public static class OxygenPickupField
         bodyDef.position = positionMeters;
         bodyDef.rotation = b2Rot.FromAngle(rotationRadians);
 
-        var speed = config.Motion.SpeedMetersPerSecondRange.Min +
-                    (float)random.NextDouble() * (config.Motion.SpeedMetersPerSecondRange.Max - config.Motion.SpeedMetersPerSecondRange.Min);
+        var speed = random.NextFloat(config.Motion.SpeedMetersPerSecondRange);
         var velocityAngle = (float)(random.NextDouble() * Math.PI * 2);
         bodyDef.linearVelocity = new Vector2(MathF.Cos(velocityAngle), MathF.Sin(velocityAngle)) * speed;
 
-        var angularSpeed = config.Motion.AngularVelocityRadiansPerSecondRange.Min +
-                            (float)random.NextDouble() * (config.Motion.AngularVelocityRadiansPerSecondRange.Max - config.Motion.AngularVelocityRadiansPerSecondRange.Min);
+        var angularSpeed = random.NextFloat(config.Motion.AngularVelocityRadiansPerSecondRange);
         bodyDef.angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
         var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);

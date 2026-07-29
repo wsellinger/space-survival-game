@@ -126,7 +126,7 @@ public static class StationCoreSystem
                 if (core.DriftTimerSeconds <= 0f)
                 {
                     ApplyDriftImpulse(world, coreEntity, ref core, config, random);
-                    core.DriftTimerSeconds = NextInRange(random, config.Drift.ImpulseIntervalSecondsRange);
+                    core.DriftTimerSeconds = random.NextFloat(config.Drift.ImpulseIntervalSecondsRange);
                 }
 
                 // Starts the next puff slot in the staggered sequence kicked off by
@@ -255,7 +255,7 @@ public static class StationCoreSystem
     private static void CreatePhysicsBody(World world, PhysicsWorld physicsWorld, Entity coreEntity, ref StationCore core, Vector2 positionMeters, StationCoreConfig config, Random random)
     {
         var initialSpeedAngle = (float)(random.NextDouble() * Math.PI * 2);
-        var initialSpeed = NextInRange(random, config.InitialSpeed.LinearMetersPerSecondRange);
+        var initialSpeed = random.NextFloat(config.InitialSpeed.LinearMetersPerSecondRange);
 
         var bodyDef = B2Api.b2DefaultBodyDef();
         bodyDef.type = b2BodyType.b2_dynamicBody;
@@ -263,7 +263,7 @@ public static class StationCoreSystem
         bodyDef.linearDamping = config.Physics.LinearDamping;
         bodyDef.angularDamping = config.Physics.AngularDamping;
         bodyDef.linearVelocity = new Vector2(MathF.Cos(initialSpeedAngle), MathF.Sin(initialSpeedAngle)) * initialSpeed;
-        bodyDef.angularVelocity = NextInRange(random, config.InitialSpeed.AngularRadiansPerSecondRange) * (random.Next(2) == 0 ? -1f : 1f);
+        bodyDef.angularVelocity = random.NextFloat(config.InitialSpeed.AngularRadiansPerSecondRange) * (random.Next(2) == 0 ? -1f : 1f);
         var bodyId = B2Api.b2CreateBody(physicsWorld.WorldId, bodyDef);
 
         var shapeDef = B2Api.b2DefaultShapeDef();
@@ -283,7 +283,7 @@ public static class StationCoreSystem
         // look exactly like getting hit by a shockwave.
         core.HomePositionMeters = positionMeters;
         core.HomeRotationRadians = 0f;
-        core.DriftTimerSeconds = NextInRange(random, config.Drift.ImpulseIntervalSecondsRange);
+        core.DriftTimerSeconds = random.NextFloat(config.Drift.ImpulseIntervalSecondsRange);
         core.PuffNextIndex = PuffSequenceCount; // nothing pending
         SetPuffSlotElapsed(ref core, 0, -1f);
         SetPuffSlotElapsed(ref core, 1, -1f);
@@ -312,13 +312,13 @@ public static class StationCoreSystem
         var rotationRadians = B2Api.b2Body_GetRotation(bodyId).GetAngle();
 
         var randomAngle = (float)(random.NextDouble() * Math.PI * 2);
-        var randomImpulse = new Vector2(MathF.Cos(randomAngle), MathF.Sin(randomAngle)) * NextInRange(random, config.Drift.LinearImpulseStrengthRange);
+        var randomImpulse = new Vector2(MathF.Cos(randomAngle), MathF.Sin(randomAngle)) * random.NextFloat(config.Drift.LinearImpulseStrengthRange);
         var displacementMeters = core.HomePositionMeters - positionMeters;
         var returnImpulse = displacementMeters * config.Drift.ReturnStrength;
         var totalLinearImpulse = randomImpulse + returnImpulse;
         B2Api.b2Body_ApplyLinearImpulseToCenter(bodyId, totalLinearImpulse, wake: true);
 
-        var randomAngularImpulse = NextInRange(random, config.Drift.AngularImpulseStrengthRange) * (random.Next(2) == 0 ? -1f : 1f);
+        var randomAngularImpulse = random.NextFloat(config.Drift.AngularImpulseStrengthRange) * (random.Next(2) == 0 ? -1f : 1f);
         var angleErrorRadians = WrapAngle(core.HomeRotationRadians - rotationRadians);
         var returnAngularImpulse = angleErrorRadians * config.Drift.AngularReturnStrength;
         var totalAngularImpulse = randomAngularImpulse + returnAngularImpulse;
@@ -403,9 +403,6 @@ public static class StationCoreSystem
         ParticleEffects.SpawnRotationJetPuff(world, texture, positionMeters, outwardDirection, random,
             config.ParticleCountPerFrame, config.ParticleSpeedMetersPerSecondRange, config.ParticleLifetimeSecondsRange,
             config.ParticleSizePixels, config.SpreadAngleDegrees, color);
-
-    private static float NextInRange(Random random, FloatRange range) =>
-        range.Min + (float)random.NextDouble() * (range.Max - range.Min);
 
     private static float WrapAngle(float angle)
     {

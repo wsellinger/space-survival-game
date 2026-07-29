@@ -51,11 +51,10 @@ public static class ShipFragments
             // the ship was going — a small kick added to a large ship-speed vector barely
             // changes the resulting direction at all.
             var fragmentAngle = baseAngle + ((float)random.NextDouble() * 2f - 1f) * config.Fragments.SpreadAngleRadians;
-            var kickSpeed = config.Fragments.SpeedMetersPerSecondRange.Min + (float)random.NextDouble() * (config.Fragments.SpeedMetersPerSecondRange.Max - config.Fragments.SpeedMetersPerSecondRange.Min);
+            var kickSpeed = random.NextFloat(config.Fragments.SpeedMetersPerSecondRange);
             var velocity = new Vector2(MathF.Cos(fragmentAngle), MathF.Sin(fragmentAngle)) * (shipSpeed + kickSpeed);
 
-            var angularSpeed = config.Fragments.AngularVelocityRadiansPerSecondRange.Min +
-                                (float)random.NextDouble() * (config.Fragments.AngularVelocityRadiansPerSecondRange.Max - config.Fragments.AngularVelocityRadiansPerSecondRange.Min);
+            var angularSpeed = random.NextFloat(config.Fragments.AngularVelocityRadiansPerSecondRange);
             var angularVelocity = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
 
             world.Create(

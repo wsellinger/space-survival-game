@@ -1,7 +1,6 @@
 using System;
 using System.Numerics;
 using Arch.Core;
-using Box2dNet.Interop;
 using Microsoft.Xna.Framework.Graphics;
 using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.Physics;
@@ -94,16 +93,6 @@ public static class OxygenPickupField
     {
         var rotationRadians = (float)(random.NextDouble() * Math.PI * 2);
 
-        var speed = random.NextFloat(config.Motion.SpeedMetersPerSecondRange);
-        var velocityAngle = (float)(random.NextDouble() * Math.PI * 2);
-
-        var angularSpeed = random.NextFloat(config.Motion.AngularVelocityRadiansPerSecondRange);
-        angularSpeed = random.Next(2) == 0 ? -angularSpeed : angularSpeed;
-
-        var bodyId = PhysicsBodyFactory.CreateDynamicBody(physicsWorld, positionMeters, rotationRadians,
-            linearVelocityMetersPerSecond: new Vector2(MathF.Cos(velocityAngle), MathF.Sin(velocityAngle)) * speed,
-            angularVelocityRadiansPerSecond: angularSpeed);
-
         // Matches the crystal's own true size exactly (unaffected by the glow — see the
         // canvas-scale compensation below, which keeps the crystal's own footprint fixed
         // regardless of GlowRadiusMultiplier).
@@ -113,14 +102,7 @@ public static class OxygenPickupField
 
         var variantIndex = random.Next(assets.ShapeVariants.Length);
         var unitVertices = assets.ShapeVariants[variantIndex];
-        var points = new Vector2[unitVertices.Length];
-        for (var p = 0; p < unitVertices.Length; p++) points[p] = unitVertices[p] * radiusMeters;
-
-        // Solid (so it still bounces off asteroids like one), but its collision mask
-        // excludes the ship specifically — the ship should fly straight through and get
-        // it collected via OxygenPickupSystem's distance check, not bounce off it.
-        PhysicsBodyFactory.CreateHullPolygonShape(bodyId, points, config.Motion.MaterialDensity, config.Motion.Restitution,
-            maskBits: ~CollisionCategories.Ship);
+        var bodyId = PickupBodyFactory.CreateBody(physicsWorld, positionMeters, rotationRadians, unitVertices, radiusMeters, config.Motion, random);
 
         world.Create(
             new PhysicsBody { BodyId = bodyId },

@@ -25,7 +25,7 @@ public static class ShipEntity
         // (size-1, size/2), tail corners at (0,0)/(0,size-1)) relative to the sprite's
         // center — same center RenderSystem uses as the rotation origin — so the collider
         // actually matches the visible triangle instead of a bounding box around it.
-        var halfSize = config.SpriteSize / 2f;
+        var halfSize = config.SpriteSizePixels / 2f;
         var trianglePointsMeters = new[]
         {
             PhysicsWorld.PixelsToMeters(new Vector2(halfSize - 1f, 0f)),
@@ -38,7 +38,7 @@ public static class ShipEntity
             enableHitEvents: true, categoryBits: CollisionCategories.Ship);
 
         // Visual only — the physics collider above stays the simpler flat-back triangle.
-        var texture = ProceduralTextures.CreateConcaveArrowShip(graphicsDevice, config.SpriteSize, config.NotchDepthFraction,
+        var texture = ProceduralTextures.CreateConcaveArrowShip(graphicsDevice, config.SpriteSizePixels, config.NotchDepthFraction,
             ColorHex.Parse(config.ColorHex), ColorHex.Parse(config.AccentColorHex), coreSocketDiameterPixels, ColorHex.Parse(config.SocketColorHex));
 
         return world.Create(
@@ -49,7 +49,7 @@ public static class ShipEntity
             // which rides at the ship's own center at the default 0 while still Attached (see
             // StationCoreSystem) — reliably draws on top of the ship instead of an undefined
             // same-depth tie under SpriteSortMode.BackToFront.
-            new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = config.SpriteSize, Scale = 1f, LayerDepth = 0.01f, Parallax = 1f },
+            new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = config.SpriteSizePixels, Scale = 1f, LayerDepth = 0.01f, Parallax = 1f },
             new ShipMovement
             {
                 ThrustAcceleration = config.Thrust.Acceleration,

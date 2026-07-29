@@ -1,7 +1,7 @@
 {
   "MaxSpeedMetersPerSecond": 3,
   "TurnSpeedRadiansPerSecond": 10,
-  "SpriteSize": 24,
+  "SpriteSizePixels": 24,
   "NotchDepthFraction": 0.15,
   "SpeedCapEaseSpeed": 8,
   "ColorHex": "#444444",

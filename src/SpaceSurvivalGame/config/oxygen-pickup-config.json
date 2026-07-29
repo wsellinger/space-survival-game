@@ -4,7 +4,7 @@
   "SpriteSizePixels": 16,
   "ColorHex": "#7398f5",
   "FloatingTextColorHex": "#7398f5",
-  "GlowRadius": 2.5,
+  "GlowRadiusMultiplier": 2.5,
   "Motion": {
     "MaterialDensity": 0.3,
     "Restitution": 0.6,

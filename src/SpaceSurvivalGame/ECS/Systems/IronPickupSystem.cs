@@ -41,7 +41,7 @@ public static class IronPickupSystem
         });
         if (!foundShip) return;
 
-        var collectDistanceMeters = PhysicsWorld.PixelsToMeters(shipConfig.SpriteSize / 2f) + PhysicsWorld.PixelsToMeters(ironConfig.SpriteSizePixels / 2f);
+        var collectDistanceMeters = PhysicsWorld.PixelsToMeters(shipConfig.SpriteSizePixels / 2f) + PhysicsWorld.PixelsToMeters(ironConfig.SpriteSizePixels / 2f);
         var collectDistanceSquared = collectDistanceMeters * collectDistanceMeters;
 
         var collectedEntities = new List<Entity>();

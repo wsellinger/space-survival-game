@@ -32,7 +32,7 @@ public class ShipConfig
 {
     public float MaxSpeedMetersPerSecond { get; set; } = 4f;
     public float TurnSpeedRadiansPerSecond { get; set; } = 8f;
-    public int SpriteSize { get; set; } = 24;
+    public int SpriteSizePixels { get; set; } = 24;
 
     // How quickly SpeedCapSystem eases speed down toward whichever cap currently applies
     // (MaxSpeedMetersPerSecond, or StrafeMaxSpeedMetersPerSecond while UseStrafeSpeedCap is

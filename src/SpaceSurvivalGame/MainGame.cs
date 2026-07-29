@@ -403,7 +403,7 @@ public class MainGame : Game
 #endif
 
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds, _engineConfig);
-        RotationJetSystem.Run(_world, _rotationJetTexture, _engineConfig, _shipConfig.SpriteSize, _rotationJetColor, _random);
+        RotationJetSystem.Run(_world, _rotationJetTexture, _engineConfig, _shipConfig.SpriteSizePixels, _rotationJetColor, _random);
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _playerConfig, _sparkTexture, _random, _sparkConfig, _camera, _screenShakeConfig, _hitFlashConfig, _hudFeedbackConfig); // must read hit events before the next Step overwrites them
         OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _oxygenPickupConfig, _worldConfig.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
@@ -542,7 +542,7 @@ public class MainGame : Game
         _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
         StationCoreBuildEffectRenderSystem.Run(_world, _spriteBatch, _camera, _stationCoreConfig, _stationCoreBuildEffectTexture);
-        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSize, _shipConfig.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds, _engineJetOuterColor, _engineJetInnerColor);
+        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _engineConfig, _shipConfig.SpriteSizePixels, _shipConfig.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds, _engineJetOuterColor, _engineJetInnerColor);
         MetallicSparkleRenderSystem.Run(_world, _spriteBatch, _camera, _ironPickupConfig, (float)gameTime.TotalGameTime.TotalSeconds, _ironSparkleColor);
         StationCoreShockwaveRenderSystem.Run(_world, _spriteBatch, _camera, _stationCoreConfig, _stationCoreShockwaveTexture, _stationCoreShockwaveColor);
         _spriteBatch.End();

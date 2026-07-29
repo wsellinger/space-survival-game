@@ -19,10 +19,11 @@ public class OxygenPickupConfig
     // to read well as legible on-screen text.
     public string FloatingTextColorHex { get; set; } = "#6495ED";
 
-    // How far the glow halo extends beyond the crystal's own edge, as a multiple of the
-    // crystal's size — 1 = no glow, 1.5 = reaches half again as far out. Purely cosmetic:
-    // never affects the crystal's actual on-screen size or its physics/collision shape.
-    public float GlowRadius { get; set; } = 1.5f;
+    // Total glow reach as a multiple of the crystal's own radius (same convention as
+    // RichAsteroidConfig.CrystalGlowRadiusMultiplier) — 1 = no glow, 1.5 = reaches half again as
+    // far out. Purely cosmetic: never affects the crystal's actual on-screen size or its
+    // physics/collision shape.
+    public float GlowRadiusMultiplier { get; set; } = 1.5f;
 
     public PickupMotionConfig Motion { get; set; } = new();
 

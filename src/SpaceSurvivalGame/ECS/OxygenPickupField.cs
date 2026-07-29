@@ -48,11 +48,11 @@ public static class OxygenPickupField
         var random = new Random();
 
         // The baked texture's canvas needs to extend past the crystal's own edge (unit
-        // magnitude 1) to have room for the glow reaching GlowRadius beyond it, with a little
-        // padding so the glow's feathered edge isn't clipped right at the canvas boundary.
+        // magnitude 1) to have room for the glow reaching GlowRadiusMultiplier beyond it, with a
+        // little padding so the glow's feathered edge isn't clipped right at the canvas boundary.
         // Sprite.Scale below is inflated by the same factor so the crystal's own on-screen/
-        // physics size stays exactly SpriteSizePixels regardless of GlowRadius.
-        var glowCanvasScale = MathF.Max(1f, pickupConfig.GlowRadius) * 1.05f;
+        // physics size stays exactly SpriteSizePixels regardless of GlowRadiusMultiplier.
+        var glowCanvasScale = MathF.Max(1f, pickupConfig.GlowRadiusMultiplier) * 1.05f;
         var crystalColor = ColorHex.Parse(pickupConfig.ColorHex);
 
         var shapeVariants = new Vector2[ShapeVariantCount][];
@@ -67,7 +67,7 @@ public static class OxygenPickupField
                 crystalXnaVertices[p] = (shapeVariants[v][p] / glowCanvasScale).ToXna();
 
             shapeTextures[v] = ProceduralTextures.CreateGlowingPolygon(graphicsDevice, TextureSize,
-                crystalColor, crystalColor, crystalXnaVertices, pickupConfig.GlowRadius / glowCanvasScale);
+                crystalColor, crystalColor, crystalXnaVertices, pickupConfig.GlowRadiusMultiplier / glowCanvasScale);
         }
 
         var assets = new PickupAssets(shapeVariants, shapeTextures);
@@ -106,8 +106,8 @@ public static class OxygenPickupField
 
         // Matches the crystal's own true size exactly (unaffected by the glow — see the
         // canvas-scale compensation below, which keeps the crystal's own footprint fixed
-        // regardless of GlowRadius).
-        var glowCanvasScale = MathF.Max(1f, config.GlowRadius) * 1.05f;
+        // regardless of GlowRadiusMultiplier).
+        var glowCanvasScale = MathF.Max(1f, config.GlowRadiusMultiplier) * 1.05f;
         var radiusMeters = PhysicsWorld.PixelsToMeters(config.SpriteSizePixels / 2f);
         var scale = config.SpriteSizePixels * glowCanvasScale / TextureSize;
 

@@ -38,7 +38,7 @@ public static class OxygenPickupSystem
         });
         if (!foundShip) return;
 
-        var collectDistanceMeters = PhysicsWorld.PixelsToMeters(shipConfig.SpriteSize / 2f) + PhysicsWorld.PixelsToMeters(pickupConfig.SpriteSizePixels / 2f);
+        var collectDistanceMeters = PhysicsWorld.PixelsToMeters(shipConfig.SpriteSizePixels / 2f) + PhysicsWorld.PixelsToMeters(pickupConfig.SpriteSizePixels / 2f);
         var collectDistanceSquared = collectDistanceMeters * collectDistanceMeters;
 
         var collectedEntities = new List<Entity>();

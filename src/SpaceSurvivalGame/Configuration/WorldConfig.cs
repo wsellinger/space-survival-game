@@ -28,7 +28,7 @@ public abstract class RichAsteroidConfig
     public FloatRange CrystalEdgeOffsetRange { get; set; } = new(-0.20f, 0.08f);
 
     // How far each speckle's glow extends beyond its own edge, as a multiple of that speckle's
-    // own radius — same convention as OxygenPickupConfig.GlowRadius.
+    // own radius — same convention as OxygenPickupConfig.GlowRadiusMultiplier.
     public float CrystalGlowRadiusMultiplier { get; set; } = 1.4f;
 
     // Chance, per qualifying Box2D hit event (any physics collision this asteroid is part of —

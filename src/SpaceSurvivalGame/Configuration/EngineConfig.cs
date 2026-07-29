@@ -70,15 +70,7 @@ public class RotationJetConfig
     // itself, no equivalent fraction needed.
     public float NoseMountFraction { get; set; } = 0.8f;
 
-    public IntRange ParticleCountPerFrame { get; set; } = new(1, 2);
-    public FloatRange ParticleSpeedMetersPerSecondRange { get; set; } = new(0.5f, 1.2f);
-    public FloatRange ParticleLifetimeSecondsRange { get; set; } = new(0.08f, 0.16f);
-    public int ParticleSizePixels { get; set; } = 3;
-
-    // Half-angle of random spread around each jet's own outward direction, in degrees.
-    public float SpreadAngleDegrees { get; set; } = 20f;
-
-    public string ColorHex { get; set; } = "#CFE8FFFF"; // pale blue-white, like a puff of gas
+    public ParticlePuffConfig Puff { get; set; } = new();
 }
 
 /// <summary>

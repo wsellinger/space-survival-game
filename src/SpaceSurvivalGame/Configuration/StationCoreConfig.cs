@@ -212,14 +212,9 @@ public class StationCoreDriftPuffConfig
 
     // How long each individual puff, once started, keeps spawning fresh particles for — 0 fires
     // just a single instant burst; higher sustains it like a brief continuous hiss (still made up
-    // of short-lived individual particles, per ParticleLifetimeSecondsRange). Independent of
+    // of short-lived individual particles, per Puff.ParticleLifetimeSecondsRange). Independent of
     // StaggerSeconds — a puff's own duration can outlast the delay before the next one starts.
     public float DurationSeconds { get; set; } = 0.1f;
 
-    public IntRange ParticleCountPerFrame { get; set; } = new(1, 2);
-    public FloatRange ParticleSpeedMetersPerSecondRange { get; set; } = new(0.3f, 0.7f);
-    public FloatRange ParticleLifetimeSecondsRange { get; set; } = new(0.1f, 0.2f);
-    public int ParticleSizePixels { get; set; } = 3;
-    public float SpreadAngleDegrees { get; set; } = 20f;
-    public string ColorHex { get; set; } = "#CFE8FFFF"; // pale blue-white, like a puff of gas
+    public ParticlePuffConfig Puff { get; set; } = new(){ ParticleSpeedMetersPerSecondRange = new(0.3f, 0.7f), ParticleLifetimeSecondsRange = new(0.1f, 0.2f) };
 }

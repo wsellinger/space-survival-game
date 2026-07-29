@@ -372,7 +372,7 @@ public static class StationCoreSystem
         {
             if (pushDirection == Vector2.Zero) return;
             var mountWorld = positionMeters - pushDirection * halfWidthMeters;
-            SpawnDriftPuff(world, driftPuffTexture, mountWorld, -pushDirection, random, config.Drift.Puffs, driftPuffColor);
+            SpawnDriftPuff(world, driftPuffTexture, mountWorld, -pushDirection, random, config.Drift.Puffs.Puff, driftPuffColor);
             return;
         }
 
@@ -384,7 +384,7 @@ public static class StationCoreSystem
         Vector2 ToWorldDirection(Vector2 local) => forward * local.X + right * local.Y;
 
         var corner = puffIndex == 1 ? new Vector2(halfWidthMeters, halfWidthMeters) : new Vector2(-halfWidthMeters, -halfWidthMeters);
-        SpawnDriftPuff(world, driftPuffTexture, ToWorldPosition(corner), ToWorldDirection(AngularExhaustLocal(corner, angularSign)), random, config.Drift.Puffs, driftPuffColor);
+        SpawnDriftPuff(world, driftPuffTexture, ToWorldPosition(corner), ToWorldDirection(AngularExhaustLocal(corner, angularSign)), random, config.Drift.Puffs.Puff, driftPuffColor);
     }
 
     /// <summary>Opposite of the tangential direction a point at cornerLocal would move due to an angular velocity of the given sign — see SpawnDriftPuffs.</summary>
@@ -392,7 +392,7 @@ public static class StationCoreSystem
         Vector2.Normalize(new Vector2(cornerLocal.Y, -cornerLocal.X) * angularSign);
 
     private static void SpawnDriftPuff(World world, Texture2D texture, Vector2 positionMeters, Vector2 outwardDirection, Random random,
-        StationCoreDriftPuffConfig config, Microsoft.Xna.Framework.Color color) =>
+        ParticlePuffConfig config, Microsoft.Xna.Framework.Color color) =>
         ParticleEffects.SpawnRotationJetPuff(world, texture, positionMeters, outwardDirection, random,
             config.ParticleCountPerFrame, config.ParticleSpeedMetersPerSecondRange, config.ParticleLifetimeSecondsRange,
             config.ParticleSizePixels, config.SpreadAngleDegrees, color);

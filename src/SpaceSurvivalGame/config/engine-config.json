@@ -30,11 +30,13 @@
   },
   "RotationJets": {
     "NoseMountFraction": 0.8,
-    "ParticleCountPerFrame": [5, 10],
-    "ParticleSpeedMetersPerSecondRange": [1, 3],
-    "ParticleLifetimeSecondsRange": [0.04, 0.08],
-    "ParticleSizePixels": 1,
-    "SpreadAngleDegrees": 2,
-    "ColorHex": "#CFE8FFFF"
+    "Puff": {
+      "ParticleCountPerFrame": [5, 10],
+      "ParticleSpeedMetersPerSecondRange": [1, 3],
+      "ParticleLifetimeSecondsRange": [0.04, 0.08],
+      "ParticleSizePixels": 1,
+      "SpreadAngleDegrees": 2,
+      "ColorHex": "#CFE8FFFF"
+    }
   }
 }

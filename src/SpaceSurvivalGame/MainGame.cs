@@ -189,8 +189,8 @@ public class MainGame : Game
         var shockwaveDiameterPixels = (int)PhysicsWorld.MetersToPixels(_stationCoreConfig.Shockwave.RadiusMeters * 2f);
         _stationCoreShockwaveTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, shockwaveDiameterPixels,
             Microsoft.Xna.Framework.Color.Transparent, Microsoft.Xna.Framework.Color.White, _stationCoreConfig.Shockwave.RingInnerRadiusFraction);
-        _stationCoreDriftPuffTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _stationCoreConfig.Drift.Puffs.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
-        _stationCoreDriftPuffColor = ColorHex.Parse(_stationCoreConfig.Drift.Puffs.ColorHex);
+        _stationCoreDriftPuffTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _stationCoreConfig.Drift.Puffs.Puff.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
+        _stationCoreDriftPuffColor = ColorHex.Parse(_stationCoreConfig.Drift.Puffs.Puff.ColorHex);
         _stationCoreShockwaveColor = ColorHex.Parse(_stationCoreConfig.Shockwave.ColorHex);
 
         var screenWarningConfigPath = Path.Combine(AppContext.BaseDirectory, "config", "screen-warning-config.json");
@@ -204,8 +204,8 @@ public class MainGame : Game
         // Baked white and tinted per-layer at draw time (see EngineJetRenderer) — shared by
         // both the outer and inner flame layers, which have independent colors.
         _flameTexture = ProceduralTextures.CreateRightFacingTriangle(GraphicsDevice, _engineConfig.FlameTextureSizePixels, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.White);
-        _rotationJetTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _engineConfig.RotationJets.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
-        _rotationJetColor = ColorHex.Parse(_engineConfig.RotationJets.ColorHex);
+        _rotationJetTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _engineConfig.RotationJets.Puff.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
+        _rotationJetColor = ColorHex.Parse(_engineConfig.RotationJets.Puff.ColorHex);
         _engineJetOuterColor = ColorHex.Parse(_engineConfig.MainJet.Outer.ColorHex);
         _engineJetInnerColor = ColorHex.Parse(_engineConfig.MainJet.Inner.ColorHex);
 

@@ -11,7 +11,7 @@
     "MaterialDensity": 1.83,
     "RockColorHex": "#473D34",
     "OxygenRich": {
-      "SpawnChanceFraction": 0.05,
+      "SpawnChanceFraction": 0.04,
       "CrystalCountRange": [3, 6],
       "CrystalSizeUnitRange": [0.10, 0.18],
       "CrystalEdgeOffsetRange": [-0.20, 0.08],
@@ -20,7 +20,7 @@
       "CrystalReleaseCooldownSeconds": 1.0
     },
     "IronRich": {
-      "SpawnChanceFraction": 0.1,
+      "SpawnChanceFraction": 0.02,
       "CrystalCountRange": [3, 6],
       "CrystalSizeUnitRange": [0.10, 0.18],
       "CrystalEdgeOffsetRange": [-0.20, 0.08],

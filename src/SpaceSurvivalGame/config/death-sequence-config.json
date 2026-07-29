@@ -13,8 +13,9 @@
   "Fragments": {
     "Count": 5,
     "SizePixels": 22,
-    "SpeedMetersPerSecondRange": [0.1, 0.8],
+    "SpeedMetersPerSecondRange": [ 0.1, 0.8 ],
     "SpreadAngleRadians": 2,
-    "AngularVelocityRadiansPerSecondRange": [2, 12]
+    "AngularVelocityRadiansPerSecondRange": [ 2, 12 ],
+    "ColorHex": "#9d6060"
   }
 }

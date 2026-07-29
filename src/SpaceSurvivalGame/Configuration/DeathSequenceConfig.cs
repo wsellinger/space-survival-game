@@ -39,6 +39,11 @@ public class FragmentsConfig
     public FloatRange SpeedMetersPerSecondRange { get; set; } = new(0.1f, 0.4f);
     public float SpreadAngleRadians { get; set; } = 0.6f;
     public FloatRange AngularVelocityRadiansPerSecondRange { get; set; } = new(2f, 6f);
+
+    // Matches the ship's own hull color by default (ShipConfig.ColorHex) — a fixed config value
+    // rather than reading ShipConfig directly at spawn time, so the two stay independently
+    // tunable without coupling the two config classes together.
+    public string ColorHex { get; set; } = "#444444";
 }
 
 /// <summary>

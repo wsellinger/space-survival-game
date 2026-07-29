@@ -35,6 +35,7 @@ public static class ShipFragments
     {
         var lifetime = config.Fade.DelaySeconds + config.Fade.DurationSeconds;
         var scale = config.Fragments.SizePixels / (float)FragmentTextureSize;
+        var fragmentColor = ColorHex.Parse(config.Fragments.ColorHex);
 
         var shipSpeed = shipVelocityMetersPerSecond.Length();
         var baseAngle = shipSpeed > 0.01f
@@ -60,8 +61,8 @@ public static class ShipFragments
             world.Create(
                 new Transform { PositionMeters = positionMeters, RotationRadians = (float)(random.NextDouble() * Math.PI * 2) },
                 new Velocity { LinearMetersPerSecond = velocity, AngularRadiansPerSecond = angularVelocity },
-                new Sprite { Texture = texture, Color = Microsoft.Xna.Framework.Color.White, Size = FragmentTextureSize, Scale = scale, Parallax = 1f },
-                new Particle { RemainingSeconds = lifetime, TotalSeconds = lifetime, BaseColor = Microsoft.Xna.Framework.Color.White });
+                new Sprite { Texture = texture, Color = fragmentColor, Size = FragmentTextureSize, Scale = scale, Parallax = 1f },
+                new Particle { RemainingSeconds = lifetime, TotalSeconds = lifetime, BaseColor = fragmentColor });
         }
     }
 

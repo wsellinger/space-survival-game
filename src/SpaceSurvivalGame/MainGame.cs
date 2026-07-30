@@ -1,6 +1,6 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
-using Box2dNet.Interop;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -16,7 +16,7 @@ using SpaceSurvivalGame.Configuration;
 
 namespace SpaceSurvivalGame;
 
-public class MainGame : Game
+public class MainGame : Game, IGameHost
 {
     private const int WindowWidth = 1920;
     private const int WindowHeight = 1080;
@@ -38,7 +38,6 @@ public class MainGame : Game
     private Camera _camera;
     private GameConfigs _configs;
     private GameAssets _assets;
-    private float _deathElapsedSeconds;
     private OxygenPickupField.PickupAssets _pickupAssets;
     private IronPickupField.PickupAssets _ironAssets;
     private RenderTarget2D _sceneRenderTarget;
@@ -47,6 +46,10 @@ public class MainGame : Game
     private System.Numerics.Vector2 _shipSpawnPositionMeters;
     private KeyboardState _previousKeyboardState;
     private readonly InputModeTracker _inputMode = new();
+    private readonly DeathTimer _deathTimer = new();
+    private Dictionary<GameState, IGameStateHandler> _stateHandlers;
+
+    public Rectangle ClientBounds => Window.ClientBounds;
 
     public MainGame()
     {
@@ -101,6 +104,15 @@ public class MainGame : Game
         var buttonBounds = new Rectangle((WindowWidth - buttonWidth) / 2, (WindowHeight - buttonHeight) / 2, buttonWidth, buttonHeight);
         _startButton = new UiButton(buttonBounds, "START");
         _restartButton = new UiButton(buttonBounds, "RESTART");
+
+        _stateHandlers = new Dictionary<GameState, IGameStateHandler>
+        {
+            [GameState.StartScreen] = new MenuStateHandler(_world, _camera, _shipSpawnPositionMeters, _startButton, isGameOverVariant: false, _inputMode, this),
+            [GameState.GameOver] = new MenuStateHandler(_world, _camera, _shipSpawnPositionMeters, _restartButton, isGameOverVariant: true, _inputMode, this),
+            [GameState.Dying] = new DyingStateHandler(_world, _physicsWorld, _configs.DeathSequence, _deathTimer, this),
+            [GameState.Playing] = new PlayingStateHandler(_world, _physicsWorld, _camera, _configs, _assets, _pickupAssets, _ironAssets, _random,
+                _inputMode, _deathTimer, _shipSpawnPositionMeters, this)
+        };
     }
 
     protected override void Update(GameTime gameTime)
@@ -112,119 +124,31 @@ public class MainGame : Game
             Exit();
 
         // Decay screen shake every frame regardless of game state — otherwise it freezes
-        // during Dying/GameOver (since those branches return before reaching the old call
-        // site further down) and then visibly resumes/jolts once Playing starts back up
-        // after a Restart, even though the hit that caused it was long past.
+        // during Dying/GameOver (since those states don't run the Playing pipeline that used
+        // to reach it) and then visibly resumes/jolts once Playing starts back up after a
+        // Restart, even though the hit that caused it was long past.
         _camera.UpdateShake((float)gameTime.ElapsedGameTime.TotalSeconds, _configs.ScreenShake.ShakeDecaySpeed);
 
-        if (_gameState == GameState.StartScreen || _gameState == GameState.GameOver)
-        {
-            // Menus always show a free, visible cursor — cursor lock/hide is a Playing-only concern.
-            IsMouseVisible = true;
-            WindowsCursorLock.Release();
-
-            var button = _gameState == GameState.StartScreen ? _startButton : _restartButton;
-            var clickedButton = mouse.LeftButton == ButtonState.Pressed && _previousMenuMouseState.LeftButton == ButtonState.Released
-                                 && button.IsHovered(mouse.Position);
-            var confirmedViaKeyboardOrPad = (keyboard.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
-                                            || (keyboard.IsKeyDown(Keys.Space) && !_previousKeyboardState.IsKeyDown(Keys.Space))
-                                            || gamePad.Buttons.Start == ButtonState.Pressed
-                                            || gamePad.Buttons.A == ButtonState.Pressed;
-
-            if (clickedButton || confirmedViaKeyboardOrPad)
-            {
-                if (_gameState == GameState.GameOver)
-                {
-                    ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
-                    StationCoreEntity.Show(_world); // undoes the Hide from death, if it was still Attached
-                    ParticleSystem.Clear(_world); // no leftover explosion sparks/ship fragments carrying over from the previous life
-                    _camera.PositionMeters = _shipSpawnPositionMeters;
-                    _camera.TargetPositionMeters = _shipSpawnPositionMeters;
-                }
-
-                _inputMode.NotifyInputReceived(); // clicking/confirming counts as the real input that unlocks the cursor for Playing
-                _gameState = GameState.Playing;
-            }
-
-            _previousMenuMouseState = mouse;
-            _previousKeyboardState = keyboard;
-            base.Update(gameTime);
-            return;
-        }
-
-        if (_gameState == GameState.Dying)
-        {
-            // A brief cutscene: no player input, but physics/particles/asteroids keep animating
-            // (including the ship's own residual momentum from Box2D) so the explosion and the
-            // dead ship drifting still read as part of the world, not a frozen snapshot.
-            IsMouseVisible = true;
-            WindowsCursorLock.Release();
-
-            var dyingDeltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _physicsWorld.Step(dyingDeltaSeconds);
-            ParticleSystem.Run(_world, dyingDeltaSeconds);
-            PhysicsSyncSystem.Run(_world);
-            ShipEntity.Hide(_world); // re-assert each frame — HitFlashSystem still runs once more in the Playing frame where death triggers (after the initial Hide() call) and clobbers it back to visible
-
-            _deathElapsedSeconds += dyingDeltaSeconds;
-            if (_deathElapsedSeconds >= _configs.DeathSequence.Fade.DelaySeconds + _configs.DeathSequence.Fade.DurationSeconds)
-                _gameState = GameState.GameOver;
-
-            _previousMenuMouseState = mouse;
-            _previousKeyboardState = keyboard;
-            base.Update(gameTime);
-            return;
-        }
-
-        if (keyboard.IsKeyDown(Keys.R) && !_previousKeyboardState.IsKeyDown(Keys.R))
-        {
-            ShipEntity.Respawn(_world, _shipSpawnPositionMeters);
-            StationCoreEntity.Show(_world);
-            ParticleSystem.Clear(_world);
-        }
-
-        var mousePosition = mouse.Position;
-        IsMouseVisible = _inputMode.Update(keyboard, mouse, gamePad, IsActive, Window.ClientBounds);
-
-        // The cursor's direction from the ship's on-screen position — used both as a mouse
-        // facing override (while RMB is held, mirroring the right stick) and for the camera
-        // look-ahead below. Uses last frame's synced Transform (one frame stale, imperceptible).
-        // Only while focused — unfocused input shouldn't affect facing/camera at all.
-        System.Numerics.Vector2? cursorDirectionFromShip = null;
-        if (_inputMode.HasReceivedInput && IsActive && !_inputMode.UseController && CameraFollowSystem.TryGetShipPositionMeters(_world, out var shipPositionForAim))
-        {
-            var shipScreenPixels = _camera.WorldToScreen(shipPositionForAim).ToNumerics();
-            var cursorScreenPixels = new System.Numerics.Vector2(mousePosition.X, mousePosition.Y);
-            cursorDirectionFromShip = cursorScreenPixels - shipScreenPixels;
-        }
-
-        var mouseFacingDirection = mouse.RightButton == ButtonState.Pressed ? cursorDirectionFromShip : null;
-
-        var deltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
 #if DEBUG
-        _fpsFrameCount++;
-        _fpsTimerSeconds += deltaSeconds;
-        if (_fpsTimerSeconds >= 1f)
+        // Only advances during Playing frames, matching the original behavior from before
+        // dispatch went through per-state handlers (the FPS counter used to live textually
+        // inside the Playing-only branch).
+        if (_gameState == GameState.Playing)
         {
-            _fps = _fpsFrameCount;
-            _fpsFrameCount = 0;
-            _fpsTimerSeconds -= 1f;
+            var fpsDeltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _fpsFrameCount++;
+            _fpsTimerSeconds += fpsDeltaSeconds;
+            if (_fpsTimerSeconds >= 1f)
+            {
+                _fps = _fpsFrameCount;
+                _fpsFrameCount = 0;
+                _fpsTimerSeconds -= 1f;
+            }
         }
 #endif
 
-        GameplaySystemsPipeline.Run(_world, _physicsWorld, _camera, _configs, _assets, _pickupAssets, _ironAssets, _random,
-            keyboard, gamePad, _inputMode.UseController, mouseFacingDirection, deltaSeconds, out var shipDied, out var suffocated);
-
-        if (shipDied)
-        {
-            _gameState = GameState.Dying;
-            _deathElapsedSeconds = 0f;
-        }
-        else if (suffocated)
-        {
-            _gameState = GameState.GameOver;
-        }
+        var nextState = _stateHandlers[_gameState].Update(gameTime, keyboard, gamePad, mouse, _previousKeyboardState, _previousMenuMouseState);
+        if (nextState.HasValue) _gameState = nextState.Value;
 
         _previousKeyboardState = keyboard;
         _previousMenuMouseState = mouse;
@@ -308,7 +232,7 @@ public class MainGame : Game
         var deathFadeAlpha = 0f;
         if (_gameState == GameState.Dying || _gameState == GameState.GameOver)
         {
-            var fadeElapsed = _deathElapsedSeconds - _configs.DeathSequence.Fade.DelaySeconds;
+            var fadeElapsed = _deathTimer.ElapsedSeconds - _configs.DeathSequence.Fade.DelaySeconds;
             deathFadeAlpha = _gameState == GameState.GameOver ? 1f : MathHelper.Clamp(fadeElapsed / _configs.DeathSequence.Fade.DurationSeconds, 0f, 1f);
         }
 

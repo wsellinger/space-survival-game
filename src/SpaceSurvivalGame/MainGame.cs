@@ -29,9 +29,6 @@ public class MainGame : Game
     private int _fps;
 #endif
     private GameState _gameState = GameState.StartScreen;
-    private Texture2D _buttonFillTexture;
-    private Texture2D _buttonOutlineTexture;
-    private Texture2D _solidPixelTexture;
     private UiButton _startButton;
     private UiButton _restartButton;
     private MouseState _previousMenuMouseState;
@@ -39,30 +36,10 @@ public class MainGame : Game
     private World _world;
     private Camera _camera;
     private GameConfigs _configs;
+    private GameAssets _assets;
     private float _deathElapsedSeconds;
     private OxygenPickupField.PickupAssets _pickupAssets;
-    private Microsoft.Xna.Framework.Color _ironSparkleColor;
     private IronPickupField.PickupAssets _ironAssets;
-    private Texture2D _stationCoreTexture;
-    private Texture2D _stationCoreBuildEffectTexture;
-    private Texture2D _stationCoreShockwaveTexture;
-    private Texture2D _stationCoreDriftPuffTexture;
-    private Microsoft.Xna.Framework.Color _stationCoreDriftPuffColor;
-    private Microsoft.Xna.Framework.Color _stationCoreShockwaveColor;
-    private Texture2D _hudBarFillTexture;
-    private Texture2D _hudBarOutlineTexture;
-    private Texture2D _screenWarningOutlineTexture;
-    private Texture2D _screenWarningVignetteTexture;
-    private Texture2D[] _shipFragmentTextures;
-    private Texture2D _flameTexture;
-    private Texture2D _rotationJetTexture;
-    private Microsoft.Xna.Framework.Color _rotationJetColor;
-    private Microsoft.Xna.Framework.Color _engineJetOuterColor;
-    private Microsoft.Xna.Framework.Color _engineJetInnerColor;
-    private Texture2D _crosshairTexture;
-    private Texture2D _strafeModeIndicatorTexture;
-    private Microsoft.Xna.Framework.Color _strafeModeIndicatorColor;
-    private Texture2D _sparkTexture;
     private RenderTarget2D _sceneRenderTarget;
     private Effect _suffocationEffect;
     private readonly Random _random = new();
@@ -99,57 +76,16 @@ public class MainGame : Game
         _uiFont = Content.Load<SpriteFont>("Fonts/DebugFont");
 
         _configs = GameConfigs.Load();
-
-        var barCornerRadius = _configs.Hud.Bars.ThicknessPixels / 2f;
-        _hudBarFillTexture = ProceduralTextures.CreateRoundedRect(GraphicsDevice, _configs.Hud.Bars.LengthPixels, _configs.Hud.Bars.ThicknessPixels, barCornerRadius, Microsoft.Xna.Framework.Color.White);
-        _hudBarOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, _configs.Hud.Bars.LengthPixels, _configs.Hud.Bars.ThicknessPixels, barCornerRadius, _configs.Hud.Bars.OutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
-        _sparkTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _configs.Spark.Burst.SizePixels, Microsoft.Xna.Framework.Color.White);
+        _assets = GameAssets.Load(GraphicsDevice, _configs, WindowWidth, WindowHeight, _random);
 
         _suffocationEffect = Content.Load<Effect>("Shaders/SuffocationEffect");
         _sceneRenderTarget = new RenderTarget2D(GraphicsDevice, WindowWidth, WindowHeight);
-
-        _ironSparkleColor = ColorHex.Parse(_configs.IronPickup.Sparkle.ColorHex);
-
-        _stationCoreTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, _configs.StationCore.CoreDot.SpriteSizePixels,
-            ColorHex.Parse(_configs.StationCore.CoreDot.ColorHex), ColorHex.Parse(_configs.StationCore.CoreDot.RingColorHex), _configs.StationCore.CoreDot.InnerRadiusFraction);
-        _stationCoreBuildEffectTexture = ProceduralTextures.CreateCircuitSquare(GraphicsDevice, _configs.StationCore.Build.MaxSizePixels,
-            ColorHex.Parse(_configs.StationCore.Build.ColorHex), ColorHex.Parse(_configs.StationCore.Circuit.ColorHex), _configs.StationCore.Circuit.ThicknessFraction);
-        // Baked at exactly its own final size (see StationCoreShockwaveRenderSystem) so it only
-        // ever shrinks, never upscales, staying crisp out to full size. Transparent center, tinted
-        // white ring — actual color/alpha applied at draw time so Shockwave.ColorHex/MaxAlpha can
-        // be re-tuned without re-baking.
-        var shockwaveDiameterPixels = (int)PhysicsWorld.MetersToPixels(_configs.StationCore.Shockwave.RadiusMeters * 2f);
-        _stationCoreShockwaveTexture = ProceduralTextures.CreateRingedCircle(GraphicsDevice, shockwaveDiameterPixels,
-            Microsoft.Xna.Framework.Color.Transparent, Microsoft.Xna.Framework.Color.White, _configs.StationCore.Shockwave.RingInnerRadiusFraction);
-        _stationCoreDriftPuffTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _configs.StationCore.Drift.Puffs.Puff.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
-        _stationCoreDriftPuffColor = ColorHex.Parse(_configs.StationCore.Drift.Puffs.Puff.ColorHex);
-        _stationCoreShockwaveColor = ColorHex.Parse(_configs.StationCore.Shockwave.ColorHex);
-
-        _screenWarningOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, WindowWidth, WindowHeight, 0f, _configs.ScreenWarning.OutlineThicknessPixels, Microsoft.Xna.Framework.Color.White);
-        _screenWarningVignetteTexture = ProceduralTextures.CreateEdgeVignette(GraphicsDevice, WindowWidth, WindowHeight, _configs.ScreenWarning.VignetteDepthPixels, Microsoft.Xna.Framework.Color.White);
-        _shipFragmentTextures = ShipFragments.CreateFragmentTextures(GraphicsDevice, _random);
-
-        // Baked white and tinted per-layer at draw time (see EngineJetRenderer) — shared by
-        // both the outer and inner flame layers, which have independent colors.
-        _flameTexture = ProceduralTextures.CreateRightFacingTriangle(GraphicsDevice, _configs.Engine.FlameTextureSizePixels, Microsoft.Xna.Framework.Color.White, Microsoft.Xna.Framework.Color.White);
-        _rotationJetTexture = ProceduralTextures.CreateCircle(GraphicsDevice, _configs.Engine.RotationJets.Puff.ParticleSizePixels, Microsoft.Xna.Framework.Color.White);
-        _rotationJetColor = ColorHex.Parse(_configs.Engine.RotationJets.Puff.ColorHex);
-        _engineJetOuterColor = ColorHex.Parse(_configs.Engine.MainJet.Outer.ColorHex);
-        _engineJetInnerColor = ColorHex.Parse(_configs.Engine.MainJet.Inner.ColorHex);
-
-        var crosshairColor = ColorHex.Parse(_configs.Crosshair.ColorHex);
-        _crosshairTexture = ProceduralTextures.CreateCrosshair(GraphicsDevice, _configs.Crosshair.SizePixels, _configs.Crosshair.GapRadiusPixels, _configs.Crosshair.TickLengthPixels, _configs.Crosshair.ThicknessPixels, crosshairColor);
-
-        _strafeModeIndicatorColor = ColorHex.Parse(_configs.StrafeModeIndicator.ColorHex);
-        var strafeIndicatorInset = (int)_configs.StrafeModeIndicator.InsetPixels;
-        _strafeModeIndicatorTexture = ProceduralTextures.CreateCornerBrackets(GraphicsDevice, WindowWidth - strafeIndicatorInset * 2, WindowHeight - strafeIndicatorInset * 2,
-            _configs.StrafeModeIndicator.CornerRadiusPixels, _configs.StrafeModeIndicator.OutlineThicknessPixels, _configs.StrafeModeIndicator.ArmLengthPixels, Microsoft.Xna.Framework.Color.White);
 
         _shipSpawnPositionMeters = PhysicsWorld.PixelsToMeters(new System.Numerics.Vector2(WindowWidth / 2f, WindowHeight / 2f));
         _camera.PositionMeters = _shipSpawnPositionMeters;
         _camera.TargetPositionMeters = _shipSpawnPositionMeters;
         ShipEntity.Create(_world, _physicsWorld, GraphicsDevice, _shipSpawnPositionMeters, _configs.Ship, _configs.Player, _configs.StationCore.CoreDot.SpriteSizePixels);
-        StationCoreEntity.Create(_world, _shipSpawnPositionMeters, _stationCoreTexture, _configs.StationCore.CoreDot.SpriteSizePixels);
+        StationCoreEntity.Create(_world, _shipSpawnPositionMeters, _assets.StationCore, _configs.StationCore.CoreDot.SpriteSizePixels);
 
         foreach (var layer in _configs.Starfield.Layers)
         {
@@ -164,11 +100,6 @@ public class MainGame : Game
 
         const int buttonWidth = 220;
         const int buttonHeight = 60;
-        const float buttonCornerRadius = 14f;
-        _buttonFillTexture = ProceduralTextures.CreateRoundedRect(GraphicsDevice, buttonWidth, buttonHeight, buttonCornerRadius, Microsoft.Xna.Framework.Color.White);
-        _buttonOutlineTexture = ProceduralTextures.CreateRoundedRectOutline(GraphicsDevice, buttonWidth, buttonHeight, buttonCornerRadius, 2f, Microsoft.Xna.Framework.Color.White);
-        _solidPixelTexture = ProceduralTextures.CreateSolidSquare(GraphicsDevice, 1, Microsoft.Xna.Framework.Color.White);
-
         var buttonBounds = new Rectangle((WindowWidth - buttonWidth) / 2, (WindowHeight - buttonHeight) / 2, buttonWidth, buttonHeight);
         _startButton = new UiButton(buttonBounds, "START");
         _restartButton = new UiButton(buttonBounds, "RESTART");
@@ -327,9 +258,9 @@ public class MainGame : Game
 #endif
 
         ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds, _configs.Engine);
-        RotationJetSystem.Run(_world, _rotationJetTexture, _configs.Engine, _configs.Ship.SpriteSizePixels, _rotationJetColor, _random);
+        RotationJetSystem.Run(_world, _assets.RotationJet, _configs.Engine, _configs.Ship.SpriteSizePixels, _assets.RotationJetColor, _random);
         _physicsWorld.Step(deltaSeconds);
-        CollisionDamageSystem.Run(_world, _physicsWorld, _configs.Player, _sparkTexture, _random, _configs.Spark, _camera, _configs.ScreenShake, _configs.HitFlash, _configs.HudFeedback); // must read hit events before the next Step overwrites them
+        CollisionDamageSystem.Run(_world, _physicsWorld, _configs.Player, _assets.Spark, _random, _configs.Spark, _camera, _configs.ScreenShake, _configs.HitFlash, _configs.HudFeedback); // must read hit events before the next Step overwrites them
         OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _configs.OxygenPickup, _configs.World.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
         IronOreReleaseSystem.Run(_world, _physicsWorld, _ironAssets, _configs.IronPickup, _configs.World.Asteroid.IronRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
 
@@ -338,7 +269,7 @@ public class MainGame : Game
         if (shipHealth <= 0f && CameraFollowSystem.TryGetShipPositionMeters(_world, out var deathPositionMeters))
         {
             for (var i = 0; i < _configs.DeathSequence.Explosion.BurstCount; i++)
-                ParticleEffects.SpawnExplosionBurst(_world, _sparkTexture, deathPositionMeters, _random, _configs.DeathSequence);
+                ParticleEffects.SpawnExplosionBurst(_world, _assets.Spark, deathPositionMeters, _random, _configs.DeathSequence);
 
             // Read the Box2D body directly rather than the ECS Velocity component — PhysicsSyncSystem
             // (which mirrors Box2D into Velocity) hasn't run yet this frame, so Velocity would still
@@ -346,7 +277,7 @@ public class MainGame : Game
             // resolved, so fragments fly off the way the ship itself actually bounced.
             var shipVelocity = System.Numerics.Vector2.Zero;
             _world.Query(in PlayerPhysicsBodyQuery, (ref PhysicsBody physicsBody) => shipVelocity = B2Api.b2Body_GetLinearVelocity(physicsBody.BodyId));
-            ShipFragments.SpawnDebris(_world, _shipFragmentTextures, deathPositionMeters, shipVelocity, _random, _configs.DeathSequence);
+            ShipFragments.SpawnDebris(_world, _assets.ShipFragmentTextures, deathPositionMeters, shipVelocity, _random, _configs.DeathSequence);
             ShipEntity.Hide(_world);
             StationCoreEntity.Hide(_world); // no-op if it already detached and became its own object
 
@@ -355,8 +286,8 @@ public class MainGame : Game
         }
 
         VitalsSystem.Run(_world, deltaSeconds, _configs.Player, _configs.Suffocation);
-        OxygenPickupSystem.Run(_world, _configs.Ship, _configs.OxygenPickup, _configs.Spark, _sparkTexture, _configs.FloatingText, _camera, _random);
-        IronPickupSystem.Run(_world, _configs.Ship, _configs.IronPickup, _configs.Spark, _sparkTexture, _configs.FloatingText, _camera, _random);
+        OxygenPickupSystem.Run(_world, _configs.Ship, _configs.OxygenPickup, _configs.Spark, _assets.Spark, _configs.FloatingText, _camera, _random);
+        IronPickupSystem.Run(_world, _configs.Ship, _configs.IronPickup, _configs.Spark, _assets.Spark, _configs.FloatingText, _camera, _random);
 
         // Suffocation kills once its post-process effect has fully played out. No explosion
         // and no extra fade here — the screen's already fully black from the vignette by
@@ -382,7 +313,7 @@ public class MainGame : Game
         // Must run after PhysicsSyncSystem so it copies the ship's just-synced position for
         // this frame, not last frame's stale value (a one-frame lag reads as constant drift
         // while riding along).
-        StationCoreSystem.Run(_world, _camera, _physicsWorld, _configs.StationCore, deltaSeconds, _random, _stationCoreDriftPuffTexture, _stationCoreDriftPuffColor);
+        StationCoreSystem.Run(_world, _camera, _physicsWorld, _configs.StationCore, deltaSeconds, _random, _assets.StationCoreDriftPuff, _assets.StationCoreDriftPuffColor);
 
         // Camera casts out toward wherever the aim input points, not the ship's facing
         // (which lags behind at a capped turn rate): the right stick's own direction in
@@ -465,22 +396,22 @@ public class MainGame : Game
         // crisp edges instead of blurring when magnified/minified.
         _spriteBatch.Begin(SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
         RenderSystem.Run(_world, _spriteBatch, _camera);
-        StationCoreBuildEffectRenderSystem.Run(_world, _spriteBatch, _camera, _configs.StationCore, _stationCoreBuildEffectTexture);
-        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _configs.Engine, _configs.Ship.SpriteSizePixels, _configs.Ship.NotchDepthFraction, _flameTexture, (float)gameTime.TotalGameTime.TotalSeconds, _engineJetOuterColor, _engineJetInnerColor);
-        MetallicSparkleRenderSystem.Run(_world, _spriteBatch, _camera, _configs.IronPickup, (float)gameTime.TotalGameTime.TotalSeconds, _ironSparkleColor);
-        StationCoreShockwaveRenderSystem.Run(_world, _spriteBatch, _camera, _configs.StationCore, _stationCoreShockwaveTexture, _stationCoreShockwaveColor);
+        StationCoreBuildEffectRenderSystem.Run(_world, _spriteBatch, _camera, _configs.StationCore, _assets.StationCoreBuildEffect);
+        EngineJetRenderer.Run(_world, _spriteBatch, _camera, _configs.Engine, _configs.Ship.SpriteSizePixels, _configs.Ship.NotchDepthFraction, _assets.Flame, (float)gameTime.TotalGameTime.TotalSeconds, _assets.EngineJetOuterColor, _assets.EngineJetInnerColor);
+        MetallicSparkleRenderSystem.Run(_world, _spriteBatch, _camera, _configs.IronPickup, (float)gameTime.TotalGameTime.TotalSeconds, _assets.IronSparkleColor);
+        StationCoreShockwaveRenderSystem.Run(_world, _spriteBatch, _camera, _configs.StationCore, _assets.StationCoreShockwave, _assets.StationCoreShockwaveColor);
         _spriteBatch.End();
 
         // Separate screen-space pass (no camera transform) for HUD/debug text.
         _spriteBatch.Begin();
         FloatingTextRenderSystem.Run(_world, _spriteBatch, _uiFont, _configs.FloatingText.TextScale);
         ScreenWarningRenderer.Run(_world, _spriteBatch, _configs.ScreenWarning, _configs.HealthWarning, _configs.OxygenWarning, _configs.HudFeedback,
-            (float)gameTime.TotalGameTime.TotalSeconds, _screenWarningOutlineTexture, _screenWarningVignetteTexture);
-        StrafeModeIndicatorRenderer.Run(_world, _spriteBatch, _uiFont, _configs.StrafeModeIndicator, _strafeModeIndicatorTexture, (float)gameTime.TotalGameTime.TotalSeconds, _strafeModeIndicatorColor);
+            (float)gameTime.TotalGameTime.TotalSeconds, _assets.ScreenWarningOutline, _assets.ScreenWarningVignette);
+        StrafeModeIndicatorRenderer.Run(_world, _spriteBatch, _uiFont, _configs.StrafeModeIndicator, _assets.StrafeModeIndicator, (float)gameTime.TotalGameTime.TotalSeconds, _assets.StrafeModeIndicatorColor);
         // Drawn after StrafeModeIndicatorRenderer so the bottom-left iron counter reads on top of
         // that corner's bracket instead of being drawn under it.
         HudRenderer.Run(_world, _spriteBatch, WindowWidth, WindowHeight, _configs.Hud, _configs.HudFeedback, _configs.HealthWarning, _configs.OxygenWarning,
-            _uiFont, (float)gameTime.TotalGameTime.TotalSeconds, _hudBarFillTexture, _hudBarOutlineTexture);
+            _uiFont, (float)gameTime.TotalGameTime.TotalSeconds, _assets.HudBarFill, _assets.HudBarOutline);
 #if DEBUG
         _spriteBatch.DrawString(_uiFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
 #endif
@@ -523,7 +454,7 @@ public class MainGame : Game
         if (deathFadeAlpha > 0f)
         {
             _spriteBatch.Begin();
-            _spriteBatch.Draw(_solidPixelTexture, new Rectangle(0, 0, WindowWidth, WindowHeight), Color.Black * deathFadeAlpha);
+            _spriteBatch.Draw(_assets.SolidPixel, new Rectangle(0, 0, WindowWidth, WindowHeight), Color.Black * deathFadeAlpha);
             _spriteBatch.End();
         }
 
@@ -533,7 +464,7 @@ public class MainGame : Game
         {
             var crosshairOrigin = new Vector2(_configs.Crosshair.SizePixels / 2f, _configs.Crosshair.SizePixels / 2f);
             _spriteBatch.Begin();
-            _spriteBatch.Draw(_crosshairTexture, Mouse.GetState().Position.ToVector2(), null, Color.White, 0f, crosshairOrigin, 1f, SpriteEffects.None, 0f);
+            _spriteBatch.Draw(_assets.Crosshair, Mouse.GetState().Position.ToVector2(), null, Color.White, 0f, crosshairOrigin, 1f, SpriteEffects.None, 0f);
             _spriteBatch.End();
         }
 
@@ -544,7 +475,7 @@ public class MainGame : Game
             var isHovered = button.IsHovered(Mouse.GetState().Position);
 
             _spriteBatch.Begin();
-            MenuRenderer.Draw(_spriteBatch, _uiFont, _solidPixelTexture, _buttonFillTexture, _buttonOutlineTexture,
+            MenuRenderer.Draw(_spriteBatch, _uiFont, _assets.SolidPixel, _assets.ButtonFill, _assets.ButtonOutline,
                 WindowWidth, WindowHeight, title, button, isHovered);
             _spriteBatch.End();
         }
@@ -558,22 +489,7 @@ public class MainGame : Game
     {
         WindowsCursorLock.Release();
         _world.Query(in SpriteQuery, (ref Sprite sprite) => sprite.Texture.Dispose());
-        _hudBarFillTexture.Dispose();
-        _hudBarOutlineTexture.Dispose();
-        _screenWarningOutlineTexture.Dispose();
-        _screenWarningVignetteTexture.Dispose();
-        foreach (var texture in _shipFragmentTextures) texture.Dispose();
-        _flameTexture.Dispose();
-        _rotationJetTexture.Dispose();
-        _crosshairTexture.Dispose();
-        _strafeModeIndicatorTexture.Dispose();
-        _sparkTexture.Dispose();
-        _stationCoreBuildEffectTexture.Dispose();
-        _stationCoreShockwaveTexture.Dispose();
-        _stationCoreDriftPuffTexture.Dispose();
-        _buttonFillTexture.Dispose();
-        _buttonOutlineTexture.Dispose();
-        _solidPixelTexture.Dispose();
+        _assets.Dispose();
         _sceneRenderTarget.Dispose();
         World.Destroy(_world);
         _physicsWorld.Dispose();

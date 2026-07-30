@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Input;
 using SpaceSurvivalGame.ECS;
 using SpaceSurvivalGame.ECS.Components;
 using SpaceSurvivalGame.ECS.Systems;
+using SpaceSurvivalGame.Input;
 using SpaceSurvivalGame.Physics;
 using SpaceSurvivalGame.Platform;
 using SpaceSurvivalGame.Rendering;
@@ -45,10 +46,7 @@ public class MainGame : Game
     private readonly Random _random = new();
     private System.Numerics.Vector2 _shipSpawnPositionMeters;
     private KeyboardState _previousKeyboardState;
-    private Point _previousMousePosition;
-    private bool _useController;
-    private bool _isFirstUpdate = true;
-    private bool _hasReceivedInput;
+    private readonly InputModeTracker _inputMode = new();
 
     public MainGame()
     {
@@ -144,7 +142,7 @@ public class MainGame : Game
                     _camera.TargetPositionMeters = _shipSpawnPositionMeters;
                 }
 
-                _hasReceivedInput = true; // clicking/confirming counts as the real input that unlocks the cursor for Playing
+                _inputMode.NotifyInputReceived(); // clicking/confirming counts as the real input that unlocks the cursor for Playing
                 _gameState = GameState.Playing;
             }
 
@@ -186,56 +184,14 @@ public class MainGame : Game
         }
 
         var mousePosition = mouse.Position;
-
-        // The OS can place the cursor anywhere at launch, and _previousMousePosition starts
-        // at (0,0) — without this, frame one would almost always read as "the mouse moved",
-        // spuriously flipping into mouse mode before the player has touched anything.
-        if (_isFirstUpdate)
-        {
-            _previousMousePosition = mousePosition;
-            _isFirstUpdate = false;
-        }
-
-        // Don't lock the cursor or react to the mouse at all until the window has actually
-        // been focused and used at least once — otherwise we'd start locking/steering the
-        // camera from wherever the OS happens to place the cursor before the player's done
-        // anything, which reads as a spurious jump/lock right at startup.
-        if (!_hasReceivedInput && IsActive &&
-            (IsControllerInputActive(gamePad) || IsKeyboardMouseInputActive(keyboard, mouse, mousePosition, _previousMousePosition)))
-        {
-            _hasReceivedInput = true;
-        }
-
-        // True OS-level cursor confinement (Win32 ClipCursor) rather than a software clamp —
-        // clamping after the fact still lets a fast mouse movement's raw position genuinely
-        // leave the window for a frame, which can defocus the game or click into whatever's
-        // behind it. Only while focused; release the clip when not, so alt-tabbing away
-        // doesn't leave the OS cursor stuck to a window that no longer has focus.
-        if (_hasReceivedInput && IsActive)
-        {
-            IsMouseVisible = false;
-            WindowsCursorLock.Lock(Window.ClientBounds);
-        }
-        else
-        {
-            IsMouseVisible = true;
-            WindowsCursorLock.Release();
-        }
-
-        // Keyboard/mouse and controller are mutually exclusive: whichever one
-        // produced input this frame becomes (or stays) active, and the other is
-        // ignored entirely until it's the one being used.
-        if (IsControllerInputActive(gamePad))
-            _useController = true;
-        else if (IsKeyboardMouseInputActive(keyboard, mouse, mousePosition, _previousMousePosition))
-            _useController = false;
+        IsMouseVisible = _inputMode.Update(keyboard, mouse, gamePad, IsActive, Window.ClientBounds);
 
         // The cursor's direction from the ship's on-screen position — used both as a mouse
         // facing override (while RMB is held, mirroring the right stick) and for the camera
         // look-ahead below. Uses last frame's synced Transform (one frame stale, imperceptible).
         // Only while focused — unfocused input shouldn't affect facing/camera at all.
         System.Numerics.Vector2? cursorDirectionFromShip = null;
-        if (_hasReceivedInput && IsActive && !_useController && CameraFollowSystem.TryGetShipPositionMeters(_world, out var shipPositionForAim))
+        if (_inputMode.HasReceivedInput && IsActive && !_inputMode.UseController && CameraFollowSystem.TryGetShipPositionMeters(_world, out var shipPositionForAim))
         {
             var shipScreenPixels = _camera.WorldToScreen(shipPositionForAim).ToNumerics();
             var cursorScreenPixels = new System.Numerics.Vector2(mousePosition.X, mousePosition.Y);
@@ -257,7 +213,7 @@ public class MainGame : Game
         }
 #endif
 
-        ShipInputSystem.Run(_world, keyboard, gamePad, _useController, mouseFacingDirection, deltaSeconds, _configs.Engine);
+        ShipInputSystem.Run(_world, keyboard, gamePad, _inputMode.UseController, mouseFacingDirection, deltaSeconds, _configs.Engine);
         RotationJetSystem.Run(_world, _assets.RotationJet, _configs.Engine, _configs.Ship.SpriteSizePixels, _assets.RotationJetColor, _random);
         _physicsWorld.Step(deltaSeconds);
         CollisionDamageSystem.Run(_world, _physicsWorld, _configs.Player, _assets.Spark, _random, _configs.Spark, _camera, _configs.ScreenShake, _configs.HitFlash, _configs.HudFeedback); // must read hit events before the next Step overwrites them
@@ -322,7 +278,7 @@ public class MainGame : Game
         // mouseFacingDirection), so idly moving the mouse without aiming doesn't drag the
         // camera around.
         System.Numerics.Vector2 lookAheadOffsetMeters;
-        if (_useController)
+        if (_inputMode.UseController)
         {
             var rightStick = new System.Numerics.Vector2(gamePad.ThumbSticks.Right.X, -gamePad.ThumbSticks.Right.Y);
             if (rightStick.LengthSquared() > 1f) rightStick = System.Numerics.Vector2.Normalize(rightStick);
@@ -345,41 +301,12 @@ public class MainGame : Game
             _configs.Camera.StrafeZoomMultiplier, _configs.Camera.ZoomTweenSpeed);
 
         _previousKeyboardState = keyboard;
-        _previousMousePosition = mousePosition;
         _previousMenuMouseState = mouse;
         base.Update(gameTime);
     }
 
     private static readonly QueryDescription HealthQuery = new QueryDescription().WithAll<Health, PlayerControlled>();
     private static readonly QueryDescription PlayerPhysicsBodyQuery = new QueryDescription().WithAll<PhysicsBody, PlayerControlled>();
-
-    private static bool IsKeyboardMouseInputActive(KeyboardState keyboard, MouseState mouse, Point mousePosition, Point previousMousePosition)
-    {
-        return keyboard.GetPressedKeys().Length > 0
-               || mousePosition != previousMousePosition
-               || mouse.LeftButton == ButtonState.Pressed
-               || mouse.RightButton == ButtonState.Pressed
-               || mouse.MiddleButton == ButtonState.Pressed;
-    }
-
-    private bool IsControllerInputActive(GamePadState gamePad)
-    {
-        return gamePad.ThumbSticks.Left != Microsoft.Xna.Framework.Vector2.Zero
-               || gamePad.ThumbSticks.Right != Microsoft.Xna.Framework.Vector2.Zero
-               || gamePad.Triggers.Left > 0.1f
-               || gamePad.Triggers.Right > 0.1f
-               || gamePad.Buttons.A == ButtonState.Pressed
-               || gamePad.Buttons.B == ButtonState.Pressed
-               || gamePad.Buttons.X == ButtonState.Pressed
-               || gamePad.Buttons.Y == ButtonState.Pressed
-               || gamePad.Buttons.LeftShoulder == ButtonState.Pressed
-               || gamePad.Buttons.RightShoulder == ButtonState.Pressed
-               || gamePad.Buttons.Start == ButtonState.Pressed
-               || gamePad.DPad.Up == ButtonState.Pressed
-               || gamePad.DPad.Down == ButtonState.Pressed
-               || gamePad.DPad.Left == ButtonState.Pressed
-               || gamePad.DPad.Right == ButtonState.Pressed;
-    }
 
     private static readonly QueryDescription SuffocationQuery = new QueryDescription().WithAll<Suffocation>();
 
@@ -460,7 +387,7 @@ public class MainGame : Game
 
         // Only while the real OS cursor is actually hidden/locked (mouse mode, Playing, past
         // the first real input) — otherwise the player already has the visible system cursor.
-        if (_gameState == GameState.Playing && _hasReceivedInput && !_useController)
+        if (_gameState == GameState.Playing && _inputMode.HasReceivedInput && !_inputMode.UseController)
         {
             var crosshairOrigin = new Vector2(_configs.Crosshair.SizePixels / 2f, _configs.Crosshair.SizePixels / 2f);
             _spriteBatch.Begin();

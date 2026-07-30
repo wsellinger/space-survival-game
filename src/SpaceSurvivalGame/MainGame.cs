@@ -233,9 +233,15 @@ public class MainGame : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        // Everything (world + HUD) draws into an offscreen target first so the suffocation
-        // effect below — grayscale/pixelation/vignette — can post-process the whole frame
-        // as one composited image, rather than each piece separately.
+        DrawSceneToRenderTarget(gameTime);
+        ApplySuffocationPostProcess(gameTime);
+        DrawOverlays(gameTime);
+        base.Draw(gameTime);
+    }
+
+    /// <summary>Everything (world + HUD) draws into an offscreen target first so ApplySuffocationPostProcess can post-process the whole frame as one composited image, rather than each piece separately.</summary>
+    private void DrawSceneToRenderTarget(GameTime gameTime)
+    {
         GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
         GraphicsDevice.Clear(Color.Black);
 
@@ -264,7 +270,11 @@ public class MainGame : Game
         _spriteBatch.DrawString(_uiFont, $"FPS: {_fps}", new Microsoft.Xna.Framework.Vector2(10, 10), Color.White);
 #endif
         _spriteBatch.End();
+    }
 
+    /// <summary>Reads _sceneRenderTarget (only valid once DrawSceneToRenderTarget has fully completed) and blits it through the suffocation shader onto the backbuffer.</summary>
+    private void ApplySuffocationPostProcess(GameTime gameTime)
+    {
         GraphicsDevice.SetRenderTarget(null);
         GraphicsDevice.Clear(Color.Black);
 
@@ -287,7 +297,11 @@ public class MainGame : Game
         _spriteBatch.Begin(effect: _suffocationEffect, samplerState: SamplerState.PointClamp);
         _spriteBatch.Draw(_sceneRenderTarget, Vector2.Zero, Color.White);
         _spriteBatch.End();
+    }
 
+    /// <summary>Death fade, crosshair, and start/game-over menu — screen-space overlays drawn on top of the post-processed backbuffer. Must run after ApplySuffocationPostProcess resets the render target to null.</summary>
+    private void DrawOverlays(GameTime gameTime)
+    {
         // Fades to fully opaque black across Dying's FadeDelaySeconds..+FadeDurationSeconds
         // window, then stays there through GameOver (elapsed is never advanced again once
         // GameOver is reached, so this keeps evaluating to 1).
@@ -326,8 +340,6 @@ public class MainGame : Game
                 WindowWidth, WindowHeight, title, button, isHovered);
             _spriteBatch.End();
         }
-
-        base.Draw(gameTime);
     }
 
     private static readonly QueryDescription SpriteQuery = new QueryDescription().WithAll<Sprite>();

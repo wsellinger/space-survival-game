@@ -220,23 +220,8 @@ public class MainGame : Game
         OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _configs.OxygenPickup, _configs.World.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
         IronOreReleaseSystem.Run(_world, _physicsWorld, _ironAssets, _configs.IronPickup, _configs.World.Asteroid.IronRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
 
-        var shipHealth = float.MaxValue;
-        _world.Query(in HealthQuery, (ref Health health) => shipHealth = health.Current);
-        if (shipHealth <= 0f && CameraFollowSystem.TryGetShipPositionMeters(_world, out var deathPositionMeters))
+        if (PlayerDeathSystem.TryTriggerCollisionDeath(_world, _assets, _configs.DeathSequence, _random))
         {
-            for (var i = 0; i < _configs.DeathSequence.Explosion.BurstCount; i++)
-                ParticleEffects.SpawnExplosionBurst(_world, _assets.Spark, deathPositionMeters, _random, _configs.DeathSequence);
-
-            // Read the Box2D body directly rather than the ECS Velocity component — PhysicsSyncSystem
-            // (which mirrors Box2D into Velocity) hasn't run yet this frame, so Velocity would still
-            // be last frame's value; the body itself already reflects the collision this Step() just
-            // resolved, so fragments fly off the way the ship itself actually bounced.
-            var shipVelocity = System.Numerics.Vector2.Zero;
-            _world.Query(in PlayerPhysicsBodyQuery, (ref PhysicsBody physicsBody) => shipVelocity = B2Api.b2Body_GetLinearVelocity(physicsBody.BodyId));
-            ShipFragments.SpawnDebris(_world, _assets.ShipFragmentTextures, deathPositionMeters, shipVelocity, _random, _configs.DeathSequence);
-            ShipEntity.Hide(_world);
-            StationCoreEntity.Hide(_world); // no-op if it already detached and became its own object
-
             _gameState = GameState.Dying;
             _deathElapsedSeconds = 0f;
         }
@@ -248,15 +233,11 @@ public class MainGame : Game
         // Suffocation kills once its post-process effect has fully played out. No explosion
         // and no extra fade here — the screen's already fully black from the vignette by
         // this point, so jump straight to GameOver instead of the collision-death sequence.
-        if (_gameState == GameState.Playing)
+        // Gated on Playing so a same-frame collision death (which just flipped state above)
+        // doesn't also race the suffocation transition.
+        if (_gameState == GameState.Playing && PlayerDeathSystem.TryTriggerSuffocationDeath(_world, _configs.Suffocation))
         {
-            var suffocationElapsedSeconds = 0f;
-            _world.Query(in SuffocationQuery, (ref Suffocation suffocation) => suffocationElapsedSeconds = suffocation.ElapsedSeconds);
-            if (suffocationElapsedSeconds >= _configs.Suffocation.EffectDurationSeconds)
-            {
-                _world.Query(in HealthQuery, (ref Health health) => health.Current = 0f);
-                _gameState = GameState.GameOver;
-            }
+            _gameState = GameState.GameOver;
         }
 
         ParticleSystem.Run(_world, deltaSeconds);
@@ -305,11 +286,6 @@ public class MainGame : Game
         base.Update(gameTime);
     }
 
-    private static readonly QueryDescription HealthQuery = new QueryDescription().WithAll<Health, PlayerControlled>();
-    private static readonly QueryDescription PlayerPhysicsBodyQuery = new QueryDescription().WithAll<PhysicsBody, PlayerControlled>();
-
-    private static readonly QueryDescription SuffocationQuery = new QueryDescription().WithAll<Suffocation>();
-
     protected override void Draw(GameTime gameTime)
     {
         // Everything (world + HUD) draws into an offscreen target first so the suffocation
@@ -347,8 +323,7 @@ public class MainGame : Game
         GraphicsDevice.SetRenderTarget(null);
         GraphicsDevice.Clear(Color.Black);
 
-        var suffocationSeconds = 0f;
-        _world.Query(in SuffocationQuery, (ref Suffocation suffocation) => suffocationSeconds = suffocation.ElapsedSeconds);
+        var suffocationSeconds = PlayerDeathSystem.GetSuffocationElapsedSeconds(_world);
         var suffocationProgress = MathHelper.Clamp(suffocationSeconds / _configs.Suffocation.EffectDurationSeconds, 0f, 1f);
 
         var pixelBlockSizePixels = _configs.Suffocation.Pixelation.Enabled ? _configs.Suffocation.Pixelation.MaxBlockSizePixels * suffocationProgress : 0f;

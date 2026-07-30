@@ -213,73 +213,18 @@ public class MainGame : Game
         }
 #endif
 
-        ShipInputSystem.Run(_world, keyboard, gamePad, _inputMode.UseController, mouseFacingDirection, deltaSeconds, _configs.Engine);
-        RotationJetSystem.Run(_world, _assets.RotationJet, _configs.Engine, _configs.Ship.SpriteSizePixels, _assets.RotationJetColor, _random);
-        _physicsWorld.Step(deltaSeconds);
-        CollisionDamageSystem.Run(_world, _physicsWorld, _configs.Player, _assets.Spark, _random, _configs.Spark, _camera, _configs.ScreenShake, _configs.HitFlash, _configs.HudFeedback); // must read hit events before the next Step overwrites them
-        OxygenCrystalReleaseSystem.Run(_world, _physicsWorld, _pickupAssets, _configs.OxygenPickup, _configs.World.Asteroid.OxygenRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
-        IronOreReleaseSystem.Run(_world, _physicsWorld, _ironAssets, _configs.IronPickup, _configs.World.Asteroid.IronRich, _random, deltaSeconds); // same hit-event buffer, same must-run-before-next-Step constraint
+        GameplaySystemsPipeline.Run(_world, _physicsWorld, _camera, _configs, _assets, _pickupAssets, _ironAssets, _random,
+            keyboard, gamePad, _inputMode.UseController, mouseFacingDirection, deltaSeconds, out var shipDied, out var suffocated);
 
-        if (PlayerDeathSystem.TryTriggerCollisionDeath(_world, _assets, _configs.DeathSequence, _random))
+        if (shipDied)
         {
             _gameState = GameState.Dying;
             _deathElapsedSeconds = 0f;
         }
-
-        VitalsSystem.Run(_world, deltaSeconds, _configs.Player, _configs.Suffocation);
-        OxygenPickupSystem.Run(_world, _configs.Ship, _configs.OxygenPickup, _configs.Spark, _assets.Spark, _configs.FloatingText, _camera, _random);
-        IronPickupSystem.Run(_world, _configs.Ship, _configs.IronPickup, _configs.Spark, _assets.Spark, _configs.FloatingText, _camera, _random);
-
-        // Suffocation kills once its post-process effect has fully played out. No explosion
-        // and no extra fade here — the screen's already fully black from the vignette by
-        // this point, so jump straight to GameOver instead of the collision-death sequence.
-        // Gated on Playing so a same-frame collision death (which just flipped state above)
-        // doesn't also race the suffocation transition.
-        if (_gameState == GameState.Playing && PlayerDeathSystem.TryTriggerSuffocationDeath(_world, _configs.Suffocation))
+        else if (suffocated)
         {
             _gameState = GameState.GameOver;
         }
-
-        ParticleSystem.Run(_world, deltaSeconds);
-        FloatingTextSystem.Run(_world, deltaSeconds);
-        HitFlashSystem.Run(_world, deltaSeconds, _configs.HitFlash);
-        InvulnerabilitySystem.Run(_world, deltaSeconds);
-        HudFeedbackSystem.Run(_world, deltaSeconds, _configs.HudFeedback, _random);
-        SpeedCapSystem.Run(_world, deltaSeconds, _configs.Ship.SpeedCapEaseSpeed);
-        PhysicsSyncSystem.Run(_world);
-        // Must run after PhysicsSyncSystem so it copies the ship's just-synced position for
-        // this frame, not last frame's stale value (a one-frame lag reads as constant drift
-        // while riding along).
-        StationCoreSystem.Run(_world, _camera, _physicsWorld, _configs.StationCore, deltaSeconds, _random, _assets.StationCoreDriftPuff, _assets.StationCoreDriftPuffColor);
-
-        // Camera casts out toward wherever the aim input points, not the ship's facing
-        // (which lags behind at a capped turn rate): the right stick's own direction in
-        // controller mode; in mouse mode, a point MouseFocusRatio of the way from the
-        // ship's on-screen position to the cursor's — only while RMB is held (same gate as
-        // mouseFacingDirection), so idly moving the mouse without aiming doesn't drag the
-        // camera around.
-        System.Numerics.Vector2 lookAheadOffsetMeters;
-        if (_inputMode.UseController)
-        {
-            var rightStick = new System.Numerics.Vector2(gamePad.ThumbSticks.Right.X, -gamePad.ThumbSticks.Right.Y);
-            if (rightStick.LengthSquared() > 1f) rightStick = System.Numerics.Vector2.Normalize(rightStick);
-            lookAheadOffsetMeters = rightStick * _configs.Camera.MaxDistanceMeters;
-        }
-        else if (mouseFacingDirection.HasValue)
-        {
-            lookAheadOffsetMeters = PhysicsWorld.PixelsToMeters(mouseFacingDirection.Value * _configs.Camera.MouseFocusRatio);
-        }
-        else
-        {
-            lookAheadOffsetMeters = System.Numerics.Vector2.Zero;
-        }
-
-        // Tweens in both modes now — since the look-ahead offset itself only engages while
-        // RMB is held (or the right stick is pushed), an instant snap read as an abrupt jump
-        // right at the moment of pressing/releasing; easing that transition in and out feels
-        // smoother without lagging behind the cursor's own live position while held.
-        CameraFollowSystem.Run(_world, _camera, lookAheadOffsetMeters, deltaSeconds, _configs.Camera.TweenSpeed,
-            _configs.Camera.StrafeZoomMultiplier, _configs.Camera.ZoomTweenSpeed);
 
         _previousKeyboardState = keyboard;
         _previousMenuMouseState = mouse;
